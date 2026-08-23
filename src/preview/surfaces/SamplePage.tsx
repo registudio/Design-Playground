@@ -1,5 +1,9 @@
+"use client";
+
+import { useRef } from "react";
 import type { DesignProject } from "@/schema/project";
 import { CustomCursor } from "../CustomCursor";
+import { useAutoAnimate } from "@/motion/useAutoAnimate";
 
 /**
  * The Sample Page (§13.1): every current choice shown together in a realistic generic
@@ -14,11 +18,17 @@ import { CustomCursor } from "../CustomCursor";
 export function SamplePage({ project }: { project: DesignProject }) {
   const { components } = project.recipe;
   const brand = project.client || project.name || "Northwind";
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Wires §12's entrance/hover recipes onto the page in one pass — see
+  // useAutoAnimate for why this is a query-and-attach rather than per-element hooks.
+  useAutoAnimate(rootRef, project);
 
   return (
     // Element variants are applied via data attributes on the root so a card or
     // button choice reaches every instance on the page, not just the gallery.
     <div
+      ref={rootRef}
       className="dp-page dp-sample"
       data-button={components.button}
       data-card={components.card}

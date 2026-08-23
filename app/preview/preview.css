@@ -1364,3 +1364,108 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .dp-spinner, .dp-skeleton, .dp-typewriter-cursor { animation: none; }
 }
+
+/* --- Motion runtime: scroll showcase --------------------------------------- */
+
+.dp-scroll-showcase {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--dp-space-4);
+}
+.dp-scroll-box { display: flex; flex-direction: column; gap: var(--dp-space-2); }
+.dp-scroll-box-label { font: 400 var(--dp-text-caption)/1.4 var(--dp-font-mono); color: var(--dp-color-muted); }
+
+.dp-scroll-container {
+  height: 12rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  border-radius: var(--dp-radius-md);
+  padding: var(--dp-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dp-space-3);
+  position: relative;
+  background: var(--dp-color-surface);
+}
+.dp-scroll-container-tall { height: 12rem; }
+
+.dp-scroll-card {
+  flex: 0 0 auto;
+  padding: var(--dp-space-4);
+  background: var(--dp-color-background);
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  border-radius: var(--dp-radius-sm);
+  font-size: var(--dp-text-small);
+}
+.dp-scroll-card-muted { color: var(--dp-color-muted); }
+.dp-scroll-card-pinned { background: var(--dp-color-primary); color: var(--dp-color-background); border: none; }
+
+.dp-parallax-layer {
+  position: absolute;
+  inset: -20% 0 -20% 0;
+  background: linear-gradient(160deg, var(--dp-color-primary), var(--dp-color-accent));
+  opacity: 0.5;
+  z-index: 0;
+}
+.dp-parallax-content {
+  position: relative;
+  z-index: 1;
+  margin-top: 8rem;
+  padding: var(--dp-space-4);
+  background: var(--dp-color-background);
+  border-radius: var(--dp-radius-sm);
+}
+
+.dp-progress-track { height: 3px; background: var(--dp-color-border); border-radius: var(--dp-radius-full); }
+.dp-progress-track-fill { height: 100%; background: var(--dp-color-primary); transform-origin: left; transform: scaleX(0); }
+
+.dp-scrub-badge {
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dp-radius-full);
+  background: var(--dp-color-primary);
+  color: var(--dp-color-background);
+  font-size: var(--dp-text-heading-3);
+  margin-top: var(--dp-space-4);
+}
+
+.dp-horizontal-track { display: flex; gap: var(--dp-space-3); width: max-content; padding-top: var(--dp-space-2); }
+.dp-horizontal-panel {
+  flex: 0 0 8rem;
+  height: 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dp-color-background);
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  border-radius: var(--dp-radius-sm);
+  font-size: var(--dp-text-small);
+  font-weight: 600;
+}
+
+/* --- Motion runtime: hover-interaction targets ----------------------------- */
+/* CSS-only fallbacks for hover recipes that don't need JS orchestration (§12.3). */
+
+.dp-btn { position: relative; overflow: hidden; }
+/* CSS key is the recipe id's last dotted segment, e.g. "animation.button.fill" -> "fill". */
+.dp-btn[data-hover="fill"] { transition: background-color var(--dp-motion-duration-fast) var(--dp-motion-ease-standard); }
+.dp-btn[data-hover="fill"]:hover { background-color: var(--dp-color-primary); color: var(--dp-color-background); }
+.dp-btn[data-hover="glow"] { transition: box-shadow var(--dp-motion-duration-base) var(--dp-motion-ease-standard); }
+.dp-btn[data-hover="glow"]:hover { box-shadow: 0 0 0 4px color-mix(in oklab, var(--dp-color-primary) 25%, transparent); }
+
+.dp-card[data-hover="border-reveal"] { border-color: transparent; transition: border-color var(--dp-motion-duration-base) var(--dp-motion-ease-standard); }
+.dp-card[data-hover="border-reveal"]:hover { border-color: var(--dp-color-primary); }
+
+/* card.lift's translateY is JS-driven (hooks.ts); the shadow rides a plain CSS
+   transition, since box-shadow tokens are var() references a JS tween can't
+   interpolate without first resolving them via computed style. */
+.dp-card[data-hover="lift"] { transition: box-shadow var(--dp-motion-duration-fast) var(--dp-motion-ease-standard); }
+.dp-card[data-hover="lift"]:hover { box-shadow: var(--dp-shadow-lg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dp-btn[data-hover], .dp-card[data-hover] { transition: none; }
+}

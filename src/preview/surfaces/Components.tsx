@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { cloneElement, useEffect, useState, type ReactElement } from "react";
 import type { DesignProject } from "@/schema/project";
 import {
   ButtonVariant, CardVariant, HeroVariant, NavbarVariant,
 } from "@/schema/recipe";
+import { useHoverInteraction } from "@/motion/hooks";
+import { ScrollShowcase } from "@/motion/ScrollShowcase";
 
 /**
  * The Components surface (§13.1): each selected component shown on its own, so a
@@ -20,21 +22,33 @@ export function Components({ project, advanced = false }: { project: DesignProje
   return (
     <div className="dp-page">
       <Group title="Button" selected={components.button} options={ButtonVariant.options}>
-        {(variant) => (
-          <button className={`dp-btn dp-btn-${variant === "pill" ? "solid" : variant}`}
-                  style={variant === "pill" ? { borderRadius: "var(--dp-radius-full)" } : undefined}>
-            {variant === "icon" ? "→" : "Get started"}
-          </button>
-        )}
+        {(variant) => {
+          const button = (
+            <button className={`dp-btn dp-btn-${variant === "pill" ? "solid" : variant}`}
+                    style={variant === "pill" ? { borderRadius: "var(--dp-radius-full)" } : undefined}>
+              {variant === "icon" ? "→" : "Get started"}
+            </button>
+          );
+          // Only the selected variant demonstrates the chosen hover recipe live —
+          // the other swatches are alternatives, not the thing that's actually configured.
+          return variant === components.button
+            ? <HoverSwatch project={project} target="button">{button}</HoverSwatch>
+            : button;
+        }}
       </Group>
 
       <Group title="Card" selected={components.card} options={CardVariant.options}>
-        {(variant) => (
-          <article className={`dp-card dp-card-${variant}`} style={cardStyle(variant)}>
-            <h3 className="dp-card-title">Strategy</h3>
-            <p className="dp-card-body">A short description of the service.</p>
-          </article>
-        )}
+        {(variant) => {
+          const card = (
+            <article className={`dp-card dp-card-${variant}`} style={cardStyle(variant)}>
+              <h3 className="dp-card-title">Strategy</h3>
+              <p className="dp-card-body">A short description of the service.</p>
+            </article>
+          );
+          return variant === components.card
+            ? <HoverSwatch project={project} target="card">{card}</HoverSwatch>
+            : card;
+        }}
       </Group>
 
       <Group title="Navigation" selected={components.navbar} options={NavbarVariant.options}>
@@ -82,9 +96,31 @@ export function Components({ project, advanced = false }: { project: DesignProje
         <CarouselDemo />
       </section>
 
+      <section className="dp-section">
+        <h2 className="dp-section-title">Scroll behaviour</h2>
+        <p className="dp-hint" style={{ marginBottom: "var(--dp-space-4)" }}>
+          Each box has its own scroll container, driven by GSAP ScrollTrigger — the
+          classic reveal, parallax, pinned, and scroll-hijack patterns.
+        </p>
+        <ScrollShowcase />
+      </section>
+
       {advanced && <AdvancedInteractive />}
     </div>
   );
+}
+
+/** Attaches the project's chosen hover-interaction recipe to a single swatch element. */
+function HoverSwatch({
+  project, target, children,
+}: {
+  project: DesignProject;
+  target: "button" | "card";
+  children: ReactElement;
+}) {
+  const binding = project.recipe.motion.interaction[target];
+  const ref = useHoverInteraction<HTMLElement>(binding, project.tokens.motion);
+  return cloneElement(children, { ref } as Partial<unknown>);
 }
 
 /** Advanced-tier interactive primitives — hidden by default (see wave-2 categorisation). */

@@ -80,6 +80,8 @@ export const SCROLL_RECIPES: MotionRecipe[] = [
   { id: "animation.scroll.progress", label: "Scroll progress", binding: { recipe: "animation.scroll.progress", engine: "gsap", properties: ["scaleX"], reducedMotion: "none" } },
   { id: "animation.scroll.pinned", label: "Pinned section", binding: { recipe: "animation.scroll.pinned", engine: "gsap", properties: ["position", "y"], reducedMotion: "instant" } },
   { id: "animation.scroll.sticky", label: "Sticky transition", binding: { recipe: "animation.scroll.sticky", engine: "gsap", properties: ["opacity", "scale"], reducedMotion: "instant" } },
+  { id: "animation.scroll.scrubbed", label: "Scrubbed sequence", binding: { recipe: "animation.scroll.scrubbed", engine: "gsap", properties: ["y", "rotate"], reducedMotion: "instant" } },
+  { id: "animation.scroll.horizontal", label: "Horizontal sequence", binding: { recipe: "animation.scroll.horizontal", engine: "gsap", properties: ["x"], reducedMotion: "instant" } },
 ];
 
 export const ALL_RECIPES = [
