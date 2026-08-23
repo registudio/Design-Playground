@@ -8,7 +8,7 @@ import { ComponentsPanel } from "@/components/ComponentsPanel";
 import { AnimationsPanel } from "@/components/AnimationsPanel";
 import { ExportPanel } from "@/components/ExportPanel";
 import { ProjectPicker } from "@/components/ProjectPicker";
-import { PRESETS } from "@/presets";
+import { PRESETS, PRESET_FAMILIES } from "@/presets";
 
 /**
  * The playground shell (§9).
@@ -100,10 +100,14 @@ function TopBar({ onExport }: { onExport: () => void }) {
       <span className="text-[11px] text-chrome-muted">{dirty ? "Saving…" : "Saved"}</span>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {/* Labelled "Viewing" because the left rail also has a "Components" tab, and
+            two identically-named controls doing different jobs is genuinely confusing.
+            The rail picks what you edit; this picks what the preview renders. */}
+        <span className="text-[11px] text-chrome-muted">Viewing</span>
         <Segmented
           options={[
-            { value: "system", label: "System" },
-            { value: "components", label: "Components" },
+            { value: "system", label: "Style Guide" },
+            { value: "components", label: "Element Gallery" },
             { value: "sample", label: "Sample Page" },
           ]}
           value={previewMode}
@@ -181,34 +185,49 @@ function DeviceBar() {
 function PresetBar() {
   const edit = useProjectStore((s) => s.edit);
   const applied = useProjectStore((s) => s.project?.appliedPreset);
+
   return (
-    <div className="shrink-0 border-t border-chrome-border px-5 py-4">
+    <div className="max-h-[38vh] shrink-0 overflow-y-auto border-t border-chrome-border px-5 py-4">
       <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-chrome-muted">
         Start from a direction
       </span>
-      <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {PRESETS.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            title={preset.description}
-            // One history entry, so a client can try a direction and undo once.
-            onClick={() =>
-              edit(`Apply ${preset.name}`, (draft) => {
-                preset.apply(draft);
-                draft.appliedPreset = preset.id;
-              })
-            }
-            className={`rounded-md border px-2.5 py-1.5 text-[12px] transition-colors ${
-              applied === preset.id
-                ? "border-chrome-accent text-chrome-accent"
-                : "border-chrome-border text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
-            }`}
-          >
-            {preset.name}
-          </button>
-        ))}
-      </div>
+      {/* Grouped by family — sixteen ungrouped chips is a wall, and the families
+          are how a designer actually narrows down in front of a client. */}
+      {PRESET_FAMILIES.map((family) => (
+        <div key={family} className="mt-3">
+          <span className="text-[10px] uppercase tracking-[0.06em] text-chrome-muted opacity-70">
+            {family}
+          </span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {PRESETS.filter((p) => p.family === family).map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                title={preset.description}
+                // One history entry, so a client can try a direction and undo once.
+                onClick={() =>
+                  edit(`Apply ${preset.name}`, (draft) => {
+                    preset.apply(draft);
+                    draft.appliedPreset = preset.id;
+                  })
+                }
+                className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] transition-colors ${
+                  applied === preset.id
+                    ? "border-chrome-accent text-chrome-accent"
+                    : "border-chrome-border text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
+                }`}
+              >
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: preset.seed }}
+                  aria-hidden="true"
+                />
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

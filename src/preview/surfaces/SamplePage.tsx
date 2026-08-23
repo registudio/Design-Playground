@@ -1,4 +1,5 @@
 import type { DesignProject } from "@/schema/project";
+import { CustomCursor } from "../CustomCursor";
 
 /**
  * The Sample Page (§13.1): every current choice shown together in a realistic generic
@@ -15,10 +16,23 @@ export function SamplePage({ project }: { project: DesignProject }) {
   const brand = project.client || project.name || "Northwind";
 
   return (
-    <div className="dp-page dp-sample">
+    // Element variants are applied via data attributes on the root so a card or
+    // button choice reaches every instance on the page, not just the gallery.
+    <div
+      className="dp-page dp-sample"
+      data-button={components.button}
+      data-card={components.card}
+      data-input={components.input}
+      data-cursor={components.cursor}
+    >
+      <CustomCursor variant={components.cursor} />
       <Navbar variant={components.navbar} brand={brand} />
       <Hero variant={components.hero} brand={brand} />
       <Features variant={components.features} />
+      <SocialProof variant={components.socialProof} />
+      <Pricing variant={components.pricing} />
+      <Faq variant={components.faq} />
+      <Team variant={components.team} />
       <Cta variant={components.cta} />
       <Footer variant={components.footer} brand={brand} />
     </div>
@@ -94,6 +108,177 @@ function Features({ variant }: { variant: string }) {
             >
               <h3 className="dp-type dp-type-heading-3 dp-card-title">{item.title}</h3>
               <p className="dp-card-body">{item.body}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Social proof (§11.2). "none" removes the slot entirely. */
+function SocialProof({ variant }: { variant: string }) {
+  if (variant === "none") return null;
+
+  if (variant === "logo-cloud") {
+    return (
+      <section className="dp-proof dp-proof-logo-cloud" data-animate="entrance">
+        <div className="dp-section-inner">
+          <p className="dp-type dp-type-small dp-proof-eyebrow">Trusted by teams at</p>
+          <div className="dp-logo-cloud">
+            {["Northgate", "Vertex", "Lumen", "Arbor", "Kestrel"].map((name) => (
+              <span key={name} className="dp-logo-item">{name}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (variant === "metrics") {
+    const metrics = [
+      { value: "200+", label: "Projects delivered" },
+      { value: "98%", label: "Client retention" },
+      { value: "12 yrs", label: "In business" },
+      { value: "4.9/5", label: "Average rating" },
+    ];
+    return (
+      <section className="dp-proof dp-proof-metrics" data-animate="entrance">
+        <div className="dp-section-inner dp-metrics-grid">
+          {metrics.map((m) => (
+            <div key={m.label} className="dp-metric">
+              <span className="dp-type dp-type-heading-1 dp-metric-value">{m.value}</span>
+              <span className="dp-type dp-type-small dp-metric-label">{m.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  const quotes = [
+    { quote: "They rebuilt our site in six weeks and enquiries doubled.", name: "Sarah Tan", role: "MD, Northgate" },
+    { quote: "The clearest process we have had with any agency.", name: "James Lim", role: "Founder, Vertex" },
+    { quote: "Our team can finally update the site without help.", name: "Aisha Rahman", role: "Marketing, Lumen" },
+  ];
+  return (
+    <section className={`dp-proof dp-proof-${variant}`}>
+      <div className="dp-section-inner">
+        <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
+          What clients say
+        </h2>
+        <div className="dp-quote-grid">
+          {quotes.map((q, i) => (
+            <figure key={q.name} className="dp-card dp-quote" data-animate="entrance" style={{ ["--dp-stagger-index" as string]: i }}>
+              <blockquote className="dp-quote-text">“{q.quote}”</blockquote>
+              <figcaption className="dp-quote-author">
+                <span className="dp-quote-name">{q.name}</span>
+                <span className="dp-quote-role">{q.role}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Pricing({ variant }: { variant: string }) {
+  if (variant === "none") return null;
+  const tiers = [
+    { name: "Starter", price: "$2,400", blurb: "A focused single-page site.", features: ["1 page", "Brand setup", "2 revisions"] },
+    { name: "Business", price: "$6,800", blurb: "A complete multi-page site.", features: ["Up to 8 pages", "CMS setup", "Analytics", "4 revisions"], featured: true },
+    { name: "Bespoke", price: "Let's talk", blurb: "Custom scope and integrations.", features: ["Unlimited pages", "Custom features", "Ongoing support"] },
+  ];
+  const shown = variant === "single" ? tiers.slice(1, 2) : tiers;
+
+  return (
+    <section className={`dp-pricing dp-pricing-${variant}`}>
+      <div className="dp-section-inner">
+        <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
+          Simple pricing
+        </h2>
+        {variant === "toggle" && (
+          <div className="dp-pricing-toggle" data-animate="entrance">
+            <span className="dp-pricing-toggle-option" data-active="true">Monthly</span>
+            <span className="dp-pricing-toggle-option">Annual</span>
+          </div>
+        )}
+        <div className="dp-pricing-grid">
+          {shown.map((tier, i) => (
+            <article
+              key={tier.name}
+              className="dp-card dp-tier"
+              data-featured={tier.featured ? "true" : undefined}
+              data-animate="entrance"
+              style={{ ["--dp-stagger-index" as string]: i }}
+            >
+              <span className="dp-tier-name">{tier.name}</span>
+              <span className="dp-type dp-type-heading-1 dp-tier-price">{tier.price}</span>
+              <p className="dp-card-body">{tier.blurb}</p>
+              <ul className="dp-tier-features">
+                {tier.features.map((f) => <li key={f}>{f}</li>)}
+              </ul>
+              <button className="dp-btn dp-btn-solid">Choose {tier.name}</button>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Faq({ variant }: { variant: string }) {
+  if (variant === "none") return null;
+  const items = [
+    { q: "How long does a project take?", a: "Most business sites take four to eight weeks from kickoff to launch." },
+    { q: "Do you write the copy?", a: "We can. Most clients supply a first draft and we edit it for the web." },
+    { q: "Who hosts the site?", a: "We deploy to modern hosting and hand over full ownership." },
+    { q: "Can we update it ourselves?", a: "Yes — we set up a CMS and train your team before launch." },
+  ];
+  return (
+    <section className={`dp-faq dp-faq-${variant}`}>
+      <div className="dp-section-inner">
+        <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
+          Common questions
+        </h2>
+        <div className="dp-faq-list">
+          {items.map((item, i) => (
+            <div key={item.q} className="dp-faq-item" data-open={i === 0 ? "true" : undefined} data-animate="entrance">
+              <div className="dp-faq-question">
+                <span>{item.q}</span>
+                <span className="dp-faq-icon" aria-hidden="true">+</span>
+              </div>
+              <p className="dp-faq-answer">{item.a}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Team({ variant }: { variant: string }) {
+  if (variant === "none") return null;
+  const people = [
+    { name: "Reginald Tan", role: "Founder & Design Lead" },
+    { name: "Mei Chen", role: "Frontend Engineer" },
+    { name: "Daniel Okafor", role: "Brand Strategist" },
+    { name: "Priya Nair", role: "Project Manager" },
+  ];
+  const shown = variant === "featured" ? people.slice(0, 3) : people;
+  return (
+    <section className={`dp-team dp-team-${variant}`}>
+      <div className="dp-section-inner">
+        <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
+          The team
+        </h2>
+        <div className="dp-team-grid">
+          {shown.map((person, i) => (
+            <article key={person.name} className="dp-person" data-animate="entrance" style={{ ["--dp-stagger-index" as string]: i }}>
+              <div className="dp-person-photo dp-image" />
+              <span className="dp-person-name">{person.name}</span>
+              <span className="dp-person-role">{person.role}</span>
             </article>
           ))}
         </div>

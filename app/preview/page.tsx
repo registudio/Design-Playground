@@ -5,6 +5,7 @@ import type { DesignProject } from "@/schema/project";
 import {
   isHostMessage, PREVIEW_ORIGIN_MARKER, type PreviewState,
 } from "@/preview/bridge";
+import { findFont, googleFontUrl } from "@/fonts/catalogue";
 import { System } from "@/preview/surfaces/System";
 import { Components } from "@/preview/surfaces/Components";
 import { SamplePage } from "@/preview/surfaces/SamplePage";
@@ -58,6 +59,37 @@ export default function PreviewPage() {
     document.documentElement.classList.toggle("dark", state.theme === "dark");
     document.documentElement.classList.toggle("light", state.theme === "light");
   }, [state?.theme]);
+
+  /**
+   * Load the selected Google faces into the iframe. Without this the type tokens
+   * resolve to family names the document has never fetched, so every pairing renders
+   * as the fallback stack and the typography controls appear to do nothing.
+   *
+   * This is preview-only: the export records families and weights so the real build
+   * self-hosts them rather than depending on the Google CDN at runtime.
+   */
+  const fontKey = state
+    ? [state.project.tokens.typography.display.family,
+       state.project.tokens.typography.body.family,
+       state.project.tokens.typography.mono.family].join("|")
+    : "";
+
+  useEffect(() => {
+    if (!fontKey) return;
+    const entries = fontKey
+      .split("|")
+      .map(findFont)
+      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+    const href = googleFontUrl(entries);
+    if (!href) return;
+
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+    return () => link.remove();
+  }, [fontKey]);
 
   if (!state) return null;
 

@@ -14,7 +14,7 @@ import { fromCss, normalize, toSrgb } from "./oklch";
 const NEUTRAL_CHROMA = 0.03;
 
 /** Colours a designer never means as brand colours. */
-function classify(color: Oklch): DetectedColor["role"] {
+export function classify(color: Oklch): DetectedColor["role"] {
   if (color.c < NEUTRAL_CHROMA || color.l > 0.95 || color.l < 0.08) return "neutral";
   return "dominant";
 }

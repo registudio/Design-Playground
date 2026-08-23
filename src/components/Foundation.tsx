@@ -2,10 +2,11 @@
 
 import { useProjectStore } from "@/store/project-store";
 import { RADIUS_STEPS, SHADOW_STEPS, TYPE_STEPS } from "@/schema/tokens";
-import { Choice, Panel, Slider, Toggle } from "./controls";
+import { Choice, Field, Panel, Slider, Toggle } from "./controls";
 import { AssetUpload } from "./AssetUpload";
+import { AdditionalAssets } from "./AdditionalAssets";
 import { ColorEditor } from "./ColorEditor";
-import { GOOGLE_FONTS, SYSTEM_FONTS } from "@/fonts/catalogue";
+import { ALL_FONTS, FONT_PAIRINGS, GOOGLE_FONTS, SYSTEM_FONTS, findFont } from "@/fonts/catalogue";
 
 /**
  * The Foundation section (§10).
@@ -17,6 +18,7 @@ import { GOOGLE_FONTS, SYSTEM_FONTS } from "@/fonts/catalogue";
 export function Foundation() {
   const project = useProjectStore((s) => s.project);
   const edit = useProjectStore((s) => s.edit);
+  const advanced = useProjectStore((s) => s.advanced);
 
   if (!project) return null;
   const { tokens } = project;
@@ -27,48 +29,98 @@ export function Foundation() {
         <AssetUpload />
       </Panel>
 
+      <Panel title="Additional assets">
+        <AdditionalAssets />
+      </Panel>
+
       <ColorEditor />
 
       <Panel title="Typography">
-        {(["display", "body", "mono"] as const).map((role) => (
-          <label key={role} className="flex flex-col gap-2">
-            <span className="text-[13px] font-medium capitalize">{role}</span>
-            <select
-              value={tokens.typography[role].family}
-              onChange={(e) => {
-                const font = [...SYSTEM_FONTS, ...GOOGLE_FONTS].find((f) => f.family === e.target.value);
-                if (!font) return;
-                edit(`Set ${role} font`, (draft) => {
-                  draft.tokens.typography[role] = {
-                    ...draft.tokens.typography[role],
-                    family: font.family,
-                    fallback: font.fallback,
-                    source: font.source,
-                    weights: font.weights,
-                  };
-                  draft.provenance[`tokens.typography.${role}`] = "user";
-                });
-              }}
-              className="rounded-md border border-chrome-border bg-chrome-panel px-2.5 py-2 text-[13px]"
-            >
-              <optgroup label="System">
-                {SYSTEM_FONTS.map((f) => (
-                  <option key={f.family} value={f.family}>{f.family}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Google Fonts">
-                {GOOGLE_FONTS.map((f) => (
-                  <option key={f.family} value={f.family}>{f.family}</option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
-        ))}
+        {/* Pairing first: choosing two families independently from a long list mostly
+            produces mismatches, so the common path is one click. Individual family
+            pickers stay available underneath for when a client insists. */}
+        <Field label="Font pairing">
+          <div className="flex flex-col gap-1">
+            {FONT_PAIRINGS.map((pairing) => {
+              const active =
+                tokens.typography.display.family === pairing.display &&
+                tokens.typography.body.family === pairing.body;
+              return (
+                <button
+                  key={pairing.id}
+                  type="button"
+                  onClick={() =>
+                    edit(`Use ${pairing.name} pairing`, (draft) => {
+                      for (const role of ["display", "body", "mono"] as const) {
+                        const entry = findFont(pairing[role]);
+                        if (!entry) continue;
+                        draft.tokens.typography[role] = {
+                          ...draft.tokens.typography[role],
+                          family: entry.family,
+                          fallback: entry.fallback,
+                          source: entry.source,
+                          weights: entry.weights,
+                        };
+                        draft.provenance[`tokens.typography.${role}`] = "user";
+                      }
+                    })
+                  }
+                  className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                    active
+                      ? "border-chrome-accent bg-chrome-hover"
+                      : "border-chrome-border hover:bg-chrome-hover"
+                  }`}
+                >
+                  <span className="block text-[12px] font-medium">{pairing.name}</span>
+                  <span className="block text-[11px] text-chrome-muted">{pairing.description}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        {advanced &&
+          (["display", "body", "mono"] as const).map((role) => (
+            <label key={role} className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium capitalize">{role}</span>
+              <select
+                value={tokens.typography[role].family}
+                onChange={(e) => {
+                  const font = ALL_FONTS.find((f) => f.family === e.target.value);
+                  if (!font) return;
+                  edit(`Set ${role} font`, (draft) => {
+                    draft.tokens.typography[role] = {
+                      ...draft.tokens.typography[role],
+                      family: font.family,
+                      fallback: font.fallback,
+                      source: font.source,
+                      weights: font.weights,
+                    };
+                    draft.provenance[`tokens.typography.${role}`] = "user";
+                  });
+                }}
+                className="rounded-md border border-chrome-border bg-chrome-panel px-2.5 py-2 text-[13px]"
+              >
+                <optgroup label="System">
+                  {SYSTEM_FONTS.map((f) => (
+                    <option key={f.family} value={f.family}>{f.family}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Google Fonts">
+                  {GOOGLE_FONTS.map((f) => (
+                    <option key={`${f.category}-${f.family}`} value={f.family}>
+                      {f.family}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          ))}
 
         <Slider
           label="Type scale"
           from="Compact" to="Dramatic"
-          min={1.1} max={1.4} step={0.01}
+          min={1.1} max={1.45} step={0.01}
           value={inferredRatio(tokens.typography.scale.heading1.size, tokens.typography.scale.body.size)}
           format={(v) => `${v.toFixed(2)}×`}
           onChange={(ratio) =>

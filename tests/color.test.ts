@@ -188,3 +188,16 @@ describe("semantic suggestion", () => {
     expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe("google font url", () => {
+  it("deduplicates a family reused across roles", async () => {
+    const { googleFontUrl } = await import("@/fonts/catalogue");
+    const url = googleFontUrl([
+      { family: "Space Mono", fallback: [], source: "google", weights: [400, 700], category: "mono" },
+      { family: "Chivo", fallback: [], source: "google", weights: [400], category: "sans" },
+      { family: "Space Mono", fallback: [], source: "google", weights: [400, 700], category: "mono" },
+    ]);
+    expect(url!.match(/family=Space\+Mono/g)).toHaveLength(1);
+    expect(url).toContain("family=Chivo");
+  });
+});

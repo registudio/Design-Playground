@@ -3,18 +3,23 @@
 import { useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { hashBlob, putAsset } from "@/store/persistence";
-import { extractFromSvg, extractFromPixels, polarityOf, suitableSurfaces } from "@/color/extract";
+import { analyseFile } from "@/color/analyse-file";
+import { polarityOf, suitableSurfaces } from "@/color/extract";
+import { aggregateAssetColors } from "@/color/aggregate";
 import { suggestPalette } from "@/color/semantic";
-import type { DetectedColor, LogoAnalysis } from "@/schema/project";
 import type { AssetKind } from "@/schema/assets";
 import { toHex } from "@/color/oklch";
 
 /**
- * Logo upload and analysis (§10.1).
+ * Primary logo upload and analysis (§10.1).
  *
  * The analyser proposes a palette and stores it as a suggestion snapshot; it never
  * locks the design. The user can restore that snapshot at any point, and every
  * assignment stays editable — which is what the spec explicitly requires.
+ *
+ * The palette suggestion is recomputed from every analysed asset (this logo plus
+ * anything added under "Additional assets" below), not just this file — see
+ * @/color/aggregate for how logo colours and recurring colours get prioritised.
  */
 
 const ACCEPTED = "image/svg+xml,image/png,image/jpeg,image/webp";
@@ -34,10 +39,8 @@ export function AssetUpload() {
     try {
       const hash = await hashBlob(file);
       await putAsset(hash, file.type, file);
-
-      const analysis = await analyseLogo(file, hash);
-      const detected = analysis.colors;
-      const suggestion = suggestPalette({ detected });
+      const analysis = await analyseFile(file);
+      const wasFirstAnalysis = project.analysis === null;
 
       edit("Upload logo", (draft) => {
         draft.assets.images = [
@@ -49,17 +52,32 @@ export function AssetUpload() {
             bytes: file.size,
             hash,
             hasTransparency: analysis.hasTransparency,
-            detectedColors: detected.map((d) => d.color),
+            detectedColors: analysis.colors.map((d) => d.color),
             ...(analysis.dimensions ?? {}),
           },
         ];
         draft.assets.logo.primary = file.name;
-        draft.analysis = analysis.record;
+        draft.analysis = {
+          assetFile: file.name,
+          method: analysis.method,
+          colors: analysis.colors,
+          polarity: polarityOf(analysis.colors),
+          hasTransparency: analysis.hasTransparency,
+          suitableSurfaces: suitableSurfaces(analysis.colors),
+        };
+
+        const combined = aggregateAssetColors(draft.assets.images);
+        const suggestion = suggestPalette({ detected: combined });
         draft.suggestion = suggestion;
-        draft.tokens.colors = suggestion;
-        // Colours now trace to the asset, which is what enables reset-to-suggestion.
-        for (const key of Object.keys(suggestion.light.semantic)) {
-          draft.provenance[`tokens.colors.${key}`] = "extracted";
+
+        // Apply automatically only when this is the first colour signal the project
+        // has ever had. Once a palette exists — from this logo or a manual edit — a
+        // later upload updates the suggestion but never silently overwrites it.
+        if (wasFirstAnalysis) {
+          draft.tokens.colors = suggestion;
+          for (const key of Object.keys(suggestion.light.semantic)) {
+            draft.provenance[`tokens.colors.${key}`] = "extracted";
+          }
         }
       });
     } catch (cause) {
@@ -142,71 +160,4 @@ export function AssetUpload() {
       )}
     </div>
   );
-}
-
-interface AnalysisResult {
-  colors: DetectedColor[];
-  hasTransparency: boolean;
-  dimensions?: { width: number; height: number };
-  record: LogoAnalysis;
-}
-
-/**
- * SVG is parsed for exact paint values; raster is decoded and quantized. The SVG path
- * is strongly preferred — it returns the designer's actual brand colours rather than
- * an approximation contaminated by antialiasing.
- */
-async function analyseLogo(file: File, _hash: string): Promise<AnalysisResult> {
-  const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
-
-  if (isSvg) {
-    const text = await file.text();
-    const colors = extractFromSvg(text);
-    if (colors.length === 0) throw new Error("No colours found in that SVG");
-    return {
-      colors,
-      hasTransparency: true,
-      record: {
-        assetFile: file.name,
-        method: "svg-attributes",
-        colors,
-        polarity: polarityOf(colors),
-        hasTransparency: true,
-        suitableSurfaces: suitableSurfaces(colors),
-      },
-    };
-  }
-
-  const bitmap = await createImageBitmap(file);
-  // Downscale before sampling: 128px is ample for palette extraction and keeps this
-  // fast enough to stay on the main thread.
-  const size = 128;
-  const ratio = Math.min(size / bitmap.width, size / bitmap.height, 1);
-  const w = Math.max(1, Math.round(bitmap.width * ratio));
-  const h = Math.max(1, Math.round(bitmap.height * ratio));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) throw new Error("Could not read image data");
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  const { data } = ctx.getImageData(0, 0, w, h);
-
-  const { colors, hasTransparency } = extractFromPixels(data);
-  if (colors.length === 0) throw new Error("No colours found in that image");
-
-  return {
-    colors,
-    hasTransparency,
-    dimensions: { width: bitmap.width, height: bitmap.height },
-    record: {
-      assetFile: file.name,
-      method: "raster-quantize",
-      colors,
-      polarity: polarityOf(colors),
-      hasTransparency,
-      suitableSurfaces: suitableSurfaces(colors),
-    },
-  };
 }
