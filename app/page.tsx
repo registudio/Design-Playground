@@ -158,6 +158,7 @@ function TopBar({ onExport }: { onExport: () => void }) {
         </button>
 
         <HistoryButton />
+        <SnapshotButton />
 
         <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-[12px] text-chrome-muted">
           <input
@@ -234,6 +235,107 @@ function HistoryButton() {
               {entry.label}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Named snapshots (§Wave D) — a deliberate, named checkpoint that survives across
+ * sessions, distinct from the linear undo history above. "Before client feedback",
+ * "After client feedback": states worth returning to long after the undo stack that
+ * produced them is gone.
+ */
+function SnapshotButton() {
+  const snapshots = useProjectStore((s) => s.snapshots);
+  const refreshSnapshots = useProjectStore((s) => s.refreshSnapshots);
+  const createSnapshot = useProjectStore((s) => s.createSnapshot);
+  const restoreSnapshot = useProjectStore((s) => s.restoreSnapshot);
+  const removeSnapshot = useProjectStore((s) => s.removeSnapshot);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    void refreshSnapshots();
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open, refreshSnapshots]);
+
+  const save = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    void createSnapshot(trimmed);
+    setName("");
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover"
+        title="Named snapshots"
+      >
+        Snapshots
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-md border border-chrome-border bg-chrome-panel p-2 shadow-lg">
+          <div className="flex gap-1.5">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && save()}
+              placeholder="Snapshot name…"
+              className="min-w-0 flex-1 rounded-md border border-chrome-border bg-chrome-bg px-2.5 py-1.5 text-[12px]"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={!name.trim()}
+              className="shrink-0 rounded-md bg-chrome-accent px-2.5 py-1.5 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+            >
+              Save
+            </button>
+          </div>
+
+          <div className="mt-2 max-h-64 overflow-y-auto">
+            {snapshots.length === 0 ? (
+              <p className="px-1 py-2 text-[12px] text-chrome-muted">No snapshots yet.</p>
+            ) : (
+              snapshots.map((snap) => (
+                <div
+                  key={snap.id}
+                  className="group flex items-center justify-between gap-2 rounded-md px-1.5 py-1.5 hover:bg-chrome-hover"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { restoreSnapshot(snap.id); setOpen(false); }}
+                    className="min-w-0 flex-1 text-left"
+                    title={`Restore "${snap.name}"`}
+                  >
+                    <span className="block truncate text-[12px] text-chrome-text">{snap.name}</span>
+                    <span className="block text-[10px] text-chrome-muted">
+                      {new Date(snap.createdAt).toLocaleString()}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removeSnapshot(snap.id)}
+                    className="shrink-0 text-[11px] text-chrome-muted opacity-0 hover:text-chrome-danger group-hover:opacity-100"
+                    title="Delete snapshot"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

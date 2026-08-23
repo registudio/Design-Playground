@@ -74,5 +74,25 @@ export const ProjectMeta = z.object({
   client: z.string(),
   updatedAt: z.number(),
   createdAt: z.number(),
+  /** Free-form labels for filtering the project directory (e.g. "law firm", "2024"). */
+  tags: z.array(z.string()).default([]),
+  /** Archived projects are hidden from the default directory view but not deleted. */
+  archived: z.boolean().default(false),
 });
 export type ProjectMeta = z.infer<typeof ProjectMeta>;
+
+/**
+ * A named snapshot: a full, restorable copy of a project at a point in time (§13.4's
+ * future "duplicate configuration" idea, made concrete). Distinct from undo history —
+ * undo is a linear, per-session log of small edits; a snapshot is a deliberate
+ * checkpoint ("before client feedback", "after client feedback") a designer can return
+ * to across sessions, long after the undo stack that led there is gone.
+ */
+export const Snapshot = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  name: z.string(),
+  createdAt: z.number(),
+  project: DesignProject,
+});
+export type Snapshot = z.infer<typeof Snapshot>;

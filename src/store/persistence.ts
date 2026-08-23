@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import { DesignProject, type ProjectMeta } from "@/schema/project";
+import { DesignProject, Snapshot, type ProjectMeta } from "@/schema/project";
 
 /**
  * IndexedDB persistence (§13.5).
@@ -11,12 +11,13 @@ import { DesignProject, type ProjectMeta } from "@/schema/project";
  */
 
 const DB_NAME = "design-playground";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface PlaygroundDB extends DBSchema {
   projects: { key: string; value: DesignProject };
   meta: { key: string; value: ProjectMeta; indexes: { updatedAt: number } };
   assets: { key: string; value: { hash: string; mime: string; blob: Blob } };
+  snapshots: { key: string; value: Snapshot; indexes: { projectId: string } };
 }
 
 let dbPromise: Promise<IDBPDatabase<PlaygroundDB>> | null = null;
@@ -24,11 +25,17 @@ let dbPromise: Promise<IDBPDatabase<PlaygroundDB>> | null = null;
 function db() {
   if (!dbPromise) {
     dbPromise = openDB<PlaygroundDB>(DB_NAME, DB_VERSION, {
-      upgrade(database) {
-        database.createObjectStore("projects", { keyPath: "id" });
-        const meta = database.createObjectStore("meta", { keyPath: "id" });
-        meta.createIndex("updatedAt", "updatedAt");
-        database.createObjectStore("assets", { keyPath: "hash" });
+      upgrade(database, oldVersion) {
+        if (oldVersion < 1) {
+          database.createObjectStore("projects", { keyPath: "id" });
+          const meta = database.createObjectStore("meta", { keyPath: "id" });
+          meta.createIndex("updatedAt", "updatedAt");
+          database.createObjectStore("assets", { keyPath: "hash" });
+        }
+        if (oldVersion < 2) {
+          const snapshots = database.createObjectStore("snapshots", { keyPath: "id" });
+          snapshots.createIndex("projectId", "projectId");
+        }
       },
     });
   }
@@ -46,6 +53,8 @@ export async function saveProject(project: DesignProject): Promise<void> {
     client: project.client,
     createdAt: existing?.createdAt ?? Date.now(),
     updatedAt: Date.now(),
+    tags: existing?.tags ?? [],
+    archived: existing?.archived ?? false,
   });
   await tx.done;
 }
@@ -58,6 +67,7 @@ export async function loadProject(id: string): Promise<DesignProject | null> {
   return parsed.success ? parsed.data : null;
 }
 
+/** Every project's metadata, most recently updated first. */
 export async function listProjects(): Promise<ProjectMeta[]> {
   const all = await (await db()).getAllFromIndex("meta", "updatedAt");
   return all.reverse();
@@ -65,13 +75,31 @@ export async function listProjects(): Promise<ProjectMeta[]> {
 
 export async function deleteProject(id: string): Promise<void> {
   const database = await db();
-  const tx = database.transaction(["projects", "meta"], "readwrite");
+  const tx = database.transaction(["projects", "meta", "snapshots"], "readwrite");
   await tx.objectStore("projects").delete(id);
   await tx.objectStore("meta").delete(id);
+  const snapshotKeys = await tx.objectStore("snapshots").index("projectId").getAllKeys(id);
+  for (const key of snapshotKeys) await tx.objectStore("snapshots").delete(key);
   await tx.done;
 }
 
-// --- Binary assets ---------------------------------------------------------
+export async function setProjectArchived(id: string, archived: boolean): Promise<void> {
+  const database = await db();
+  const tx = database.transaction("meta", "readwrite");
+  const existing = await tx.store.get(id);
+  if (existing) await tx.store.put({ ...existing, archived });
+  await tx.done;
+}
+
+export async function setProjectTags(id: string, tags: string[]): Promise<void> {
+  const database = await db();
+  const tx = database.transaction("meta", "readwrite");
+  const existing = await tx.store.get(id);
+  if (existing) await tx.store.put({ ...existing, tags });
+  await tx.done;
+}
+
+// --- Binary assets -----------------------------------------------------------
 
 export async function putAsset(hash: string, mime: string, blob: Blob): Promise<void> {
   await (await db()).put("assets", { hash, mime, blob });
@@ -91,4 +119,30 @@ export async function hashBlob(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", buffer);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// --- Snapshots -----------------------------------------------------------------
+// Distinct from undo history: a deliberate, named checkpoint that survives across
+// sessions, long after the undo stack that produced it is gone (see Snapshot's
+// doc comment in schema/project.ts).
+
+export async function saveSnapshot(projectId: string, name: string, project: DesignProject): Promise<Snapshot> {
+  const snapshot: Snapshot = {
+    id: crypto.randomUUID(),
+    projectId,
+    name,
+    createdAt: Date.now(),
+    project,
+  };
+  await (await db()).put("snapshots", snapshot);
+  return snapshot;
+}
+
+export async function listSnapshots(projectId: string): Promise<Snapshot[]> {
+  const all = await (await db()).getAllFromIndex("snapshots", "projectId", projectId);
+  return all.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function deleteSnapshot(id: string): Promise<void> {
+  await (await db()).delete("snapshots", id);
 }

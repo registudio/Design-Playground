@@ -1,14 +1,17 @@
 "use client";
 
 import { create } from "zustand";
-import type { DesignProject } from "@/schema/project";
+import type { DesignProject, Snapshot } from "@/schema/project";
 import type { ProjectMeta } from "@/schema/project";
 import { createProject } from "@/schema/defaults";
 import {
   canRedo, canUndo, commit, emptyHistory, jumpTo, redo, timeline, undo,
   type History, type TimelineEntry,
 } from "./history";
-import { listProjects, loadProject, saveProject } from "./persistence";
+import {
+  deleteProject, deleteSnapshot, listProjects, listSnapshots, loadProject, saveProject,
+  saveSnapshot, setProjectArchived, setProjectTags,
+} from "./persistence";
 
 /**
  * Single source of truth for the open project. The preview iframe subscribes to this
@@ -27,6 +30,7 @@ interface ProjectState {
   project: DesignProject | null;
   history: History;
   projects: ProjectMeta[];
+  snapshots: Snapshot[];
   status: "idle" | "loading" | "ready";
   dirty: boolean;
 
@@ -55,6 +59,18 @@ interface ProjectState {
   setDevice: (d: Device) => void;
   setTheme: (t: Theme) => void;
   setAdvanced: (v: boolean) => void;
+
+  // Named snapshots (distinct from linear undo — see schema/project.ts's Snapshot).
+  refreshSnapshots: () => Promise<void>;
+  createSnapshot: (name: string) => Promise<void>;
+  /** Restores a snapshot's full state as a single undoable edit. */
+  restoreSnapshot: (id: string) => void;
+  removeSnapshot: (id: string) => Promise<void>;
+
+  // Project directory: tags and archive state, kept in meta (§Wave D).
+  setProjectTags: (id: string, tags: string[]) => Promise<void>;
+  setProjectArchived: (id: string, archived: boolean) => Promise<void>;
+  removeProject: (id: string) => Promise<void>;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -70,6 +86,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   project: null,
   history: emptyHistory(),
   projects: [],
+  snapshots: [],
   status: "idle",
   dirty: false,
   section: "foundation",
@@ -83,7 +100,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   newProject: async (name, client = "") => {
     const project = createProject(name, client);
     await saveProject(project);
-    set({ project, history: emptyHistory(), status: "ready", dirty: false });
+    set({ project, history: emptyHistory(), status: "ready", dirty: false, snapshots: [] });
     await get().refreshProjects();
   },
 
@@ -95,7 +112,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       history: emptyHistory(),
       status: project ? "ready" : "idle",
       dirty: false,
+      snapshots: [],
     });
+    if (project) await get().refreshSnapshots();
   },
 
   edit: (label, recipe, coalesceKey) => {
@@ -140,4 +159,50 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setDevice: (device) => set({ device }),
   setTheme: (theme) => set({ theme }),
   setAdvanced: (advanced) => set({ advanced }),
+
+  refreshSnapshots: async () => {
+    const { project } = get();
+    if (!project) return;
+    set({ snapshots: await listSnapshots(project.id) });
+  },
+
+  createSnapshot: async (name) => {
+    const { project } = get();
+    if (!project) return;
+    await saveSnapshot(project.id, name, project);
+    await get().refreshSnapshots();
+  },
+
+  restoreSnapshot: (id) => {
+    const { project, history, snapshots } = get();
+    const snapshot = snapshots.find((s) => s.id === id);
+    if (!project || !snapshot) return;
+    const result = commit(project, history, `Restore snapshot "${snapshot.name}"`, (draft) => {
+      Object.assign(draft, snapshot.project);
+    });
+    if (result.state === project) return;
+    set({ project: result.state, history: result.history, dirty: true });
+    scheduleSave(result.state, () => set({ dirty: false }));
+  },
+
+  removeSnapshot: async (id) => {
+    await deleteSnapshot(id);
+    await get().refreshSnapshots();
+  },
+
+  setProjectTags: async (id, tags) => {
+    await setProjectTags(id, tags);
+    await get().refreshProjects();
+  },
+
+  setProjectArchived: async (id, archived) => {
+    await setProjectArchived(id, archived);
+    await get().refreshProjects();
+  },
+
+  removeProject: async (id) => {
+    await deleteProject(id);
+    if (get().project?.id === id) set({ project: null, history: emptyHistory(), snapshots: [] });
+    await get().refreshProjects();
+  },
 }));

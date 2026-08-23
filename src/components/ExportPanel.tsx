@@ -7,6 +7,7 @@ import {
   downloadZip, pickDirectory, supportsDirectoryAccess, writeToDirectory, ensureWritable,
 } from "@/export/deliver";
 import { packProject, downloadProject } from "@/export/project-file";
+import { downloadRationale } from "@/export/rationale";
 import { getAsset } from "@/store/persistence";
 
 /**
@@ -97,6 +98,14 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
             className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
           >
             Save project file (backup)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => downloadRationale(project)}
+            className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
+          >
+            Download client rationale (HTML)
           </button>
         </div>
 
