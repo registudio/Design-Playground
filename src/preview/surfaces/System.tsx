@@ -22,7 +22,7 @@ const TYPE_LABELS: Record<(typeof TYPE_STEPS)[number], string> = {
   caption: "Caption",
 };
 
-export function System({ project }: { project: DesignProject }) {
+export function System({ project, advanced = false }: { project: DesignProject; advanced?: boolean }) {
   const scaleNames = Object.keys(project.tokens.colors.scales).sort();
 
   return (
@@ -200,7 +200,125 @@ export function System({ project }: { project: DesignProject }) {
           <div className="dp-image" data-ratio="1/1" />
         </div>
       </Section>
+
+      {advanced && <AdvancedElements />}
     </div>
+  );
+}
+
+/**
+ * Advanced-tier primitives (implementation detail, power-user, or low general
+ * applicability for a business site — see the wave-2 categorisation). Hidden by
+ * default so the default view stays the client-facing set from §10.7.
+ */
+function AdvancedElements() {
+  return (
+    <>
+      <Section title="Breadcrumb">
+        <nav className="dp-breadcrumb" aria-label="Breadcrumb">
+          <a href="#0">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="#0">Services</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">Website design</span>
+        </nav>
+      </Section>
+
+      <Section title="Stack (layout primitive)">
+        <div className="dp-stack-demo" style={{ ["--dp-stack-gap" as string]: "var(--dp-space-3)" }}>
+          <span>Item A</span>
+          <span>Item B</span>
+          <span>Item C</span>
+        </div>
+        <p className="dp-hint">A flex column with a configurable gap — used to compose other primitives, not to be styled itself.</p>
+      </Section>
+
+      <Section title="Table">
+        <div className="dp-table-wrap">
+          <table className="dp-table">
+            <thead>
+              <tr><th>Plan</th><th>Pages</th><th>Price</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Starter</td><td>1</td><td>$2,400</td><td><span className="dp-badge dp-badge-success">Active</span></td></tr>
+              <tr><td>Business</td><td>8</td><td>$6,800</td><td><span className="dp-badge dp-badge-primary">Popular</span></td></tr>
+              <tr><td>Bespoke</td><td>Unlimited</td><td>Custom</td><td><span className="dp-badge dp-badge-warning">On request</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section title="Loading states">
+        <div className="dp-row" style={{ alignItems: "center" }}>
+          <div className="dp-spinner" role="status" aria-label="Loading" />
+          <div className="dp-progress"><div className="dp-progress-bar" style={{ width: "62%" }} /></div>
+        </div>
+        <div className="dp-skeleton-row">
+          <div className="dp-skeleton dp-skeleton-avatar" />
+          <div className="dp-skeleton-lines">
+            <div className="dp-skeleton dp-skeleton-line" style={{ width: "60%" }} />
+            <div className="dp-skeleton dp-skeleton-line" style={{ width: "85%" }} />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="KBD &amp; code">
+        <div className="dp-stack">
+          <p className="dp-hint">
+            Press <kbd className="dp-kbd">⌘</kbd> + <kbd className="dp-kbd">K</kbd> to open search.
+          </p>
+          <pre className="dp-code-block"><code>{`npm install
+npm run dev`}</code></pre>
+        </div>
+      </Section>
+
+      <Section title="Comment card">
+        <div className="dp-comment">
+          <span className="dp-avatar">M</span>
+          <div className="dp-comment-body">
+            <div className="dp-comment-header">
+              <span className="dp-comment-name">Mei Chen</span>
+              <span className="dp-comment-time">2 hours ago</span>
+            </div>
+            <p className="dp-comment-text">Loving the new hero section — much clearer than the old one.</p>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Article header">
+        <header className="dp-article-header">
+          <span className="dp-badge dp-badge-primary">Guides</span>
+          <h2 className="dp-type dp-type-heading-2">Five things to check before your site launches</h2>
+          <div className="dp-article-meta">
+            <span className="dp-avatar">R</span>
+            <span>Reginald Tan · 12 Aug · 6 min read</span>
+          </div>
+        </header>
+      </Section>
+
+      <Section title="Filter sidebar">
+        <div className="dp-filter-sidebar">
+          <div className="dp-filter-group">
+            <span className="dp-field-label">Category</span>
+            <select className="dp-input dp-select">
+              <option>All services</option>
+              <option>Web design</option>
+              <option>Branding</option>
+            </select>
+          </div>
+          <div className="dp-filter-group">
+            <span className="dp-field-label">Page count</span>
+            <label className="dp-check"><input type="checkbox" defaultChecked readOnly /><span className="dp-check-box" aria-hidden="true" /><span>1–5 pages</span></label>
+            <label className="dp-check"><input type="checkbox" readOnly /><span className="dp-check-box" aria-hidden="true" /><span>6–10 pages</span></label>
+          </div>
+          <div className="dp-filter-group">
+            <span className="dp-field-label">Sort by</span>
+            <label className="dp-check dp-check-radio"><input type="radio" name="dp-filter-sort" defaultChecked readOnly /><span className="dp-check-box" aria-hidden="true" /><span>Newest</span></label>
+            <label className="dp-check dp-check-radio"><input type="radio" name="dp-filter-sort" readOnly /><span className="dp-check-box" aria-hidden="true" /><span>Price</span></label>
+          </div>
+        </div>
+      </Section>
+    </>
   );
 }
 

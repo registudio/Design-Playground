@@ -22,6 +22,10 @@ export interface PreviewState {
   mode: PreviewMode;
   device: Device;
   theme: Theme;
+  /** Gates the Advanced-tier primitives (Modal, Table, Toast, etc.) in the Style
+   * Guide and Element Gallery surfaces — implementation-detail components a client
+   * doesn't need to see by default. */
+  advanced: boolean;
 }
 
 export type HostMessage =

@@ -23,6 +23,7 @@ export function PreviewFrame() {
   const mode = useProjectStore((s) => s.previewMode);
   const device = useProjectStore((s) => s.device);
   const theme = useProjectStore((s) => s.theme);
+  const advanced = useProjectStore((s) => s.advanced);
 
   const frameRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,9 +52,9 @@ export function PreviewFrame() {
     post({
       marker: PREVIEW_ORIGIN_MARKER,
       type: "state",
-      payload: { project, mode, device, theme },
+      payload: { project, mode, device, theme, advanced },
     });
-  }, [ready, project, mode, device, theme]);
+  }, [ready, project, mode, device, theme, advanced]);
 
   // Fast path: tokens alone, applied as CSS with no remount.
   useEffect(() => {

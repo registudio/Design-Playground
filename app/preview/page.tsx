@@ -93,16 +93,22 @@ export default function PreviewPage() {
 
   if (!state) return null;
 
-  return <Surface project={state.project} mode={state.mode} />;
+  return <Surface project={state.project} mode={state.mode} advanced={state.advanced} />;
 }
 
-function Surface({ project, mode }: { project: DesignProject; mode: PreviewState["mode"] }) {
+function Surface({
+  project, mode, advanced,
+}: {
+  project: DesignProject;
+  mode: PreviewState["mode"];
+  advanced: boolean;
+}) {
   switch (mode) {
     case "components":
-      return <Components project={project} />;
+      return <Components project={project} advanced={advanced} />;
     case "sample":
       return <SamplePage project={project} />;
     default:
-      return <System project={project} />;
+      return <System project={project} advanced={advanced} />;
   }
 }

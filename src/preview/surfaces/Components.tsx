@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DesignProject } from "@/schema/project";
 import {
   ButtonVariant, CardVariant, HeroVariant, NavbarVariant,
@@ -14,7 +14,7 @@ import {
  * the recipe automatically shows it here.
  */
 
-export function Components({ project }: { project: DesignProject }) {
+export function Components({ project, advanced = false }: { project: DesignProject; advanced?: boolean }) {
   const { components } = project.recipe;
 
   return (
@@ -81,7 +81,240 @@ export function Components({ project }: { project: DesignProject }) {
         <h2 className="dp-section-title">Carousel</h2>
         <CarouselDemo />
       </section>
+
+      {advanced && <AdvancedInteractive />}
     </div>
+  );
+}
+
+/** Advanced-tier interactive primitives — hidden by default (see wave-2 categorisation). */
+function AdvancedInteractive() {
+  return (
+    <>
+      <section className="dp-section">
+        <h2 className="dp-section-title">Modal</h2>
+        <ModalDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Popover</h2>
+        <PopoverDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Toast</h2>
+        <ToastDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Dropdown</h2>
+        <DropdownDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Tooltip</h2>
+        <TooltipDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Pagination</h2>
+        <PaginationDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Slider</h2>
+        <SliderDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Animated counter</h2>
+        <CounterDemo />
+      </section>
+
+      <section className="dp-section">
+        <h2 className="dp-section-title">Typewriter text</h2>
+        <TypewriterDemo />
+      </section>
+    </>
+  );
+}
+
+function ModalDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="dp-btn dp-btn-solid" onClick={() => setOpen(true)}>Open modal</button>
+      {open && (
+        <div className="dp-modal-backdrop" onClick={() => setOpen(false)}>
+          <div className="dp-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dp-card-title">Confirm project</h3>
+            <p className="dp-card-body">This will start a new project using the current design direction.</p>
+            <div className="dp-row" style={{ justifyContent: "flex-end" }}>
+              <button className="dp-btn dp-btn-ghost" onClick={() => setOpen(false)}>Cancel</button>
+              <button className="dp-btn dp-btn-solid" onClick={() => setOpen(false)}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function PopoverDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="dp-popover-wrap">
+      <button className="dp-btn dp-btn-outline" onClick={() => setOpen((v) => !v)}>
+        {open ? "Close options" : "Show options"}
+      </button>
+      {open && (
+        <div className="dp-popover" role="menu">
+          <button className="dp-popover-item">Duplicate</button>
+          <button className="dp-popover-item">Rename</button>
+          <button className="dp-popover-item">Delete</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToastDemo() {
+  const [visible, setVisible] = useState(false);
+  const show = () => {
+    setVisible(true);
+    setTimeout(() => setVisible(false), 2600);
+  };
+  return (
+    <div className="dp-toast-wrap">
+      <button className="dp-btn dp-btn-outline" onClick={show}>Trigger toast</button>
+      {visible && (
+        <div className="dp-toast dp-toast-success" role="status">
+          <span>Changes saved.</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const DROPDOWN_OPTIONS = ["Newest first", "Oldest first", "Highest price", "Lowest price"];
+
+function DropdownDemo() {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState(DROPDOWN_OPTIONS[0]!);
+  return (
+    <div className="dp-dropdown-wrap">
+      <button className="dp-btn dp-btn-outline dp-dropdown-trigger" onClick={() => setOpen((v) => !v)}>
+        {selected} <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="dp-dropdown-menu" role="listbox">
+          {DROPDOWN_OPTIONS.map((option) => (
+            <button
+              key={option}
+              className="dp-dropdown-item"
+              data-selected={option === selected ? "true" : undefined}
+              onClick={() => { setSelected(option); setOpen(false); }}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TooltipDemo() {
+  return (
+    <div className="dp-row">
+      <span className="dp-tooltip-wrap">
+        <button className="dp-btn dp-btn-ghost">Hover me</button>
+        <span className="dp-tooltip" role="tooltip">Exports as a ZIP file</span>
+      </span>
+    </div>
+  );
+}
+
+function PaginationDemo() {
+  const [page, setPage] = useState(2);
+  const total = 5;
+  return (
+    <nav className="dp-pagination" aria-label="Pagination">
+      <button className="dp-pagination-arrow" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹</button>
+      {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
+        <button
+          key={n}
+          className="dp-pagination-item"
+          data-active={n === page ? "true" : undefined}
+          onClick={() => setPage(n)}
+        >
+          {n}
+        </button>
+      ))}
+      <button className="dp-pagination-arrow" disabled={page === total} onClick={() => setPage((p) => p + 1)}>›</button>
+    </nav>
+  );
+}
+
+function SliderDemo() {
+  const [value, setValue] = useState(60);
+  return (
+    <div className="dp-slider-demo">
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+        className="dp-slider"
+      />
+      <span className="dp-slider-value">{value}%</span>
+    </div>
+  );
+}
+
+function CounterDemo() {
+  const [value, setValue] = useState(0);
+  const target = 248;
+  useEffect(() => {
+    let frame: number;
+    const start = performance.now();
+    const duration = 1200;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      // Ease-out: fast start, gentle settle, matching a typical "counting up" feel.
+      const eased = 1 - (1 - progress) ** 3;
+      setValue(Math.round(eased * target));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  return (
+    <div className="dp-counter">
+      <span className="dp-type dp-type-display-l">{value}</span>
+      <span className="dp-card-body">projects delivered</span>
+    </div>
+  );
+}
+
+function TypewriterDemo() {
+  const full = "Design that earns attention.";
+  const [text, setText] = useState("");
+  useEffect(() => {
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setText(full.slice(0, i));
+      if (i >= full.length) clearInterval(id);
+    }, 45);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <p className="dp-type dp-type-heading-3 dp-typewriter">
+      {text}
+      <span className="dp-typewriter-cursor" aria-hidden="true" />
+    </p>
   );
 }
 
