@@ -29,14 +29,14 @@ export const FeaturesVariant = z.enum([
   "grid", "bento", "alternating", "tabs", "cards", "demo",
 ]);
 export const CtaVariant = z.enum(["banner", "contact-form", "booking", "pricing", "newsletter"]);
-export const FooterVariant = z.enum(["minimal", "columns", "expanded"]);
+export const FooterVariant = z.enum(["minimal", "columns", "expanded", "mega", "simple", "social"]);
 
 // Social proof and content sections (§11.2). Each is an optional slot on the Sample
 // Page — "none" hides it, so a project without pricing simply doesn't show pricing.
 export const SocialProofVariant = z.enum(["none", "logo-cloud", "metrics", "testimonial-grid", "testimonial-carousel", "case-study"]);
 export const PricingVariant = z.enum(["none", "tiers", "single", "comparison", "toggle"]);
-export const FaqVariant = z.enum(["none", "accordion", "two-column", "grid"]);
-export const TeamVariant = z.enum(["none", "grid", "list", "featured"]);
+export const FaqVariant = z.enum(["none", "accordion", "two-column", "grid", "list", "compact"]);
+export const TeamVariant = z.enum(["none", "grid", "list", "featured", "carousel", "minimal"]);
 export const AnnouncementVariant = z.enum(["none", "banner", "floating"]);
 export const BlogVariant = z.enum(["none", "grid", "list", "featured"]);
 

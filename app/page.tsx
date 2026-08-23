@@ -8,7 +8,10 @@ import { ComponentsPanel } from "@/components/ComponentsPanel";
 import { AnimationsPanel } from "@/components/AnimationsPanel";
 import { ExportPanel } from "@/components/ExportPanel";
 import { ProjectPicker } from "@/components/ProjectPicker";
-import { PRESETS, PRESET_FAMILIES } from "@/presets";
+import {
+  applyPreset, applyPresetFacets, FACET_LABELS, PRESET_FACETS, PRESET_FAMILIES, PRESETS,
+  type Preset, type PresetFacet,
+} from "@/presets";
 
 /**
  * The playground shell (§9).
@@ -185,13 +188,29 @@ function DeviceBar() {
 function PresetBar() {
   const edit = useProjectStore((s) => s.edit);
   const applied = useProjectStore((s) => s.project?.appliedPreset);
+  const advanced = useProjectStore((s) => s.advanced);
+  // Which preset's facet picker is open, if any — only one at a time.
+  const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null);
+
+  const applyFull = (preset: Preset) =>
+    edit(`Apply ${preset.name}`, (draft) => {
+      applyPreset(draft, preset);
+      draft.appliedPreset = preset.id;
+    });
+
+  const applyPartial = (preset: Preset, facets: PresetFacet[]) =>
+    edit(`Apply ${preset.name} (${facets.map((f) => FACET_LABELS[f]).join(", ")})`, (draft) => {
+      applyPresetFacets(draft, preset, facets);
+      // A partial application isn't "the preset" anymore, so don't claim credit for it.
+      draft.appliedPreset = null;
+    });
 
   return (
     <div className="max-h-[38vh] shrink-0 overflow-y-auto border-t border-chrome-border px-5 py-4">
       <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-chrome-muted">
         Start from a direction
       </span>
-      {/* Grouped by family — sixteen ungrouped chips is a wall, and the families
+      {/* Grouped by family — twenty-two ungrouped chips is a wall, and the families
           are how a designer actually narrows down in front of a client. */}
       {PRESET_FAMILIES.map((family) => (
         <div key={family} className="mt-3">
@@ -200,34 +219,105 @@ function PresetBar() {
           </span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {PRESETS.filter((p) => p.family === family).map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                title={preset.description}
-                // One history entry, so a client can try a direction and undo once.
-                onClick={() =>
-                  edit(`Apply ${preset.name}`, (draft) => {
-                    preset.apply(draft);
-                    draft.appliedPreset = preset.id;
-                  })
-                }
-                className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] transition-colors ${
-                  applied === preset.id
-                    ? "border-chrome-accent text-chrome-accent"
-                    : "border-chrome-border text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
-                }`}
-              >
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: preset.seed }}
-                  aria-hidden="true"
-                />
-                {preset.name}
-              </button>
+              <div key={preset.id} className="flex flex-col">
+                <div
+                  className={`flex items-center rounded-md border transition-colors ${
+                    applied === preset.id
+                      ? "border-chrome-accent text-chrome-accent"
+                      : "border-chrome-border text-chrome-muted hover:text-chrome-text"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    title={preset.description}
+                    // One history entry, so a client can try a direction and undo once.
+                    onClick={() => applyFull(preset)}
+                    className="flex items-center gap-1.5 rounded-l-md px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: preset.seed }}
+                      aria-hidden="true"
+                    />
+                    {preset.name}
+                  </button>
+                  {/* Partial application is power-user territory — mixing just one
+                      facet of a preset into an already-customised project — so it
+                      stays behind Advanced rather than cluttering the default view. */}
+                  {advanced && (
+                    <button
+                      type="button"
+                      title="Apply only some of this preset"
+                      onClick={() => setPickerOpenFor(pickerOpenFor === preset.id ? null : preset.id)}
+                      className="border-l border-chrome-border px-1.5 py-1.5 text-[11px] hover:bg-chrome-hover"
+                    >
+                      ⋯
+                    </button>
+                  )}
+                </div>
+                {pickerOpenFor === preset.id && (
+                  <FacetPicker
+                    onApply={(facets) => {
+                      applyPartial(preset, facets);
+                      setPickerOpenFor(null);
+                    }}
+                    onCancel={() => setPickerOpenFor(null)}
+                  />
+                )}
+              </div>
             ))}
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function FacetPicker({
+  onApply, onCancel,
+}: {
+  onApply: (facets: PresetFacet[]) => void;
+  onCancel: () => void;
+}) {
+  const [checked, setChecked] = useState<Set<PresetFacet>>(new Set(PRESET_FACETS));
+  const toggle = (facet: PresetFacet) =>
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(facet)) next.delete(facet);
+      else next.add(facet);
+      return next;
+    });
+
+  return (
+    <div className="mt-1 flex flex-col gap-1.5 rounded-md border border-chrome-border bg-chrome-panel p-2.5">
+      {PRESET_FACETS.map((facet) => (
+        <label key={facet} className="flex items-center gap-2 text-[11px] text-chrome-text">
+          <input
+            type="checkbox"
+            checked={checked.has(facet)}
+            onChange={() => toggle(facet)}
+            className="accent-chrome-accent"
+          />
+          {FACET_LABELS[facet]}
+        </label>
+      ))}
+      <div className="mt-1 flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => onApply([...checked])}
+          disabled={checked.size === 0}
+          className="flex-1 rounded-md bg-chrome-accent px-2 py-1 text-[11px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+        >
+          Apply selected
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-chrome-border px-2 py-1 text-[11px] text-chrome-muted hover:bg-chrome-hover"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

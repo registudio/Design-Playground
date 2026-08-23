@@ -248,15 +248,22 @@ function Faq({ variant }: { variant: string }) {
     { q: "Who hosts the site?", a: "We deploy to modern hosting and hand over full ownership." },
     { q: "Can we update it ourselves?", a: "Yes — we set up a CMS and train your team before launch." },
   ];
+  // "list" is always expanded (no accordion interaction), so every answer starts open.
+  const alwaysOpen = variant === "list" || variant === "grid" || variant === "two-column";
   return (
     <section className={`dp-faq dp-faq-${variant}`}>
       <div className="dp-section-inner">
         <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
           Common questions
         </h2>
-        <div className="dp-faq-list">
+        <div className="dp-faq-items">
           {items.map((item, i) => (
-            <div key={item.q} className="dp-faq-item" data-open={i === 0 ? "true" : undefined} data-animate="entrance">
+            <div
+              key={item.q}
+              className="dp-faq-item"
+              data-open={alwaysOpen || i === 0 ? "true" : undefined}
+              data-animate="entrance"
+            >
               <div className="dp-faq-question">
                 <span>{item.q}</span>
                 <span className="dp-faq-icon" aria-hidden="true">+</span>
@@ -279,6 +286,8 @@ function Team({ variant }: { variant: string }) {
     { name: "Priya Nair", role: "Project Manager" },
   ];
   const shown = variant === "featured" ? people.slice(0, 3) : people;
+  // "minimal" is a dense text list - a photo would fight the density it's going for.
+  const withPhoto = variant !== "minimal";
   return (
     <section className={`dp-team dp-team-${variant}`}>
       <div className="dp-section-inner">
@@ -288,7 +297,7 @@ function Team({ variant }: { variant: string }) {
         <div className="dp-team-items">
           {shown.map((person, i) => (
             <article key={person.name} className="dp-person" data-animate="entrance" style={{ ["--dp-stagger-index" as string]: i }}>
-              <div className="dp-person-photo dp-image" />
+              {withPhoto && <div className="dp-person-photo dp-image" />}
               <span className="dp-person-name">{person.name}</span>
               <span className="dp-person-role">{person.role}</span>
             </article>
@@ -362,12 +371,41 @@ function Footer({ variant, brand }: { variant: string; brand: string }) {
     { title: "Company", links: ["About", "Work", "Careers"] },
     { title: "Legal", links: ["Privacy", "Terms"] },
   ];
+  const socialLabels = ["X", "IG", "LI"];
+
+  if (variant === "simple") {
+    return (
+      <footer className="dp-footer dp-footer-simple">
+        <div className="dp-section-inner dp-footer-simple-inner">
+          <span className="dp-type dp-type-small">© {new Date().getFullYear()} {brand}. All rights reserved.</span>
+          <nav className="dp-footer-simple-links">
+            <a className="dp-footer-link" href="#0">Privacy</a>
+            <a className="dp-footer-link" href="#0">Terms</a>
+          </nav>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className={`dp-footer dp-footer-${variant}`}>
       <div className="dp-section-inner dp-footer-inner">
         <div className="dp-footer-brand">
           <span className="dp-navbar-brand">{brand}</span>
           <p className="dp-type dp-type-small">Design and delivery for businesses that need to be taken seriously.</p>
+          {variant === "mega" && (
+            <div className="dp-footer-newsletter">
+              <input className="dp-input" placeholder="you@company.com" readOnly />
+              <button className="dp-btn dp-btn-solid dp-btn-sm">Subscribe</button>
+            </div>
+          )}
+          {variant === "social" && (
+            <div className="dp-footer-social-row">
+              {socialLabels.map((label) => (
+                <span key={label} className="dp-footer-social-icon">{label}</span>
+              ))}
+            </div>
+          )}
         </div>
         {variant !== "minimal" &&
           groups.map((group) => (

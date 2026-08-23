@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { PRESETS, PRESET_FAMILIES } from "@/presets";
+import {
+  applyPreset, applyPresetFacets, PRESET_FACETS, PRESET_FAMILIES, PRESETS,
+} from "@/presets";
 import { FONT_PAIRINGS, findFont, ALL_FONTS } from "@/fonts/catalogue";
 import { ComponentChoices, SiteRecipe } from "@/schema/recipe";
 import { DesignTokens } from "@/schema/tokens";
@@ -68,7 +70,7 @@ describe("presets", () => {
       const project = fixtureProject();
       // fixtureProject has an analysis-free palette, so preset colours apply.
       project.analysis = null;
-      preset.apply(project);
+      applyPreset(project, preset);
 
       it("produces schema-valid tokens", () => {
         const result = DesignTokens.safeParse(project.tokens);
@@ -123,7 +125,69 @@ describe("presets", () => {
       },
     };
     const before = JSON.stringify(project.tokens.colors);
-    PRESETS.find((p) => p.id === "luxury")!.apply(project);
+    applyPreset(project, PRESETS.find((p) => p.id === "luxury")!);
     expect(JSON.stringify(project.tokens.colors)).toBe(before);
+  });
+});
+
+describe("composable preset application", () => {
+  const luxury = PRESETS.find((p) => p.id === "luxury")!;
+  const corporate = PRESETS.find((p) => p.id === "corporate")!;
+
+  it("each facet touches only its own part of the project", () => {
+    const before = fixtureProject();
+    before.analysis = null;
+
+    for (const facet of PRESET_FACETS) {
+      const project = fixtureProject();
+      project.analysis = null;
+      applyPresetFacets(project, luxury, [facet]);
+
+      const changed = {
+        palette: JSON.stringify(project.tokens.colors) !== JSON.stringify(before.tokens.colors),
+        typography: JSON.stringify(project.tokens.typography) !== JSON.stringify(before.tokens.typography),
+        geometry:
+          JSON.stringify(project.tokens.geometry) !== JSON.stringify(before.tokens.geometry) ||
+          JSON.stringify(project.tokens.layout) !== JSON.stringify(before.tokens.layout) ||
+          JSON.stringify(project.tokens.imagery) !== JSON.stringify(before.tokens.imagery),
+        components: JSON.stringify(project.recipe.components) !== JSON.stringify(before.recipe.components),
+        motion: project.recipe.motion.profile !== before.recipe.motion.profile,
+      };
+
+      // The requested facet changed; every other facet's territory did not.
+      expect(changed[facet], facet).toBe(true);
+      for (const other of PRESET_FACETS) {
+        if (other === facet) continue;
+        expect(changed[other], `${facet} touched ${other}`).toBe(false);
+      }
+    }
+  });
+
+  it("mixing one preset's palette with another's typography works as a real combination", () => {
+    const project = fixtureProject();
+    project.analysis = null;
+    applyPresetFacets(project, luxury, ["palette"]);
+    applyPresetFacets(project, corporate, ["typography"]);
+
+    expect(project.tokens.typography.display.family).toBe(
+      findFont(FONT_PAIRINGS.find((p) => p.id === corporate.pairing)!.display)!.family,
+    );
+    // Luxury's palette facet only runs when there's no logo analysis (fixtureProject
+    // has none here), so the seed colour should have taken hold.
+    const primary = resolveSemantic(project.tokens.colors, "light", "primary");
+    expect(primary).toBeDefined();
+  });
+
+  it("a full apply equals applying every facet individually", () => {
+    const full = fixtureProject();
+    full.analysis = null;
+    applyPreset(full, luxury);
+
+    const piecemeal = fixtureProject();
+    piecemeal.analysis = null;
+    applyPresetFacets(piecemeal, luxury, [...PRESET_FACETS]);
+
+    expect(JSON.stringify(full.tokens)).toBe(JSON.stringify(piecemeal.tokens));
+    expect(JSON.stringify(full.recipe)).toBe(JSON.stringify(piecemeal.recipe));
   });
 });

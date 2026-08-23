@@ -424,6 +424,35 @@ body {
 .dp-footer-link { color: var(--dp-color-muted); text-decoration: none; font-size: var(--dp-text-small); }
 .dp-footer-link:hover { color: var(--dp-color-foreground); }
 
+.dp-footer-mega { padding-block: var(--dp-space-24); }
+.dp-footer-mega .dp-footer-inner { grid-template-columns: 3fr 1fr 1fr 1fr; gap: var(--dp-space-12); }
+.dp-footer-mega .dp-footer-brand { max-width: 24rem; }
+.dp-footer-newsletter { display: flex; gap: var(--dp-space-2); margin-top: var(--dp-space-2); }
+.dp-footer-newsletter .dp-input { max-width: 14rem; }
+
+.dp-footer-social-row { display: flex; gap: var(--dp-space-3); margin-top: var(--dp-space-2); }
+.dp-footer-social-icon {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dp-radius-full);
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  font: 600 var(--dp-text-caption)/1 var(--dp-font-mono);
+  color: var(--dp-color-muted);
+}
+
+.dp-footer-simple { padding-block: var(--dp-space-6); border-top: var(--dp-border-hairline) solid var(--dp-color-border); }
+.dp-footer-simple-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--dp-space-4);
+  color: var(--dp-color-muted);
+}
+.dp-footer-simple-links { display: flex; gap: var(--dp-space-4); }
+
 /* --- Responsive ---------------------------------------------------------- */
 /* Real breakpoints, matching against the iframe's own width — which is exactly why
    the preview is an iframe and not a resized div. */
@@ -717,7 +746,7 @@ body {
 /* --- FAQ ------------------------------------------------------------------ */
 
 .dp-faq { padding-block: var(--dp-layout-section-spacing); }
-.dp-faq-list { display: flex; flex-direction: column; gap: var(--dp-space-2); }
+.dp-faq-items { display: flex; flex-direction: column; gap: var(--dp-space-2); }
 .dp-faq-item {
   border-bottom: var(--dp-border-hairline) solid var(--dp-color-border);
   padding-block: var(--dp-space-4);
@@ -744,12 +773,11 @@ body {
 /* Closed items hide their answer, which is what an accordion actually does. */
 .dp-faq-item:not([data-open]) .dp-faq-answer { display: none; }
 
-.dp-faq-two-column .dp-faq-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--dp-space-6); }
-.dp-faq-two-column .dp-faq-item[data-open] ~ .dp-faq-item .dp-faq-answer,
+.dp-faq-two-column .dp-faq-items { display: grid; grid-template-columns: 1fr 1fr; gap: var(--dp-space-6); }
 .dp-faq-two-column .dp-faq-answer { display: block; }
 .dp-faq-two-column .dp-faq-icon { display: none; }
 
-.dp-faq-grid .dp-faq-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--dp-space-4); }
+.dp-faq-grid .dp-faq-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--dp-space-4); }
 .dp-faq-grid .dp-faq-item {
   border: var(--dp-border-hairline) solid var(--dp-color-border);
   border-radius: var(--dp-radius-lg);
@@ -757,6 +785,15 @@ body {
 }
 .dp-faq-grid .dp-faq-answer { display: block; }
 .dp-faq-grid .dp-faq-icon { display: none; }
+
+/* Always-expanded, single column, plain - no accordion interaction. */
+.dp-faq-list .dp-faq-answer { display: block; }
+.dp-faq-list .dp-faq-icon { display: none; }
+
+/* Same accordion behaviour as the default, just denser. */
+.dp-faq-compact .dp-faq-item { padding-block: var(--dp-space-2); }
+.dp-faq-compact .dp-faq-question { font-size: var(--dp-text-body); }
+.dp-faq-compact .dp-faq-answer { font-size: var(--dp-text-small); margin-top: var(--dp-space-2); }
 
 /* --- Team ----------------------------------------------------------------- */
 
@@ -774,6 +811,25 @@ body {
 .dp-team-featured .dp-team-items { grid-template-columns: 2fr 1fr 1fr; }
 .dp-team-featured .dp-person:first-child .dp-person-photo { aspect-ratio: 4 / 5; }
 
+.dp-team-carousel .dp-team-items {
+  display: flex;
+  grid-template-columns: none;
+  overflow-x: auto;
+  gap: var(--dp-space-4);
+  padding-bottom: var(--dp-space-2);
+}
+.dp-team-carousel .dp-person { flex: 0 0 12rem; }
+
+/* No photo - a dense text list trades imagery for scanability. */
+.dp-team-minimal .dp-team-items { grid-template-columns: 1fr; gap: var(--dp-space-1); }
+.dp-team-minimal .dp-person {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--dp-space-3);
+  padding-block: var(--dp-space-2);
+  border-bottom: var(--dp-border-hairline) solid var(--dp-color-border);
+}
+
 /* --- Responsive for new sections ------------------------------------------ */
 
 @media (max-width: 900px) {
@@ -785,8 +841,8 @@ body {
   .dp-pricing-comparison .dp-tier { border-radius: var(--dp-radius-lg); border-right-width: var(--dp-border-hairline); }
   .dp-team-items,
   .dp-team-featured .dp-team-items { grid-template-columns: repeat(2, 1fr); }
-  .dp-faq-two-column .dp-faq-list,
-  .dp-faq-grid .dp-faq-list { grid-template-columns: 1fr; }
+  .dp-faq-two-column .dp-faq-items,
+  .dp-faq-grid .dp-faq-items { grid-template-columns: 1fr; }
   .dp-hero-product .dp-hero-inner,
   .dp-hero-bento .dp-hero-inner { grid-template-columns: 1fr; }
   .dp-hero-bento .dp-hero-content { grid-row: auto; }
