@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/*
+ * The playground's own chrome. Deliberately neutral and low-contrast so it never
+ * competes with the design being previewed — §9 asks for an interface that is
+ * significantly less cluttered than general-purpose design-system tools.
+ *
+ * These variables are entirely separate from the --dp-* project tokens, which only
+ * ever exist inside the preview iframe.
+ */
+@theme {
+  --color-chrome-bg: oklch(0.985 0.001 260);
+  --color-chrome-panel: oklch(1 0 0);
+  --color-chrome-border: oklch(0.92 0.003 260);
+  --color-chrome-text: oklch(0.25 0.008 260);
+  --color-chrome-muted: oklch(0.55 0.006 260);
+  --color-chrome-accent: oklch(0.55 0.17 265);
+  --color-chrome-hover: oklch(0.96 0.003 260);
+  --color-chrome-danger: oklch(0.58 0.19 27);
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-chrome-bg: oklch(0.19 0.006 260);
+    --color-chrome-panel: oklch(0.23 0.007 260);
+    --color-chrome-border: oklch(0.31 0.008 260);
+    --color-chrome-text: oklch(0.95 0.003 260);
+    --color-chrome-muted: oklch(0.68 0.008 260);
+    --color-chrome-accent: oklch(0.7 0.15 265);
+    --color-chrome-hover: oklch(0.27 0.008 260);
+    --color-chrome-danger: oklch(0.68 0.17 27);
+  }
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--color-chrome-bg);
+  color: var(--color-chrome-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus visibility is one of the things §13.3 asks the tool to check, so the tool
+   itself should not fail it. */
+:focus-visible {
+  outline: 2px solid var(--color-chrome-accent);
+  outline-offset: 2px;
+}

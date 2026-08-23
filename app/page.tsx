@@ -1,0 +1,258 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useProjectStore, type Section } from "@/store/project-store";
+import { PreviewFrame } from "@/components/PreviewFrame";
+import { Foundation } from "@/components/Foundation";
+import { ComponentsPanel } from "@/components/ComponentsPanel";
+import { AnimationsPanel } from "@/components/AnimationsPanel";
+import { ExportPanel } from "@/components/ExportPanel";
+import { ProjectPicker } from "@/components/ProjectPicker";
+import { PRESETS } from "@/presets";
+
+/**
+ * The playground shell (§9).
+ *
+ * Layout follows the recommended arrangement: a narrow control rail, the live preview
+ * taking most of the screen, and device switching along the bottom.
+ */
+const SECTIONS: Array<{ id: Section; label: string }> = [
+  { id: "foundation", label: "Foundation" },
+  { id: "components", label: "Components" },
+  { id: "animations", label: "Animations" },
+];
+
+export default function Playground() {
+  const project = useProjectStore((s) => s.project);
+  const section = useProjectStore((s) => s.section);
+  const setSection = useProjectStore((s) => s.setSection);
+  const [exporting, setExporting] = useState(false);
+
+  useKeyboardShortcuts();
+
+  if (!project) return <ProjectPicker />;
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden">
+      <TopBar onExport={() => setExporting(true)} />
+
+      <div className="flex min-h-0 flex-1">
+        <aside className="flex w-[320px] shrink-0 flex-col border-r border-chrome-border bg-chrome-panel">
+          <nav className="flex shrink-0 border-b border-chrome-border">
+            {SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSection(item.id)}
+                className={`flex-1 px-3 py-3 text-[13px] transition-colors ${
+                  section === item.id
+                    ? "border-b-2 border-chrome-accent font-medium text-chrome-text"
+                    : "text-chrome-muted hover:text-chrome-text"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {section === "foundation" && <Foundation />}
+            {section === "components" && <ComponentsPanel />}
+            {section === "animations" && <AnimationsPanel />}
+          </div>
+
+          <PresetBar />
+        </aside>
+
+        <main className="flex min-w-0 flex-1 flex-col">
+          <PreviewFrame />
+          <DeviceBar />
+        </main>
+      </div>
+
+      {exporting && <ExportPanel onClose={() => setExporting(false)} />}
+    </div>
+  );
+}
+
+function TopBar({ onExport }: { onExport: () => void }) {
+  const project = useProjectStore((s) => s.project)!;
+  const dirty = useProjectStore((s) => s.dirty);
+  const advanced = useProjectStore((s) => s.advanced);
+  const setAdvanced = useProjectStore((s) => s.setAdvanced);
+  const previewMode = useProjectStore((s) => s.previewMode);
+  const setPreviewMode = useProjectStore((s) => s.setPreviewMode);
+  const theme = useProjectStore((s) => s.theme);
+  const setTheme = useProjectStore((s) => s.setTheme);
+  const undo = useProjectStore((s) => s.undo);
+  const redo = useProjectStore((s) => s.redo);
+  const history = useProjectStore((s) => s.history);
+
+  return (
+    <header className="flex shrink-0 items-center gap-4 border-b border-chrome-border bg-chrome-panel px-4 py-2.5">
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate text-[13px] font-medium">{project.name}</span>
+        {project.client && (
+          <span className="truncate text-[11px] text-chrome-muted">{project.client}</span>
+        )}
+      </div>
+
+      <span className="text-[11px] text-chrome-muted">{dirty ? "Saving…" : "Saved"}</span>
+
+      <div className="ml-auto flex items-center gap-1.5">
+        <Segmented
+          options={[
+            { value: "system", label: "System" },
+            { value: "components", label: "Components" },
+            { value: "sample", label: "Sample Page" },
+          ]}
+          value={previewMode}
+          onChange={(v) => setPreviewMode(v as typeof previewMode)}
+        />
+
+        <button
+          type="button"
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover"
+          title="Toggle preview theme"
+        >
+          {theme === "light" ? "Light" : "Dark"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => undo()}
+          disabled={history.past.length === 0}
+          className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover disabled:opacity-40"
+          title="Undo (⌘Z)"
+        >
+          Undo
+        </button>
+        <button
+          type="button"
+          onClick={() => redo()}
+          disabled={history.future.length === 0}
+          className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover disabled:opacity-40"
+          title="Redo (⇧⌘Z)"
+        >
+          Redo
+        </button>
+
+        <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-[12px] text-chrome-muted">
+          <input
+            type="checkbox"
+            checked={advanced}
+            onChange={(e) => setAdvanced(e.target.checked)}
+            className="accent-chrome-accent"
+          />
+          Advanced
+        </label>
+
+        <button
+          type="button"
+          onClick={onExport}
+          className="rounded-md bg-chrome-accent px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90"
+        >
+          Export
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function DeviceBar() {
+  const device = useProjectStore((s) => s.device);
+  const setDevice = useProjectStore((s) => s.setDevice);
+  return (
+    <div className="flex shrink-0 justify-center gap-1 border-t border-chrome-border bg-chrome-panel py-2">
+      <Segmented
+        options={[
+          { value: "desktop", label: "Desktop" },
+          { value: "tablet", label: "Tablet" },
+          { value: "mobile", label: "Mobile" },
+        ]}
+        value={device}
+        onChange={(v) => setDevice(v as typeof device)}
+      />
+    </div>
+  );
+}
+
+function PresetBar() {
+  const edit = useProjectStore((s) => s.edit);
+  const applied = useProjectStore((s) => s.project?.appliedPreset);
+  return (
+    <div className="shrink-0 border-t border-chrome-border px-5 py-4">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-chrome-muted">
+        Start from a direction
+      </span>
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        {PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            title={preset.description}
+            // One history entry, so a client can try a direction and undo once.
+            onClick={() =>
+              edit(`Apply ${preset.name}`, (draft) => {
+                preset.apply(draft);
+                draft.appliedPreset = preset.id;
+              })
+            }
+            className={`rounded-md border px-2.5 py-1.5 text-[12px] transition-colors ${
+              applied === preset.id
+                ? "border-chrome-accent text-chrome-accent"
+                : "border-chrome-border text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
+            }`}
+          >
+            {preset.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Segmented({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ value: string; label: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex rounded-md border border-chrome-border p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`rounded px-2.5 py-1 text-[12px] transition-colors ${
+            option.value === value
+              ? "bg-chrome-accent text-white"
+              : "text-chrome-muted hover:text-chrome-text"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function useKeyboardShortcuts() {
+  const undo = useProjectStore((s) => s.undo);
+  const redo = useProjectStore((s) => s.redo);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") return;
+      event.preventDefault();
+      if (event.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
+}
