@@ -37,6 +37,8 @@ export const SocialProofVariant = z.enum(["none", "logo-cloud", "metrics", "test
 export const PricingVariant = z.enum(["none", "tiers", "single", "comparison", "toggle"]);
 export const FaqVariant = z.enum(["none", "accordion", "two-column", "grid"]);
 export const TeamVariant = z.enum(["none", "grid", "list", "featured"]);
+export const AnnouncementVariant = z.enum(["none", "banner", "floating"]);
+export const BlogVariant = z.enum(["none", "grid", "list", "featured"]);
 
 /**
  * The Sample Page is a fixed sequence of slots with one variant each — not a
@@ -50,10 +52,12 @@ export const ComponentChoices = z.object({
   navbar: NavbarVariant,
   hero: HeroVariant,
   features: FeaturesVariant,
+  announcement: AnnouncementVariant,
   socialProof: SocialProofVariant,
   pricing: PricingVariant,
   faq: FaqVariant,
   team: TeamVariant,
+  blog: BlogVariant,
   cta: CtaVariant,
   footer: FooterVariant,
   cursor: CursorVariant,

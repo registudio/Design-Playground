@@ -26,6 +26,7 @@ export function SamplePage({ project }: { project: DesignProject }) {
       data-cursor={components.cursor}
     >
       <CustomCursor variant={components.cursor} />
+      <Announcement variant={components.announcement} />
       <Navbar variant={components.navbar} brand={brand} />
       <Hero variant={components.hero} brand={brand} />
       <Features variant={components.features} />
@@ -33,6 +34,7 @@ export function SamplePage({ project }: { project: DesignProject }) {
       <Pricing variant={components.pricing} />
       <Faq variant={components.faq} />
       <Team variant={components.team} />
+      <Blog variant={components.blog} />
       <Cta variant={components.cta} />
       <Footer variant={components.footer} brand={brand} />
     </div>
@@ -98,7 +100,7 @@ function Features({ variant }: { variant: string }) {
         <h2 className="dp-type dp-type-heading-2 dp-features-title" data-animate="entrance">
           What working with us looks like
         </h2>
-        <div className="dp-features-grid">
+        <div className="dp-features-items">
           {items.map((item, index) => (
             <article
               key={item.title}
@@ -199,9 +201,9 @@ function Pricing({ variant }: { variant: string }) {
           Simple pricing
         </h2>
         {variant === "toggle" && (
-          <div className="dp-pricing-toggle" data-animate="entrance">
-            <span className="dp-pricing-toggle-option" data-active="true">Monthly</span>
-            <span className="dp-pricing-toggle-option">Annual</span>
+          <div className="dp-pricing-switch" data-animate="entrance">
+            <span className="dp-pricing-switch-option" data-active="true">Monthly</span>
+            <span className="dp-pricing-switch-option">Annual</span>
           </div>
         )}
         <div className="dp-pricing-grid">
@@ -273,12 +275,52 @@ function Team({ variant }: { variant: string }) {
         <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
           The team
         </h2>
-        <div className="dp-team-grid">
+        <div className="dp-team-items">
           {shown.map((person, i) => (
             <article key={person.name} className="dp-person" data-animate="entrance" style={{ ["--dp-stagger-index" as string]: i }}>
               <div className="dp-person-photo dp-image" />
               <span className="dp-person-name">{person.name}</span>
               <span className="dp-person-role">{person.role}</span>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Announcement({ variant }: { variant: string }) {
+  if (variant === "none") return null;
+  return (
+    <div className={`dp-announcement dp-announcement-${variant}`}>
+      <span>New: we now offer fixed-price starter packages.</span>
+      <a href="#0">Learn more →</a>
+    </div>
+  );
+}
+
+function Blog({ variant }: { variant: string }) {
+  if (variant === "none") return null;
+  const posts = [
+    { title: "Five things to check before your site launches", tag: "Guides", date: "12 Aug" },
+    { title: "Why we moved to a design-tokens workflow", tag: "Process", date: "3 Aug" },
+    { title: "A short case study: Northgate's new site", tag: "Case study", date: "28 Jul" },
+    { title: "What makes a hero section actually convert", tag: "Design", date: "19 Jul" },
+  ];
+  const shown = variant === "featured" ? posts.slice(0, 3) : posts;
+
+  return (
+    <section className={`dp-blog dp-blog-${variant}`}>
+      <div className="dp-section-inner">
+        <h2 className="dp-type dp-type-heading-2 dp-section-heading" data-animate="entrance">
+          From the blog
+        </h2>
+        <div className="dp-blog-items">
+          {shown.map((post, i) => (
+            <article key={post.title} className="dp-card dp-post" data-animate="entrance" style={{ ["--dp-stagger-index" as string]: i }}>
+              <div className="dp-post-image dp-image" />
+              <span className="dp-post-tag">{post.tag} · {post.date}</span>
+              <h3 className="dp-card-title dp-post-title">{post.title}</h3>
             </article>
           ))}
         </div>

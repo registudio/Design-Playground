@@ -2,9 +2,9 @@
 
 import { useProjectStore } from "@/store/project-store";
 import {
-  ButtonVariant, CardVariant, CtaVariant, FaqVariant, FeaturesVariant, FooterVariant,
-  HeroVariant, InputVariant, NavbarVariant, PricingVariant, SocialProofVariant,
-  TeamVariant, CursorVariant,
+  AnnouncementVariant, BlogVariant, ButtonVariant, CardVariant, CtaVariant, FaqVariant,
+  FeaturesVariant, FooterVariant, HeroVariant, InputVariant, NavbarVariant,
+  PricingVariant, SocialProofVariant, TeamVariant, CursorVariant,
 } from "@/schema/recipe";
 import { Choice, Panel } from "./controls";
 
@@ -44,10 +44,12 @@ export function ComponentsPanel() {
         <p className="text-[12px] text-chrome-muted">
           Set any of these to “none” to leave the section out of the page.
         </p>
+        <Choice label="Announcement" options={AnnouncementVariant.options} value={components.announcement} onChange={set("announcement")} />
         <Choice label="Social proof" options={SocialProofVariant.options} value={components.socialProof} onChange={set("socialProof")} />
         <Choice label="Pricing" options={PricingVariant.options} value={components.pricing} onChange={set("pricing")} />
         <Choice label="FAQ" options={FaqVariant.options} value={components.faq} onChange={set("faq")} />
         <Choice label="Team" options={TeamVariant.options} value={components.team} onChange={set("team")} />
+        <Choice label="Blog" options={BlogVariant.options} value={components.blog} onChange={set("blog")} />
       </Panel>
 
       <Panel title="Cursor">

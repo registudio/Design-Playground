@@ -88,10 +88,87 @@ export function System({ project }: { project: DesignProject }) {
             <input className="dp-input" placeholder="Sarah Tan" readOnly />
           </label>
           <label className="dp-field">
+            <span className="dp-field-label">Company size</span>
+            <select className="dp-input dp-select" defaultValue="2-5">
+              <option value="1">Just me</option>
+              <option value="2-5">2–5 people</option>
+              <option value="6-20">6–20 people</option>
+              <option value="20+">20+ people</option>
+            </select>
+          </label>
+          <label className="dp-field">
             <span className="dp-field-label">Message</span>
             <textarea className="dp-input dp-textarea" placeholder="Tell us about the project" readOnly />
           </label>
+          <div className="dp-row">
+            <label className="dp-check">
+              <input type="checkbox" defaultChecked readOnly />
+              <span className="dp-check-box" aria-hidden="true" />
+              <span>Subscribe to updates</span>
+            </label>
+            <label className="dp-check dp-check-radio">
+              <input type="radio" name="dp-radio-demo" defaultChecked readOnly />
+              <span className="dp-check-box" aria-hidden="true" />
+              <span>New website</span>
+            </label>
+            <label className="dp-check dp-check-radio">
+              <input type="radio" name="dp-radio-demo" readOnly />
+              <span className="dp-check-box" aria-hidden="true" />
+              <span>Redesign</span>
+            </label>
+          </div>
+          <label className="dp-toggle-row">
+            <span>Email notifications</span>
+            <span className="dp-toggle" data-checked="true" aria-hidden="true">
+              <span className="dp-toggle-thumb" />
+            </span>
+          </label>
         </div>
+      </Section>
+
+      <Section title="Alerts">
+        <div className="dp-stack">
+          <div className="dp-alert dp-alert-success">
+            <strong>Message sent.</strong> We usually reply within one business day.
+          </div>
+          <div className="dp-alert dp-alert-warning">
+            <strong>Almost there.</strong> A couple of fields still need your attention.
+          </div>
+          <div className="dp-alert dp-alert-error">
+            <strong>Something went wrong.</strong> Please try that again.
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Panels &amp; quotes">
+        <div className="dp-row" style={{ alignItems: "stretch" }}>
+          <div className="dp-panel">
+            <h3 className="dp-card-title">Panel</h3>
+            <p className="dp-card-body">
+              A quieter container than a card — for grouping content without competing
+              for attention.
+            </p>
+          </div>
+          <blockquote className="dp-blockquote">
+            “The clearest process we have had with any agency.”
+            <cite>— James Lim, Vertex</cite>
+          </blockquote>
+        </div>
+      </Section>
+
+      <Section title="Avatars">
+        <div className="dp-row">
+          {["S", "J", "A"].map((initial) => (
+            <span key={initial} className="dp-avatar">{initial}</span>
+          ))}
+          <span className="dp-avatar dp-avatar-image" />
+          <span className="dp-divider-v" aria-hidden="true" />
+          <span className="dp-type dp-type-heading-2 dp-gradient-text">Gradient headline</span>
+        </div>
+      </Section>
+
+      <Section title="Divider">
+        <hr className="dp-divider" />
       </Section>
 
       <Section title="Cards">
