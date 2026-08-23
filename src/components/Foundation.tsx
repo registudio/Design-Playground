@@ -39,7 +39,7 @@ export function Foundation() {
         {/* Pairing first: choosing two families independently from a long list mostly
             produces mismatches, so the common path is one click. Individual family
             pickers stay available underneath for when a client insists. */}
-        <Field label="Font pairing">
+        <Field label="Font pairing" provenancePath="tokens.typography.display">
           <div className="flex flex-col gap-1">
             {FONT_PAIRINGS.map((pairing) => {
               const active =
@@ -123,6 +123,7 @@ export function Foundation() {
           min={1.1} max={1.45} step={0.01}
           value={inferredRatio(tokens.typography.scale.heading1.size, tokens.typography.scale.body.size)}
           format={(v) => `${v.toFixed(2)}×`}
+          provenancePath="tokens.typography.scale"
           onChange={(ratio) =>
             edit("Adjust type scale", (draft) => {
               const base = draft.tokens.typography.scale.body.size;
@@ -135,6 +136,7 @@ export function Foundation() {
                 draft.tokens.typography.scale[step].size =
                   Math.round(base * ratio ** offsets[step] * 1000) / 1000;
               }
+              draft.provenance["tokens.typography.scale"] = "user";
             }, "type.scale")
           }
         />
@@ -146,6 +148,7 @@ export function Foundation() {
           min={0} max={5} step={1}
           value={RADIUS_STEPS.indexOf(nearestRadius(tokens.geometry.radius.md))}
           format={() => `${tokens.geometry.radius.md}rem`}
+          provenancePath="tokens.geometry.radius"
           onChange={(index) =>
             edit("Adjust radius", (draft) => {
               // One control drives the whole ramp, keeping the family proportional.
@@ -158,6 +161,7 @@ export function Foundation() {
                 xl: scale * 2,
                 full: 9999,
               };
+              draft.provenance["tokens.geometry.radius"] = "user";
             }, "geometry.radius")
           }
         />
@@ -167,6 +171,7 @@ export function Foundation() {
           min={0.75} max={1.5} step={0.05}
           value={tokens.geometry.spacing["4"]}
           format={(v) => `${v}rem base`}
+          provenancePath="tokens.geometry.spacing"
           onChange={(base) =>
             edit("Adjust spacing", (draft) => {
               const ratios: Record<string, number> = {
@@ -177,6 +182,7 @@ export function Foundation() {
                 draft.tokens.geometry.spacing[key as keyof typeof draft.tokens.geometry.spacing] =
                   Math.round(base * ratio * 1000) / 1000;
               }
+              draft.provenance["tokens.geometry.spacing"] = "user";
             }, "geometry.spacing")
           }
         />
@@ -186,9 +192,11 @@ export function Foundation() {
           min={0} max={4} step={1}
           value={SHADOW_STEPS.indexOf(tokens.imagery.shadow)}
           format={(v) => SHADOW_STEPS[v] ?? "none"}
+          provenancePath="tokens.imagery.shadow"
           onChange={(index) =>
             edit("Adjust shadow", (draft) => {
               draft.tokens.imagery.shadow = SHADOW_STEPS[index] ?? "none";
+              draft.provenance["tokens.imagery.shadow"] = "user";
             }, "geometry.shadow")
           }
         />
@@ -199,6 +207,7 @@ export function Foundation() {
           label="Density"
           options={["compact", "balanced", "spacious", "editorial"] as const}
           value={tokens.layout.density}
+          provenancePath="tokens.layout.density"
           onChange={(density) =>
             edit("Set density", (draft) => {
               draft.tokens.layout.density = density;
@@ -209,6 +218,7 @@ export function Foundation() {
                 editorial: { maxWidth: 56, gutter: 2.5, sectionSpacing: 12 },
               };
               Object.assign(draft.tokens.layout, presets[density]);
+              draft.provenance["tokens.layout.density"] = "user";
             })
           }
         />
@@ -216,8 +226,12 @@ export function Foundation() {
           label="Alignment"
           options={["left", "center"] as const}
           value={tokens.layout.alignment}
+          provenancePath="tokens.layout.alignment"
           onChange={(alignment) =>
-            edit("Set alignment", (draft) => { draft.tokens.layout.alignment = alignment; })
+            edit("Set alignment", (draft) => {
+              draft.tokens.layout.alignment = alignment;
+              draft.provenance["tokens.layout.alignment"] = "user";
+            })
           }
         />
       </Panel>
@@ -227,23 +241,34 @@ export function Foundation() {
           label="Corner treatment"
           options={RADIUS_STEPS}
           value={tokens.imagery.radius}
+          provenancePath="tokens.imagery.radius"
           onChange={(radius) =>
-            edit("Set image radius", (draft) => { draft.tokens.imagery.radius = radius; })
+            edit("Set image radius", (draft) => {
+              draft.tokens.imagery.radius = radius;
+              draft.provenance["tokens.imagery.radius"] = "user";
+            })
           }
         />
         <Choice
           label="Treatment"
           options={["contained", "full-bleed"] as const}
           value={tokens.imagery.treatment}
+          provenancePath="tokens.imagery.treatment"
           onChange={(treatment) =>
-            edit("Set image treatment", (draft) => { draft.tokens.imagery.treatment = treatment; })
+            edit("Set image treatment", (draft) => {
+              draft.tokens.imagery.treatment = treatment;
+              draft.provenance["tokens.imagery.treatment"] = "user";
+            })
           }
         />
         <Toggle
           label="Image borders"
           value={tokens.imagery.border}
           onChange={(border) =>
-            edit("Toggle image borders", (draft) => { draft.tokens.imagery.border = border; })
+            edit("Toggle image borders", (draft) => {
+              draft.tokens.imagery.border = border;
+              draft.provenance["tokens.imagery.border"] = "user";
+            })
           }
         />
       </Panel>

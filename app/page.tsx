@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore, type Section } from "@/store/project-store";
 import { PreviewFrame } from "@/components/PreviewFrame";
 import { Foundation } from "@/components/Foundation";
@@ -8,6 +8,7 @@ import { ComponentsPanel } from "@/components/ComponentsPanel";
 import { AnimationsPanel } from "@/components/AnimationsPanel";
 import { ExportPanel } from "@/components/ExportPanel";
 import { ProjectPicker } from "@/components/ProjectPicker";
+import { CommandPalette, openCommandPalette } from "@/components/CommandPalette";
 import {
   applyPreset, applyPresetFacets, FACET_LABELS, PRESET_FACETS, PRESET_FAMILIES, PRESETS,
   type Preset, type PresetFacet,
@@ -74,6 +75,7 @@ export default function Playground() {
       </div>
 
       {exporting && <ExportPanel onClose={() => setExporting(false)} />}
+      <CommandPalette />
     </div>
   );
 }
@@ -103,6 +105,16 @@ function TopBar({ onExport }: { onExport: () => void }) {
       <span className="text-[11px] text-chrome-muted">{dirty ? "Saving…" : "Saved"}</span>
 
       <div className="ml-auto flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="flex items-center gap-1.5 rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
+          title="Search presets, components and actions"
+        >
+          Search
+          <kbd className="rounded border border-chrome-border px-1 font-mono text-[10px]">⌘K</kbd>
+        </button>
+
         {/* Labelled "Viewing" because the left rail also has a "Components" tab, and
             two identically-named controls doing different jobs is genuinely confusing.
             The rail picks what you edit; this picks what the preview renders. */}
@@ -145,6 +157,8 @@ function TopBar({ onExport }: { onExport: () => void }) {
           Redo
         </button>
 
+        <HistoryButton />
+
         <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-[12px] text-chrome-muted">
           <input
             type="checkbox"
@@ -164,6 +178,65 @@ function TopBar({ onExport }: { onExport: () => void }) {
         </button>
       </div>
     </header>
+  );
+}
+
+/**
+ * A real history list (§13.4), not just Undo/Redo buttons. After trying three
+ * presets in a row, "undo six times and hope I counted right" isn't how anyone wants
+ * to get back to a specific earlier state — clicking that entry directly is.
+ */
+function HistoryButton() {
+  const history = useProjectStore((s) => s.history);
+  const historyTimeline = useProjectStore((s) => s.historyTimeline);
+  const jumpToHistory = useProjectStore((s) => s.jumpToHistory);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const entries = open ? historyTimeline() : [];
+  const isEmpty = history.past.length === 0 && history.future.length === 0;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={isEmpty}
+        className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover disabled:opacity-40"
+        title="History"
+      >
+        History
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-64 overflow-y-auto rounded-md border border-chrome-border bg-chrome-panel py-1 shadow-lg">
+          {entries.map((entry) => (
+            <button
+              key={entry.position}
+              type="button"
+              onClick={() => { jumpToHistory(entry.position); setOpen(false); }}
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] hover:bg-chrome-hover ${
+                entry.current ? "text-chrome-accent" : "text-chrome-text"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${entry.current ? "bg-chrome-accent" : "bg-transparent"}`}
+                aria-hidden="true"
+              />
+              {entry.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -191,6 +264,17 @@ function PresetBar() {
   const advanced = useProjectStore((s) => s.advanced);
   // Which preset's facet picker is open, if any — only one at a time.
   const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null);
+  // Families start expanded (unchanged default); a header click can compact one away
+  // once the list of twenty-plus presets gets in the way — the command palette (⌘K)
+  // is the other half of this: jump straight to a preset by name instead of scrolling.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleFamily = (family: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(family)) next.delete(family);
+      else next.add(family);
+      return next;
+    });
 
   const applyFull = (preset: Preset) =>
     edit(`Apply ${preset.name}`, (draft) => {
@@ -214,9 +298,15 @@ function PresetBar() {
           are how a designer actually narrows down in front of a client. */}
       {PRESET_FAMILIES.map((family) => (
         <div key={family} className="mt-3">
-          <span className="text-[10px] uppercase tracking-[0.06em] text-chrome-muted opacity-70">
+          <button
+            type="button"
+            onClick={() => toggleFamily(family)}
+            className="flex w-full items-center gap-1 text-[10px] uppercase tracking-[0.06em] text-chrome-muted opacity-70 hover:opacity-100"
+          >
+            <span aria-hidden="true">{collapsed.has(family) ? "▸" : "▾"}</span>
             {family}
-          </span>
+          </button>
+          {!collapsed.has(family) && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {PRESETS.filter((p) => p.family === family).map((preset) => (
               <div key={preset.id} className="flex flex-col">
@@ -267,6 +357,7 @@ function PresetBar() {
               </div>
             ))}
           </div>
+          )}
         </div>
       ))}
     </div>

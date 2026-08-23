@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commit, undo, redo, emptyHistory, canUndo, canRedo } from "@/store/history";
+import { commit, undo, redo, emptyHistory, canUndo, canRedo, jumpTo, timeline } from "@/store/history";
 
 interface Doc {
   radius: number;
@@ -93,5 +93,113 @@ describe("history", () => {
       history = result.history;
     }
     expect(state).toEqual(doc());
+  });
+});
+
+describe("jumpTo", () => {
+  it("jumps backward past multiple entries in one call", () => {
+    let state = doc();
+    let history = emptyHistory();
+    for (const value of [1, 2, 3, 4, 5]) {
+      const result = commit(state, history, `Set ${value}`, (d) => { d.radius = value; });
+      state = result.state;
+      history = result.history;
+    }
+    expect(state.radius).toBe(5);
+
+    const jumped = jumpTo(state, history, 2);
+    expect(jumped.state.radius).toBe(2);
+    expect(jumped.history.past).toHaveLength(2);
+    expect(jumped.history.future).toHaveLength(3);
+  });
+
+  it("jumps forward past multiple entries in one call", () => {
+    let state = doc();
+    let history = emptyHistory();
+    for (const value of [1, 2, 3, 4, 5]) {
+      const result = commit(state, history, `Set ${value}`, (d) => { d.radius = value; });
+      state = result.state;
+      history = result.history;
+    }
+    const back = jumpTo(state, history, 0);
+    const forward = jumpTo(back.state, back.history, 4);
+    expect(forward.state.radius).toBe(4);
+    expect(forward.history.past).toHaveLength(4);
+  });
+
+  it("jumping to the current position is a no-op", () => {
+    const first = commit(doc(), emptyHistory(), "Set", (d) => { d.radius = 9; });
+    const jumped = jumpTo(first.state, first.history, first.history.past.length);
+    expect(jumped.state).toBe(first.state);
+  });
+
+  it("jumping to 0 fully reverts to the start", () => {
+    let state = doc();
+    let history = emptyHistory();
+    for (const value of [1, 2, 3]) {
+      const result = commit(state, history, `Set ${value}`, (d) => { d.radius = value; });
+      state = result.state;
+      history = result.history;
+    }
+    const jumped = jumpTo(state, history, 0);
+    expect(jumped.state).toEqual(doc());
+    expect(jumped.history.past).toHaveLength(0);
+  });
+});
+
+describe("timeline", () => {
+  it("lists past entries most-recent-first, with a synthetic Start at the end", () => {
+    let state = doc();
+    let history = emptyHistory();
+    for (const label of ["First", "Second", "Third"]) {
+      const result = commit(state, history, label, (d) => { d.name = label; });
+      state = result.state;
+      history = result.history;
+    }
+    const entries = timeline(history);
+    expect(entries.map((e) => e.label)).toEqual(["Third", "Second", "First", "Start"]);
+  });
+
+  it("marks exactly the current position", () => {
+    let state = doc();
+    let history = emptyHistory();
+    for (const label of ["First", "Second"]) {
+      const result = commit(state, history, label, (d) => { d.name = label; });
+      state = result.state;
+      history = result.history;
+    }
+    const entries = timeline(history);
+    const current = entries.filter((e) => e.current);
+    expect(current).toHaveLength(1);
+    expect(current[0]!.label).toBe("Second");
+  });
+
+  it("includes redoable entries after an undo, still with one current marker", () => {
+    // doc()'s default name is already "a" - setting it to "a" would be a no-op commit
+    // and never land in history at all, so these use values that actually differ.
+    const first = commit(doc(), emptyHistory(), "First", (d) => { d.name = "x"; });
+    const second = commit(first.state, first.history, "Second", (d) => { d.name = "y"; });
+    const back = undo(second.state, second.history);
+
+    const entries = timeline(back.history);
+    expect(entries.map((e) => e.label)).toEqual(["Second", "First", "Start"]);
+    expect(entries.find((e) => e.current)!.label).toBe("First");
+  });
+
+  it("every entry's position round-trips through jumpTo to the right state", () => {
+    let state = doc();
+    let history = emptyHistory();
+    for (const label of ["First", "Second", "Third"]) {
+      const result = commit(state, history, label, (d) => { d.name = label; });
+      state = result.state;
+      history = result.history;
+    }
+    for (const entry of timeline(history)) {
+      const jumped = jumpTo(state, history, entry.position);
+      // Start is the fixture's own default name; every other entry's label is
+      // literally the name that commit set, so the two must match exactly.
+      const expectedName = entry.label === "Start" ? doc().name : entry.label;
+      expect(jumped.state.name).toBe(expectedName);
+    }
   });
 });

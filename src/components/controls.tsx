@@ -10,12 +10,31 @@
  */
 
 import { useProjectStore } from "@/store/project-store";
+import { provenanceLabel } from "@/store/provenance";
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+export function Field({
+  label, hint, provenancePath, children,
+}: {
+  label: string;
+  hint?: string;
+  /** Dotted path into project.provenance — shows a small hoverable source dot next to the label. */
+  provenancePath?: string;
+  children: React.ReactNode;
+}) {
+  const project = useProjectStore((s) => s.project);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-medium text-chrome-text">{label}</span>
+        <span className="flex items-center gap-1.5 text-[13px] font-medium text-chrome-text">
+          {label}
+          {provenancePath && (
+            <span
+              className="h-1.5 w-1.5 shrink-0 cursor-help rounded-full bg-chrome-border"
+              title={provenanceLabel(project, provenancePath)}
+              aria-hidden="true"
+            />
+          )}
+        </span>
         {hint && <span className="font-mono text-[11px] text-chrome-muted">{hint}</span>}
       </div>
       {children}
@@ -33,6 +52,7 @@ export function Slider({
   from,
   to,
   format,
+  provenancePath,
 }: {
   label: string;
   min: number;
@@ -44,10 +64,11 @@ export function Slider({
   from: string;
   to: string;
   format?: (value: number) => string;
+  provenancePath?: string;
 }) {
   const advanced = useProjectStore((s) => s.advanced);
   return (
-    <Field label={label} hint={advanced && format ? format(value) : undefined}>
+    <Field label={label} hint={advanced && format ? format(value) : undefined} provenancePath={provenancePath}>
       <input
         type="range"
         min={min}
@@ -71,15 +92,17 @@ export function Choice<T extends string>({
   value,
   onChange,
   describe,
+  provenancePath,
 }: {
   label: string;
   options: readonly T[];
   value: T;
   onChange: (value: T) => void;
   describe?: (option: T) => string;
+  provenancePath?: string;
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} provenancePath={provenancePath}>
       <div className="flex flex-wrap gap-1.5">
         {options.map((option) => (
           <button

@@ -5,7 +5,8 @@ import type { DesignProject } from "@/schema/project";
 import type { ProjectMeta } from "@/schema/project";
 import { createProject } from "@/schema/defaults";
 import {
-  canRedo, canUndo, commit, emptyHistory, redo, undo, type History,
+  canRedo, canUndo, commit, emptyHistory, jumpTo, redo, timeline, undo,
+  type History, type TimelineEntry,
 } from "./history";
 import { listProjects, loadProject, saveProject } from "./persistence";
 
@@ -43,6 +44,10 @@ interface ProjectState {
   edit: (label: string, recipe: (draft: DesignProject) => void, coalesceKey?: string) => void;
   undo: () => void;
   redo: () => void;
+  /** Jumps directly to a point in the timeline (see history.ts's jumpTo). */
+  jumpToHistory: (position: number) => void;
+  /** A flattened, current-position-aware view of the whole undo/redo timeline. */
+  historyTimeline: () => TimelineEntry[];
   canUndo: () => boolean;
   canRedo: () => boolean;
   setSection: (s: Section) => void;
@@ -117,6 +122,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ project: result.state, history: result.history, dirty: true });
     scheduleSave(result.state, () => set({ dirty: false }));
   },
+
+  jumpToHistory: (position) => {
+    const { project, history } = get();
+    if (!project) return;
+    const result = jumpTo(project, history, position);
+    set({ project: result.state, history: result.history, dirty: true });
+    scheduleSave(result.state, () => set({ dirty: false }));
+  },
+
+  historyTimeline: () => timeline(get().history),
 
   canUndo: () => canUndo(get().history),
   canRedo: () => canRedo(get().history),

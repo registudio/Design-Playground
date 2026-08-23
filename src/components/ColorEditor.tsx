@@ -8,6 +8,7 @@ import { resolveSemantic } from "@/color/semantic";
 import { generateScale } from "@/color/scale";
 import { evaluatePair, type ContrastFinding } from "@/color/contrast";
 import { Field, Panel } from "./controls";
+import { provenanceLabel } from "@/store/provenance";
 
 /**
  * Semantic colour editing with continuous contrast feedback (§10.2, §13.3).
@@ -60,6 +61,10 @@ export function ColorEditor() {
           {SEMANTIC_TOKENS.map((token) => {
             const color = resolveSemantic(colors, theme, token);
             const hex = toHex(color);
+            // Surfaced right here, not just in the separate Accessibility panel below
+            // (§13.3) — the point of the warning is to be seen while the swatch that
+            // caused it is still the thing your eye is on.
+            const tokenFindings = findingsForToken(findings, token);
             return (
               <div key={token} className="flex items-center gap-3">
                 <label className="relative h-8 w-12 shrink-0 cursor-pointer overflow-hidden rounded-md border border-chrome-border">
@@ -72,7 +77,22 @@ export function ColorEditor() {
                     aria-label={`${token} colour`}
                   />
                 </label>
-                <span className="flex-1 text-[13px] capitalize">{token}</span>
+                <span className="flex items-center gap-1.5 flex-1 text-[13px] capitalize">
+                  {token}
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 cursor-help rounded-full bg-chrome-border"
+                    title={provenanceLabel(project, `tokens.colors.${token}`)}
+                    aria-hidden="true"
+                  />
+                  {tokenFindings.length > 0 && (
+                    <span
+                      className="cursor-help text-chrome-danger"
+                      title={tokenFindings.map((f) => f.message).join("\n")}
+                    >
+                      ⚠
+                    </span>
+                  )}
+                </span>
                 {advanced && (
                   <span className="font-mono text-[11px] text-chrome-muted">
                     {`oklch(${color.l} ${color.c} ${color.h})`}
@@ -134,14 +154,26 @@ const PAIRS: Array<[string, SemanticToken, SemanticToken, boolean]> = [
   ["Large headings on background", "foreground", "background", true],
 ];
 
-function allFindings(tokens: ColorTokens, theme: "light" | "dark"): ContrastFinding[] {
-  return PAIRS.map(([label, fg, bg, large]) =>
-    evaluatePair(label, resolveSemantic(tokens, theme, fg), resolveSemantic(tokens, theme, bg), large),
-  );
+interface AnnotatedFinding extends ContrastFinding {
+  fg: SemanticToken;
+  bg: SemanticToken;
 }
 
-function contrastFindings(tokens: ColorTokens, theme: "light" | "dark"): ContrastFinding[] {
+function allFindings(tokens: ColorTokens, theme: "light" | "dark"): AnnotatedFinding[] {
+  return PAIRS.map(([label, fg, bg, large]) => ({
+    ...evaluatePair(label, resolveSemantic(tokens, theme, fg), resolveSemantic(tokens, theme, bg), large),
+    fg,
+    bg,
+  }));
+}
+
+function contrastFindings(tokens: ColorTokens, theme: "light" | "dark"): AnnotatedFinding[] {
   return allFindings(tokens, theme).filter((f) => f.level === "fail");
+}
+
+/** Failing pairs that involve a given token, either as the foreground or background. */
+function findingsForToken(findings: AnnotatedFinding[], token: SemanticToken): AnnotatedFinding[] {
+  return findings.filter((f) => f.fg === token || f.bg === token);
 }
 
 function PassingPairs({ tokens, theme }: { tokens: ColorTokens; theme: "light" | "dark" }) {

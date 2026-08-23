@@ -34,6 +34,7 @@ export function AnimationsPanel() {
           label="Overall character"
           options={MOTION_PROFILES}
           value={motion.profile}
+          provenancePath="recipe.motion.profile"
           onChange={(profile) =>
             edit("Set motion profile", (draft) => {
               draft.recipe.motion.profile = profile;
@@ -50,6 +51,7 @@ export function AnimationsPanel() {
               draft.tokens.motion.distance = presets.distance;
               draft.tokens.motion.scale = presets.scale;
               draft.tokens.motion.stagger = presets.stagger;
+              draft.provenance["recipe.motion.profile"] = "user";
             })
           }
         />
@@ -61,10 +63,12 @@ export function AnimationsPanel() {
           options={ENTRANCE_RECIPES.map((r) => r.id)}
           value={motion.entrance.default?.recipe ?? ENTRANCE_RECIPES[0]!.id}
           describe={(id) => ENTRANCE_RECIPES.find((r) => r.id === id)?.label ?? id}
+          provenancePath="recipe.motion.entrance.default"
           onChange={(id) =>
             edit("Set entrance animation", (draft) => {
               const recipe = ENTRANCE_RECIPES.find((r) => r.id === id)!;
               draft.recipe.motion.entrance.default = { ...recipe.binding };
+              draft.provenance["recipe.motion.entrance.default"] = "user";
             })
           }
         />
@@ -78,10 +82,12 @@ export function AnimationsPanel() {
             options={HOVER_RECIPES[target].map((r) => r.id)}
             value={motion.interaction[target]?.recipe ?? HOVER_RECIPES[target][0]!.id}
             describe={(id) => HOVER_RECIPES[target].find((r) => r.id === id)?.label ?? id}
+            provenancePath={`recipe.motion.interaction.${target}`}
             onChange={(id) =>
               edit(`Set ${target} hover`, (draft) => {
                 const recipe = HOVER_RECIPES[target].find((r) => r.id === id)!;
                 draft.recipe.motion.interaction[target] = { ...recipe.binding };
+                draft.provenance[`recipe.motion.interaction.${target}`] = "user";
               })
             }
           />
@@ -94,10 +100,12 @@ export function AnimationsPanel() {
           options={SCROLL_RECIPES.map((r) => r.id)}
           value={motion.scroll.default?.recipe ?? SCROLL_RECIPES[0]!.id}
           describe={(id) => SCROLL_RECIPES.find((r) => r.id === id)?.label ?? id}
+          provenancePath="recipe.motion.scroll.default"
           onChange={(id) =>
             edit("Set scroll behaviour", (draft) => {
               const recipe = SCROLL_RECIPES.find((r) => r.id === id)!;
               draft.recipe.motion.scroll.default = { ...recipe.binding };
+              draft.provenance["recipe.motion.scroll.default"] = "user";
             })
           }
         />
@@ -110,11 +118,13 @@ export function AnimationsPanel() {
             min={80} max={1200} step={10}
             value={tokens.duration.base}
             format={(v) => `${v}ms`}
+            provenancePath="tokens.motion.duration"
             onChange={(base) =>
               edit("Adjust duration", (draft) => {
                 draft.tokens.motion.duration.base = base;
                 draft.tokens.motion.duration.fast = Math.round(base * 0.47);
                 draft.tokens.motion.duration.slow = Math.round(base * 1.88);
+                draft.provenance["tokens.motion.duration"] = "user";
               }, "motion.duration")
             }
           />
@@ -123,8 +133,12 @@ export function AnimationsPanel() {
             min={0} max={96} step={2}
             value={tokens.distance}
             format={(v) => `${v}px`}
+            provenancePath="tokens.motion.distance"
             onChange={(distance) =>
-              edit("Adjust distance", (draft) => { draft.tokens.motion.distance = distance; }, "motion.distance")
+              edit("Adjust distance", (draft) => {
+                draft.tokens.motion.distance = distance;
+                draft.provenance["tokens.motion.distance"] = "user";
+              }, "motion.distance")
             }
           />
           <Slider
@@ -132,8 +146,12 @@ export function AnimationsPanel() {
             min={0} max={200} step={5}
             value={tokens.stagger}
             format={(v) => `${v}ms`}
+            provenancePath="tokens.motion.stagger"
             onChange={(stagger) =>
-              edit("Adjust stagger", (draft) => { draft.tokens.motion.stagger = stagger; }, "motion.stagger")
+              edit("Adjust stagger", (draft) => {
+                draft.tokens.motion.stagger = stagger;
+                draft.provenance["tokens.motion.stagger"] = "user";
+              }, "motion.stagger")
             }
           />
         </Panel>

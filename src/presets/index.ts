@@ -2,6 +2,8 @@ import type { DesignProject } from "@/schema/project";
 import { fromCss } from "@/color/oklch";
 import { suggestPalette } from "@/color/semantic";
 import { findFont, FONT_PAIRINGS } from "@/fonts/catalogue";
+import { SEMANTIC_TOKENS } from "@/schema/primitives";
+import { markProvenance } from "@/store/provenance";
 
 /**
  * Design presets (§14).
@@ -71,6 +73,7 @@ const setPairing = (draft: DesignProject, pairingId: string) => {
       weights: entry.weights,
     };
   }
+  markProvenance(draft, ["tokens.typography.display", "tokens.typography.body", "tokens.typography.mono"], "preset");
 };
 
 /** Scales the whole type ladder around the body size. */
@@ -84,6 +87,7 @@ const setTypeScale = (draft: DesignProject, ratio: number, bodySize = 1) => {
     draft.tokens.typography.scale[step as keyof typeof offsets].size =
       Math.round(bodySize * ratio ** offset * 1000) / 1000;
   }
+  markProvenance(draft, ["tokens.typography.scale"], "preset");
 };
 
 const setRadius = (draft: DesignProject, md: number) => {
@@ -100,6 +104,7 @@ const setPalette = (draft: DesignProject, hex: string) => {
   draft.tokens.colors = suggestPalette({
     detected: [{ color: seed, weight: 1, role: "dominant", label: "Preset" }],
   });
+  markProvenance(draft, SEMANTIC_TOKENS.map((t) => `tokens.colors.${t}`), "preset");
 };
 
 type LayoutPatch = Partial<DesignProject["tokens"]["layout"]>;
@@ -116,16 +121,23 @@ const setGeometry = (
   draft.tokens.layout = { ...draft.tokens.layout, ...layout };
   draft.tokens.imagery = { ...draft.tokens.imagery, ...imagery };
   if (borderWidth) draft.tokens.geometry.borderWidth = borderWidth;
+  markProvenance(draft, [
+    "tokens.geometry.radius", "tokens.geometry.spacing", "tokens.imagery.shadow",
+    "tokens.layout.density", "tokens.layout.alignment",
+    "tokens.imagery.radius", "tokens.imagery.treatment", "tokens.imagery.border",
+  ], "preset");
 };
 
 type ComponentPatch = Partial<DesignProject["recipe"]["components"]>;
 
 const setComponents = (draft: DesignProject, patch: ComponentPatch) => {
   draft.recipe.components = { ...draft.recipe.components, ...patch };
+  markProvenance(draft, Object.keys(patch).map((k) => `recipe.components.${k}`), "preset");
 };
 
 const setMotionProfile = (draft: DesignProject, profile: DesignProject["recipe"]["motion"]["profile"]) => {
   draft.recipe.motion.profile = profile;
+  markProvenance(draft, ["recipe.motion.profile"], "preset");
 };
 
 /** Builds a preset's five facet functions from a flat description. */
