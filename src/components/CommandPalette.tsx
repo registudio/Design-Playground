@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProjectStore, type Device, type PreviewMode, type Section } from "@/store/project-store";
-import { PRESETS, applyPreset } from "@/presets";
+import { PRESETS, applyPreset, customPresetToPreset } from "@/presets";
 import { ComponentChoices } from "@/schema/recipe";
 
 /**
@@ -33,11 +33,12 @@ function useActions(onDone: () => void): Action[] {
   const theme = useProjectStore((s) => s.theme);
   const undo = useProjectStore((s) => s.undo);
   const redo = useProjectStore((s) => s.redo);
+  const customPresets = useProjectStore((s) => s.customPresets);
 
   return useMemo(() => {
     const actions: Action[] = [];
 
-    for (const preset of PRESETS) {
+    for (const preset of [...PRESETS, ...customPresets.map(customPresetToPreset)]) {
       actions.push({
         id: `preset:${preset.id}`,
         label: preset.name,
@@ -132,7 +133,7 @@ function useActions(onDone: () => void): Action[] {
 
     return actions;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edit, setSection, setPreviewMode, setDevice, setTheme, setAdvanced, advanced, theme, undo, redo, onDone]);
+  }, [edit, setSection, setPreviewMode, setDevice, setTheme, setAdvanced, advanced, theme, undo, redo, onDone, customPresets]);
 }
 
 export const COMMAND_PALETTE_OPEN_EVENT = "dp:open-command-palette";

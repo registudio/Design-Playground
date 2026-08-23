@@ -10,8 +10,8 @@ import { ExportPanel } from "@/components/ExportPanel";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { CommandPalette, openCommandPalette } from "@/components/CommandPalette";
 import {
-  applyPreset, applyPresetFacets, FACET_LABELS, PRESET_FACETS, PRESET_FAMILIES, PRESETS,
-  type Preset, type PresetFacet,
+  applyPreset, applyPresetFacets, customPresetToPreset, FACET_LABELS, presetThumbnail,
+  PRESET_FACETS, PRESET_FAMILIES, PRESETS, type Preset, type PresetFacet,
 } from "@/presets";
 
 /**
@@ -364,12 +364,18 @@ function PresetBar() {
   const edit = useProjectStore((s) => s.edit);
   const applied = useProjectStore((s) => s.project?.appliedPreset);
   const advanced = useProjectStore((s) => s.advanced);
+  const customPresets = useProjectStore((s) => s.customPresets);
+  const refreshCustomPresets = useProjectStore((s) => s.refreshCustomPresets);
+  const saveCurrentAsPreset = useProjectStore((s) => s.saveCurrentAsPreset);
+  const removeCustomPreset = useProjectStore((s) => s.removeCustomPreset);
   // Which preset's facet picker is open, if any — only one at a time.
   const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null);
   // Families start expanded (unchanged default); a header click can compact one away
   // once the list of twenty-plus presets gets in the way — the command palette (⌘K)
   // is the other half of this: jump straight to a preset by name instead of scrolling.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const toggleFamily = (family: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -377,6 +383,10 @@ function PresetBar() {
       else next.add(family);
       return next;
     });
+
+  useEffect(() => { void refreshCustomPresets(); }, [refreshCustomPresets]);
+
+  const allPresets: Preset[] = [...PRESETS, ...customPresets.map(customPresetToPreset)];
 
   const applyFull = (preset: Preset) =>
     edit(`Apply ${preset.name}`, (draft) => {
@@ -391,78 +401,147 @@ function PresetBar() {
       draft.appliedPreset = null;
     });
 
+  const submitSave = () => {
+    const trimmed = saveName.trim();
+    if (!trimmed) return;
+    void saveCurrentAsPreset(trimmed);
+    setSaveName("");
+    setSaving(false);
+  };
+
   return (
     <div className="max-h-[38vh] shrink-0 overflow-y-auto border-t border-chrome-border px-5 py-4">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-chrome-muted">
-        Start from a direction
-      </span>
-      {/* Grouped by family — twenty-two ungrouped chips is a wall, and the families
-          are how a designer actually narrows down in front of a client. */}
-      {PRESET_FAMILIES.map((family) => (
-        <div key={family} className="mt-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-chrome-muted">
+          Start from a direction
+        </span>
+        <button
+          type="button"
+          onClick={() => setSaving((v) => !v)}
+          className="text-[11px] text-chrome-accent hover:underline"
+        >
+          {saving ? "Cancel" : "Save current as preset"}
+        </button>
+      </div>
+
+      {saving && (
+        <div className="mt-2 flex gap-1.5">
+          <input
+            autoFocus
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitSave()}
+            placeholder="Preset name…"
+            className="min-w-0 flex-1 rounded-md border border-chrome-border bg-chrome-panel px-2.5 py-1.5 text-[12px]"
+          />
           <button
             type="button"
-            onClick={() => toggleFamily(family)}
-            className="flex w-full items-center gap-1 text-[10px] uppercase tracking-[0.06em] text-chrome-muted opacity-70 hover:opacity-100"
+            onClick={submitSave}
+            disabled={!saveName.trim()}
+            className="shrink-0 rounded-md bg-chrome-accent px-2.5 py-1.5 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-40"
           >
-            <span aria-hidden="true">{collapsed.has(family) ? "▸" : "▾"}</span>
-            {family}
+            Save
           </button>
-          {!collapsed.has(family) && (
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {PRESETS.filter((p) => p.family === family).map((preset) => (
-              <div key={preset.id} className="flex flex-col">
-                <div
-                  className={`flex items-center rounded-md border transition-colors ${
-                    applied === preset.id
-                      ? "border-chrome-accent text-chrome-accent"
-                      : "border-chrome-border text-chrome-muted hover:text-chrome-text"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    title={preset.description}
-                    // One history entry, so a client can try a direction and undo once.
-                    onClick={() => applyFull(preset)}
-                    className="flex items-center gap-1.5 rounded-l-md px-2.5 py-1.5 text-[12px] hover:bg-chrome-hover"
+        </div>
+      )}
+
+      {/* Grouped by family — twenty-two-plus ungrouped chips is a wall, and the
+          families are how a designer actually narrows down in front of a client.
+          Empty families (Custom, before anything's been saved) don't render at all. */}
+      {PRESET_FAMILIES.map((family) => {
+        const inFamily = allPresets.filter((p) => p.family === family);
+        if (inFamily.length === 0) return null;
+        return (
+          <div key={family} className="mt-3">
+            <button
+              type="button"
+              onClick={() => toggleFamily(family)}
+              className="flex w-full items-center gap-1 text-[10px] uppercase tracking-[0.06em] text-chrome-muted opacity-70 hover:opacity-100"
+            >
+              <span aria-hidden="true">{collapsed.has(family) ? "▸" : "▾"}</span>
+              {family}
+            </button>
+            {!collapsed.has(family) && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {inFamily.map((preset) => (
+                <div key={preset.id} className="flex flex-col">
+                  <div
+                    className={`flex items-center rounded-md border transition-colors ${
+                      applied === preset.id
+                        ? "border-chrome-accent text-chrome-accent"
+                        : "border-chrome-border text-chrome-muted hover:text-chrome-text"
+                    }`}
                   >
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: preset.seed }}
-                      aria-hidden="true"
-                    />
-                    {preset.name}
-                  </button>
-                  {/* Partial application is power-user territory — mixing just one
-                      facet of a preset into an already-customised project — so it
-                      stays behind Advanced rather than cluttering the default view. */}
-                  {advanced && (
                     <button
                       type="button"
-                      title="Apply only some of this preset"
-                      onClick={() => setPickerOpenFor(pickerOpenFor === preset.id ? null : preset.id)}
-                      className="border-l border-chrome-border px-1.5 py-1.5 text-[11px] hover:bg-chrome-hover"
+                      title={preset.description}
+                      // One history entry, so a client can try a direction and undo once.
+                      onClick={() => applyFull(preset)}
+                      className="flex items-center gap-1.5 rounded-l-md py-1.5 pl-1.5 pr-2.5 text-[12px] hover:bg-chrome-hover"
                     >
-                      ⋯
+                      <PresetThumbnail preset={preset} />
+                      {preset.name}
                     </button>
+                    {/* Partial application is power-user territory — mixing just one
+                        facet of a preset into an already-customised project — so it
+                        stays behind Advanced rather than cluttering the default view. */}
+                    {advanced && (
+                      <button
+                        type="button"
+                        title="Apply only some of this preset"
+                        onClick={() => setPickerOpenFor(pickerOpenFor === preset.id ? null : preset.id)}
+                        className="border-l border-chrome-border px-1.5 py-1.5 text-[11px] hover:bg-chrome-hover"
+                      >
+                        ⋯
+                      </button>
+                    )}
+                    {preset.family === "Custom" && (
+                      <button
+                        type="button"
+                        title="Delete this saved preset"
+                        onClick={() => void removeCustomPreset(preset.id)}
+                        className="border-l border-chrome-border px-1.5 py-1.5 text-[11px] hover:bg-chrome-hover hover:text-chrome-danger"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  {pickerOpenFor === preset.id && (
+                    <FacetPicker
+                      onApply={(facets) => {
+                        applyPartial(preset, facets);
+                        setPickerOpenFor(null);
+                      }}
+                      onCancel={() => setPickerOpenFor(null)}
+                    />
                   )}
                 </div>
-                {pickerOpenFor === preset.id && (
-                  <FacetPicker
-                    onApply={(facets) => {
-                      applyPartial(preset, facets);
-                      setPickerOpenFor(null);
-                    }}
-                    onCancel={() => setPickerOpenFor(null)}
-                  />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
+            )}
           </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
+  );
+}
+
+/** A tiny live-computed snapshot (§Wave D Templating-2) — colour + shape read straight
+ *  off the preset's own facet functions, so it can never drift from what applying the
+ *  preset actually produces. */
+function PresetThumbnail({ preset }: { preset: Preset }) {
+  const thumb = presetThumbnail(preset);
+  const radiusPx = Math.min(10, thumb.radius * 16);
+  return (
+    <span
+      className="grid h-6 w-8 shrink-0 grid-cols-2 gap-0.5 overflow-hidden rounded border border-chrome-border/60"
+      style={{ background: thumb.background }}
+      aria-hidden="true"
+    >
+      <span className="row-span-2" style={{ background: thumb.primary, borderRadius: radiusPx }} />
+      <span style={{ background: thumb.accent, borderRadius: radiusPx }} />
+      <span style={{ background: thumb.background, border: "1px solid currentColor", borderRadius: radiusPx, opacity: 0.3 }} />
+    </span>
   );
 }
 

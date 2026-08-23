@@ -3,6 +3,7 @@ import { SEMANTIC_TOKENS, type SemanticToken } from "@/schema/primitives";
 import { toHex, toCss } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
 import { evaluatePair, type ContrastFinding } from "@/color/contrast";
+import { escapeHtml } from "./htmlUtil";
 
 /**
  * A client-facing rationale document (§Wave D Features-4): a standalone HTML file
@@ -36,10 +37,6 @@ const MOTION_COPY: Record<string, string> = {
   expressive: "Expressive — motion is part of the brand voice: noticeable easing, stagger, and hover response.",
   cinematic: "Cinematic — the most pronounced motion profile, with longer durations and larger movement, for brands that want an immersive feel.",
 };
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-}
 
 function swatchRow(project: DesignProject, theme: "light" | "dark", token: SemanticToken): string {
   const color = resolveSemantic(project.tokens.colors, theme, token);

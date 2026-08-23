@@ -3,14 +3,17 @@
 import { create } from "zustand";
 import type { DesignProject, Snapshot } from "@/schema/project";
 import type { ProjectMeta } from "@/schema/project";
+import type { CustomPreset } from "@/schema/customPreset";
 import { createProject } from "@/schema/defaults";
+import { captureCustomPresetFacets } from "@/presets";
 import {
   canRedo, canUndo, commit, emptyHistory, jumpTo, redo, timeline, undo,
   type History, type TimelineEntry,
 } from "./history";
 import {
-  deleteProject, deleteSnapshot, listProjects, listSnapshots, loadProject, saveProject,
-  saveSnapshot, setProjectArchived, setProjectTags,
+  deleteCustomPreset, deleteProject, deleteSnapshot, listCustomPresets, listProjects,
+  listSnapshots, loadProject, saveCustomPreset, saveProject, saveSnapshot,
+  setProjectArchived, setProjectTags,
 } from "./persistence";
 
 /**
@@ -31,6 +34,7 @@ interface ProjectState {
   history: History;
   projects: ProjectMeta[];
   snapshots: Snapshot[];
+  customPresets: CustomPreset[];
   status: "idle" | "loading" | "ready";
   dirty: boolean;
 
@@ -71,6 +75,11 @@ interface ProjectState {
   setProjectTags: (id: string, tags: string[]) => Promise<void>;
   setProjectArchived: (id: string, archived: boolean) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
+
+  // User-savable custom presets, global across projects (§Wave D Templating-1).
+  refreshCustomPresets: () => Promise<void>;
+  saveCurrentAsPreset: (name: string, description?: string) => Promise<void>;
+  removeCustomPreset: (id: string) => Promise<void>;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -87,6 +96,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   history: emptyHistory(),
   projects: [],
   snapshots: [],
+  customPresets: [],
   status: "idle",
   dirty: false,
   section: "foundation",
@@ -204,5 +214,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     await deleteProject(id);
     if (get().project?.id === id) set({ project: null, history: emptyHistory(), snapshots: [] });
     await get().refreshProjects();
+  },
+
+  refreshCustomPresets: async () => set({ customPresets: await listCustomPresets() }),
+
+  saveCurrentAsPreset: async (name, description = "") => {
+    const { project } = get();
+    if (!project) return;
+    const preset: CustomPreset = {
+      id: crypto.randomUUID(),
+      name,
+      description,
+      createdAt: Date.now(),
+      facets: captureCustomPresetFacets(project),
+    };
+    await saveCustomPreset(preset);
+    await get().refreshCustomPresets();
+  },
+
+  removeCustomPreset: async (id) => {
+    await deleteCustomPreset(id);
+    await get().refreshCustomPresets();
   },
 }));

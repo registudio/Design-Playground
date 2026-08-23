@@ -8,6 +8,7 @@ import {
 } from "@/export/deliver";
 import { packProject, downloadProject } from "@/export/project-file";
 import { downloadRationale } from "@/export/rationale";
+import { downloadStaticPage } from "@/export/staticPage";
 import { getAsset } from "@/store/persistence";
 
 /**
@@ -106,6 +107,21 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
             className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
           >
             Download client rationale (HTML)
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              setStatus(null);
+              try {
+                await downloadStaticPage(project);
+              } catch {
+                setStatus("Could not build the static page. Try again.");
+              }
+            }}
+            className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
+          >
+            Share Sample Page (standalone HTML)
           </button>
         </div>
 

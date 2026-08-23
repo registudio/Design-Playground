@@ -57,8 +57,11 @@ describe("presets", () => {
     }
   });
 
-  it("every family is represented", () => {
-    for (const family of PRESET_FAMILIES) {
+  it("every built-in family is represented", () => {
+    // "Custom" is deliberately absent from the static list — those presets are
+    // user-saved at runtime (see presets.ts's captureCustomPresetFacets) — so it's
+    // excluded here rather than asserted empty.
+    for (const family of PRESET_FAMILIES.filter((f) => f !== "Custom")) {
       expect(PRESETS.some((p) => p.family === family), family).toBe(true);
     }
   });

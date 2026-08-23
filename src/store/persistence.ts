@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { DesignProject, Snapshot, type ProjectMeta } from "@/schema/project";
+import type { CustomPreset } from "@/schema/customPreset";
 
 /**
  * IndexedDB persistence (§13.5).
@@ -11,13 +12,14 @@ import { DesignProject, Snapshot, type ProjectMeta } from "@/schema/project";
  */
 
 const DB_NAME = "design-playground";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 interface PlaygroundDB extends DBSchema {
   projects: { key: string; value: DesignProject };
   meta: { key: string; value: ProjectMeta; indexes: { updatedAt: number } };
   assets: { key: string; value: { hash: string; mime: string; blob: Blob } };
   snapshots: { key: string; value: Snapshot; indexes: { projectId: string } };
+  customPresets: { key: string; value: CustomPreset };
 }
 
 let dbPromise: Promise<IDBPDatabase<PlaygroundDB>> | null = null;
@@ -35,6 +37,9 @@ function db() {
         if (oldVersion < 2) {
           const snapshots = database.createObjectStore("snapshots", { keyPath: "id" });
           snapshots.createIndex("projectId", "projectId");
+        }
+        if (oldVersion < 3) {
+          database.createObjectStore("customPresets", { keyPath: "id" });
         }
       },
     });
@@ -145,4 +150,21 @@ export async function listSnapshots(projectId: string): Promise<Snapshot[]> {
 
 export async function deleteSnapshot(id: string): Promise<void> {
   await (await db()).delete("snapshots", id);
+}
+
+// --- Custom presets --------------------------------------------------------------
+// Global, not scoped to a project (§Wave D Templating-1) — a starting point saved on
+// one client's project should be reusable on the next.
+
+export async function saveCustomPreset(preset: CustomPreset): Promise<void> {
+  await (await db()).put("customPresets", preset);
+}
+
+export async function listCustomPresets(): Promise<CustomPreset[]> {
+  const all = await (await db()).getAll("customPresets");
+  return all.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export async function deleteCustomPreset(id: string): Promise<void> {
+  await (await db()).delete("customPresets", id);
 }

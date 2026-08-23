@@ -1,8 +1,11 @@
+import { produce } from "immer";
 import type { DesignProject } from "@/schema/project";
-import { fromCss } from "@/color/oklch";
-import { suggestPalette } from "@/color/semantic";
+import { fromCss, toHex } from "@/color/oklch";
+import { resolveSemantic, suggestPalette } from "@/color/semantic";
 import { findFont, FONT_PAIRINGS } from "@/fonts/catalogue";
 import { SEMANTIC_TOKENS } from "@/schema/primitives";
+import { createProject } from "@/schema/defaults";
+import type { CustomPreset } from "@/schema/customPreset";
 import { markProvenance } from "@/store/provenance";
 
 /**
@@ -38,7 +41,7 @@ export interface Preset {
   id: string;
   name: string;
   /** Grouping shown in the UI. */
-  family: "Professional" | "Editorial" | "Expressive" | "Technical" | "Industry";
+  family: "Professional" | "Editorial" | "Expressive" | "Technical" | "Industry" | "Custom";
   description: string;
   /** Seed colour used only when no logo has been analysed. */
   seed: string;
@@ -491,4 +494,109 @@ export const PRESETS: Preset[] = [
   }),
 ];
 
-export const PRESET_FAMILIES = ["Professional", "Editorial", "Expressive", "Technical", "Industry"] as const;
+export const PRESET_FAMILIES = ["Professional", "Editorial", "Expressive", "Technical", "Industry", "Custom"] as const;
+
+// --- Custom presets (§Wave D Templating-1) --------------------------------------
+// Unlike the parametric presets above, a custom preset is built directly from a
+// live project's concrete values — captured once, then reapplied verbatim.
+
+/** Captures the current project's facet values, ready to persist as a CustomPreset. */
+export function captureCustomPresetFacets(project: DesignProject): CustomPreset["facets"] {
+  return {
+    palette: structuredClone(project.tokens.colors),
+    typography: structuredClone(project.tokens.typography),
+    geometry: {
+      radius: structuredClone(project.tokens.geometry.radius),
+      borderWidth: structuredClone(project.tokens.geometry.borderWidth),
+      layout: structuredClone(project.tokens.layout),
+      imagery: structuredClone(project.tokens.imagery),
+    },
+    components: structuredClone(project.recipe.components),
+    motion: structuredClone(project.recipe.motion),
+  };
+}
+
+/** Wraps a stored CustomPreset back into the same Preset shape the built-ins use, so
+ *  the rest of the UI (application, facet picker, thumbnails) never has to know the
+ *  difference. */
+export function customPresetToPreset(preset: CustomPreset): Preset {
+  const primaryHex = toHex(resolveSemantic(preset.facets.palette, "light", "primary"));
+  return {
+    id: preset.id,
+    name: preset.name,
+    family: "Custom",
+    description: preset.description || "Saved from a project",
+    seed: primaryHex,
+    pairing: "",
+    facets: {
+      palette: (draft) => {
+        // Brand colours from an uploaded logo still outrank a saved starting point.
+        if (draft.analysis) return;
+        draft.tokens.colors = structuredClone(preset.facets.palette);
+        markProvenance(draft, SEMANTIC_TOKENS.map((t) => `tokens.colors.${t}`), "preset");
+      },
+      typography: (draft) => {
+        draft.tokens.typography = structuredClone(preset.facets.typography);
+        markProvenance(draft, [
+          "tokens.typography.display", "tokens.typography.body", "tokens.typography.mono",
+          "tokens.typography.scale",
+        ], "preset");
+      },
+      geometry: (draft) => {
+        draft.tokens.geometry.radius = structuredClone(preset.facets.geometry.radius);
+        draft.tokens.geometry.borderWidth = structuredClone(preset.facets.geometry.borderWidth);
+        draft.tokens.layout = structuredClone(preset.facets.geometry.layout);
+        draft.tokens.imagery = structuredClone(preset.facets.geometry.imagery);
+        markProvenance(draft, [
+          "tokens.geometry.radius", "tokens.geometry.spacing", "tokens.imagery.shadow",
+          "tokens.layout.density", "tokens.layout.alignment",
+          "tokens.imagery.radius", "tokens.imagery.treatment", "tokens.imagery.border",
+        ], "preset");
+      },
+      components: (draft) => {
+        draft.recipe.components = structuredClone(preset.facets.components);
+        markProvenance(draft, Object.keys(preset.facets.components).map((k) => `recipe.components.${k}`), "preset");
+      },
+      motion: (draft) => {
+        draft.recipe.motion = structuredClone(preset.facets.motion);
+        markProvenance(draft, ["recipe.motion.profile"], "preset");
+      },
+    },
+  };
+}
+
+// --- Thumbnails (§Wave D Templating-2) ------------------------------------------
+// A colour dot and a name don't scan well past a handful of presets. Rather than
+// hand-maintain separate thumbnail metadata per preset, apply just the palette and
+// geometry facets to a scratch project and read the result back — the same facet
+// functions that already define the preset, so a thumbnail can never drift from what
+// applying the preset actually produces.
+
+export interface PresetThumbnail {
+  background: string;
+  primary: string;
+  accent: string;
+  /** rem */
+  radius: number;
+}
+
+const thumbnailCache = new Map<string, PresetThumbnail>();
+
+export function presetThumbnail(preset: Preset): PresetThumbnail {
+  const cached = thumbnailCache.get(preset.id);
+  if (cached) return cached;
+
+  const scratch = produce(createProject("", ""), (draft) => {
+    preset.facets.palette(draft);
+    preset.facets.geometry(draft);
+  });
+
+  const thumb: PresetThumbnail = {
+    background: toHex(resolveSemantic(scratch.tokens.colors, "light", "background")),
+    primary: toHex(resolveSemantic(scratch.tokens.colors, "light", "primary")),
+    accent: toHex(resolveSemantic(scratch.tokens.colors, "light", "accent")),
+    radius: scratch.tokens.geometry.radius.md,
+  };
+  thumbnailCache.set(preset.id, thumb);
+  return thumb;
+}
