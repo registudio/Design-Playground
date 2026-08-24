@@ -317,10 +317,32 @@ body {
 .dp-features-items { display: grid; gap: var(--dp-space-4); grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
 .dp-features-bento .dp-features-items { grid-template-columns: repeat(4, 1fr); }
 .dp-features-bento .dp-feature:first-child { grid-column: span 2; grid-row: span 2; }
-.dp-features-alternating .dp-features-items { grid-template-columns: 1fr; }
-/* Alternating stagger: every other row indents, suggesting side-by-side content/media. */
+.dp-features-alternating .dp-features-items { grid-template-columns: 1fr; counter-reset: dp-feature; }
+/* Alternating stagger: every other row indents, suggesting side-by-side content/media.
+   A bare indent with nothing on the empty side reads as misaligned rather than
+   intentional, so a large low-opacity index numeral anchors that side — the same
+   "big quiet number" pattern real editorial sites use when there's no photography
+   to place there yet. */
+.dp-features-alternating .dp-feature {
+  counter-increment: dp-feature;
+  position: relative;
+  overflow: visible;
+}
+.dp-features-alternating .dp-feature::before {
+  content: counter(dp-feature, decimal-leading-zero);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 700 4rem/1 var(--dp-font-display);
+  letter-spacing: -0.03em;
+  color: var(--dp-color-primary);
+  opacity: 0.14;
+  pointer-events: none;
+}
 .dp-features-alternating .dp-feature:nth-child(even) { margin-left: 20%; }
+.dp-features-alternating .dp-feature:nth-child(even)::before { right: calc(100% + var(--dp-space-6)); }
 .dp-features-alternating .dp-feature:nth-child(odd) { margin-right: 20%; }
+.dp-features-alternating .dp-feature:nth-child(odd)::before { left: calc(100% + var(--dp-space-6)); }
 
 /* Tabs: first item reads as the active tab panel, the rest as an inline tab strip. */
 .dp-features-tabs .dp-features-items { grid-template-columns: 1fr; gap: var(--dp-space-3); }
@@ -849,6 +871,7 @@ body {
   .dp-features-demo .dp-features-items { grid-template-columns: repeat(2, 1fr); }
   .dp-features-alternating .dp-feature:nth-child(even),
   .dp-features-alternating .dp-feature:nth-child(odd) { margin-inline: 0; }
+  .dp-features-alternating .dp-feature::before { display: none; }
   .dp-cta-booking .dp-cta-inner { flex-direction: column; text-align: center; }
   .dp-navbar-split .dp-navbar-brand { position: static; transform: none; }
 }

@@ -189,6 +189,24 @@ export const FONT_PAIRINGS: FontPairing[] = [
     description: "Punchy headlines, highly legible body",
     display: "Bricolage Grotesque", body: "Plus Jakarta Sans", mono: "Geist Mono",
   },
+  {
+    id: "considered-sans",
+    name: "Considered Sans",
+    description: "Two precise sans faces, built for design-led professional work",
+    display: "Manrope", body: "Public Sans", mono: "IBM Plex Mono",
+  },
+  {
+    id: "refined-serif",
+    name: "Refined Serif",
+    description: "Two considered serifs — authoritative without shouting",
+    display: "Spectral", body: "Source Serif 4", mono: "IBM Plex Mono",
+  },
+  {
+    id: "type-forward",
+    name: "Type Forward",
+    description: "An expressive variable serif over a quiet reading serif",
+    display: "Fraunces", body: "Newsreader", mono: "Space Mono",
+  },
 ];
 
 /**

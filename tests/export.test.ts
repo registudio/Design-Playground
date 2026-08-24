@@ -1,9 +1,14 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { buildExport, toZip, validate } from "@/export/bundle";
 import { stableStringify, assertDeterministic } from "@/export/serialize";
 import { generateCss } from "@/export/css";
 import { DesignTokens } from "@/schema/tokens";
 import { fixtureProject } from "./fixture";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("deterministic export", () => {
   it("produces byte-identical files across runs", () => {
@@ -98,5 +103,33 @@ describe("globals.css generation", () => {
 
   it("quotes font families that need it", () => {
     expect(css).toContain('"JetBrains Mono"');
+  });
+
+  // Regression for a real bug: toKebab("heading2") produced "heading2" (no dash),
+  // because its regex only inserted a dash at a lower->upper case boundary — a bare
+  // letter-then-digit boundary never matched. preview.css's .dp-type-heading-{1,2,3}
+  // selectors reference --dp-text-heading-{1,2,3} (with the dash), so the variable
+  // this generated could never be found. Inside the `font` shorthand, one var() that
+  // fails to resolve invalidates the whole declaration at computed-value time, so
+  // every heading silently rendered at the browser default (16px/400) instead of the
+  // token's real size and weight — with no visible error anywhere.
+  it("emits heading step variables with the dash preview.css's selectors expect", () => {
+    for (const step of ["heading-1", "heading-2", "heading-3"]) {
+      expect(css).toContain(`--dp-text-${step}:`);
+      expect(css).toContain(`--dp-text-${step}--line-height:`);
+      expect(css).toContain(`--dp-text-${step}--letter-spacing:`);
+      expect(css).toContain(`--dp-text-${step}--font-weight:`);
+    }
+  });
+
+  it("emits every custom property preview.css's typography selectors reference", () => {
+    const previewCss = readFileSync(join(__dirname, "..", "app", "preview", "preview.css"), "utf-8");
+    const referenced = new Set(
+      [...previewCss.matchAll(/var\((--dp-text-[a-z0-9-]+)\)/g)].map((m) => m[1]),
+    );
+    expect(referenced.size).toBeGreaterThan(0);
+    for (const name of referenced) {
+      expect(css, name).toContain(`${name}:`);
+    }
   });
 });

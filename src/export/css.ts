@@ -177,7 +177,15 @@ function reducedMotionBlock(): string[] {
   ];
 }
 
-const toKebab = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+// Handles both camelCase boundaries ("displayXl" -> "display-xl") and a letter
+// immediately followed by a digit ("heading2" -> "heading-2") — the digit case has no
+// case change for the plain regex to key off, so it needs its own pass. Missing this
+// silently broke every --dp-text-heading-{1,2,3} variable: the generated name never
+// matched the "heading-1" etc. selectors in preview.css, so the `font` shorthand that
+// reads it became invalid at computed-value time and collapsed to the browser default
+// (16px/400) instead of the token's actual size and weight.
+const toKebab = (s: string) =>
+  s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([a-zA-Z])([0-9])/g, "$1-$2").toLowerCase();
 
 /** Families with spaces or non-identifier characters need quoting in a font stack. */
 const quoteFamily = (f: string) => (/^[a-zA-Z-][a-zA-Z0-9-]*$/.test(f) ? f : `"${f}"`);
