@@ -143,6 +143,13 @@ export async function saveSnapshot(projectId: string, name: string, project: Des
   return snapshot;
 }
 
+/** Restores a snapshot exactly as recorded (id, timestamp, projectId included) — for
+ *  project-file import (§Wave F2), where the snapshot already exists and just needs to
+ *  land back in IndexedDB, as opposed to `saveSnapshot`, which mints a new one. */
+export async function putSnapshot(snapshot: Snapshot): Promise<void> {
+  await (await db()).put("snapshots", snapshot);
+}
+
 export async function listSnapshots(projectId: string): Promise<Snapshot[]> {
   const all = await (await db()).getAllFromIndex("snapshots", "projectId", projectId);
   return all.sort((a, b) => b.createdAt - a.createdAt);
