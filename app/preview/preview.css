@@ -1067,6 +1067,37 @@ body {
 .dp-tab[data-active] { color: var(--dp-color-primary); border-color: var(--dp-color-primary); }
 .dp-tabs-panel { padding-top: var(--dp-space-4); color: var(--dp-color-muted); margin: 0; }
 
+/* Tabs — pills: a rounded, self-contained segmented row instead of an underline. */
+.dp-tabs-pills .dp-tabs-list { border-bottom: none; gap: var(--dp-space-1); }
+.dp-tabs-pills .dp-tab {
+  border-bottom: none;
+  margin-bottom: 0;
+  border-radius: var(--dp-radius-full);
+  background: var(--dp-color-surface);
+}
+.dp-tabs-pills .dp-tab[data-active] {
+  background: var(--dp-color-primary);
+  color: var(--dp-color-background);
+  border-color: transparent;
+}
+
+/* Tabs — boxed: a bordered container, active tab reads as a raised segment. */
+.dp-tabs-boxed .dp-tabs-list {
+  border-bottom: none;
+  gap: 0;
+  padding: var(--dp-space-1);
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  border-radius: var(--dp-radius-md);
+  background: var(--dp-color-surface);
+}
+.dp-tabs-boxed .dp-tab { border-bottom: none; margin-bottom: 0; border-radius: var(--dp-radius-sm); }
+.dp-tabs-boxed .dp-tab[data-active] {
+  background: var(--dp-color-background);
+  color: var(--dp-color-foreground);
+  border-color: transparent;
+  box-shadow: var(--dp-shadow-sm);
+}
+
 .dp-accordion { display: flex; flex-direction: column; max-width: 32rem; }
 .dp-accordion-item { border-bottom: var(--dp-border-hairline) solid var(--dp-color-border); }
 .dp-accordion-trigger {
@@ -1084,6 +1115,20 @@ body {
 }
 .dp-accordion-item[data-open] .dp-accordion-icon { transform: rotate(45deg); }
 .dp-accordion-panel { margin: 0 0 var(--dp-space-4); color: var(--dp-color-muted); font-size: var(--dp-text-small); }
+
+/* Accordion — minimal: no dividers, just spacing between questions. */
+.dp-accordion-minimal { gap: var(--dp-space-2); }
+.dp-accordion-minimal .dp-accordion-item { border-bottom: none; }
+
+/* Accordion — filled: each item is its own surface, not a divided list. */
+.dp-accordion-filled { gap: var(--dp-space-2); }
+.dp-accordion-filled .dp-accordion-item {
+  border-bottom: none;
+  background: var(--dp-color-surface);
+  border-radius: var(--dp-radius-md);
+  padding-inline: var(--dp-space-4);
+}
+.dp-accordion-filled .dp-accordion-panel { margin-bottom: var(--dp-space-4); }
 
 .dp-carousel {
   position: relative;
@@ -1325,7 +1370,28 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--dp-space-4);
+  animation: dp-modal-center-in var(--dp-motion-duration-base) var(--dp-motion-ease-standard);
 }
+@keyframes dp-modal-center-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* Modal — drawer: pinned to the right edge, full height. */
+.dp-modal-backdrop-drawer { justify-content: flex-end; padding: 0; }
+.dp-modal-drawer {
+  max-width: 22rem;
+  height: 100%;
+  border-radius: 0;
+  animation: dp-modal-drawer-in var(--dp-motion-duration-base) var(--dp-motion-ease-standard);
+}
+@keyframes dp-modal-drawer-in { from { transform: translateX(100%); } to { transform: none; } }
+
+/* Modal — sheet: pinned to the bottom edge, full width, rounded top only. */
+.dp-modal-backdrop-sheet { align-items: flex-end; padding: 0; }
+.dp-modal-sheet {
+  max-width: 100%;
+  border-radius: var(--dp-radius-lg) var(--dp-radius-lg) 0 0;
+  animation: dp-modal-sheet-in var(--dp-motion-duration-base) var(--dp-motion-ease-standard);
+}
+@keyframes dp-modal-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
 
 /* Popover */
 .dp-popover-wrap { position: relative; display: inline-block; }
@@ -1367,6 +1433,23 @@ body {
 .dp-toast-success { background: var(--dp-color-success); }
 @keyframes dp-toast-in { from { opacity: 0; transform: translateY(-0.5rem); } to { opacity: 1; transform: none; } }
 
+/* Toast — banner: a full-width strip instead of a small corner card. */
+.dp-toast-banner {
+  position: static;
+  width: 100%;
+  margin-top: var(--dp-space-3);
+  border-radius: var(--dp-radius-sm);
+  text-align: center;
+}
+
+/* Toast — minimal: an outlined pill, no filled colour. */
+.dp-toast-minimal {
+  background: var(--dp-color-background);
+  color: var(--dp-color-foreground);
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  box-shadow: none;
+}
+
 /* Dropdown */
 .dp-dropdown-wrap { position: relative; display: inline-block; }
 .dp-dropdown-trigger { display: inline-flex; align-items: center; gap: var(--dp-space-2); }
@@ -1393,6 +1476,20 @@ body {
 .dp-dropdown-item:hover { background: var(--dp-color-surface); }
 .dp-dropdown-item[data-selected] { color: var(--dp-color-primary); font-weight: 600; }
 
+/* Dropdown — compact: denser rows for menus that need to fit more options. */
+.dp-dropdown-menu-compact { padding: calc(var(--dp-space-1) / 2); min-width: 9rem; }
+.dp-dropdown-item-compact { padding: var(--dp-space-1) var(--dp-space-2); font-size: var(--dp-text-caption); }
+
+/* Dropdown — check: a checkmark marks the selection instead of colour + weight. */
+.dp-dropdown-item-check {
+  display: flex;
+  align-items: center;
+  gap: var(--dp-space-2);
+  color: var(--dp-color-foreground);
+  font-weight: 400;
+}
+.dp-dropdown-check { width: 1em; color: var(--dp-color-primary); }
+
 /* Tooltip */
 .dp-tooltip-wrap { position: relative; display: inline-block; }
 .dp-tooltip {
@@ -1412,6 +1509,17 @@ body {
 }
 .dp-tooltip-wrap:hover .dp-tooltip { opacity: 1; }
 
+/* Tooltip — light: a bordered, on-surface card instead of an inverted fill. */
+.dp-tooltip-light {
+  background: var(--dp-color-background);
+  color: var(--dp-color-foreground);
+  border: var(--dp-border-hairline) solid var(--dp-color-border);
+  box-shadow: var(--dp-shadow-md);
+}
+
+/* Tooltip — accent: uses the brand colour instead of a neutral fill. */
+.dp-tooltip-accent { background: var(--dp-color-primary); color: var(--dp-color-background); }
+
 /* Pagination */
 .dp-pagination { display: flex; gap: var(--dp-space-1); align-items: center; }
 .dp-pagination-item,
@@ -1425,6 +1533,15 @@ body {
   justify-content: center;
 }
 .dp-pagination-item:hover { background: var(--dp-color-surface); }
+.dp-pagination-status { font-size: var(--dp-text-small); color: var(--dp-color-muted); }
+.dp-pagination-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--dp-radius-full);
+  background: var(--dp-color-border);
+  transition: background-color var(--dp-motion-duration-fast) var(--dp-motion-ease-standard);
+}
+.dp-pagination-dot[data-active] { background: var(--dp-color-primary); }
 .dp-pagination-item[data-active] { background: var(--dp-color-primary); color: var(--dp-color-background); }
 .dp-pagination-arrow:disabled { opacity: 0.35; }
 
@@ -1555,6 +1672,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .dp-btn[data-hover], .dp-card[data-hover] { transition: none; }
+  .dp-modal, .dp-modal-drawer, .dp-modal-sheet, .dp-toast { animation: none; }
 }
 
 /* --- Click-to-edit on the Sample Page (§Wave E) --------------------------------

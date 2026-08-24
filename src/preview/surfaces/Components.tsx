@@ -3,7 +3,9 @@
 import { cloneElement, useEffect, useState, type ReactElement } from "react";
 import type { DesignProject } from "@/schema/project";
 import {
-  ButtonVariant, CardVariant, HeroVariant, NavbarVariant, type ComponentChoices,
+  AccordionVariant, ButtonVariant, CardVariant, DropdownVariant, HeroVariant, ModalVariant,
+  NavbarVariant, PaginationVariant, TabsVariant, ToastVariant, TooltipVariant,
+  type ComponentChoices,
 } from "@/schema/recipe";
 import { useHoverInteraction } from "@/motion/hooks";
 import { ScrollShowcase } from "@/motion/ScrollShowcase";
@@ -82,17 +84,17 @@ export function Components({ project, advanced = false }: { project: DesignProje
         )}
       </Group>
 
-      {/* These three carry real state — a static specimen can't show what a tab
-          switch, an accordion expand, or a carousel advance actually feels like. */}
-      <section className="dp-section">
-        <h2 className="dp-section-title">Tabs</h2>
-        <TabsDemo />
-      </section>
+      {/* Tabs and Accordion carry real state — a static specimen can't show what a
+          tab switch or an accordion expand actually feels like. Each swatch below is
+          a fully independent, live instance of that same interaction, just styled
+          differently, so clicking one to select it doesn't cost the live preview. */}
+      <Group title="Tabs" selected={components.tabs} options={TabsVariant.options} field="tabs">
+        {(variant) => <TabsDemo variant={variant} />}
+      </Group>
 
-      <section className="dp-section">
-        <h2 className="dp-section-title">Accordion</h2>
-        <AccordionDemo />
-      </section>
+      <Group title="Accordion" selected={components.accordion} options={AccordionVariant.options} field="accordion">
+        {(variant) => <AccordionDemo variant={variant} />}
+      </Group>
 
       <section className="dp-section">
         <h2 className="dp-section-title">Carousel</h2>
@@ -108,7 +110,7 @@ export function Components({ project, advanced = false }: { project: DesignProje
         <ScrollShowcase />
       </section>
 
-      {advanced && <AdvancedInteractive />}
+      {advanced && <AdvancedInteractive components={components} />}
     </div>
   );
 }
@@ -127,38 +129,33 @@ function HoverSwatch({
 }
 
 /** Advanced-tier interactive primitives — hidden by default (see wave-2 categorisation). */
-function AdvancedInteractive() {
+function AdvancedInteractive({ components }: { components: ComponentChoices }) {
   return (
     <>
-      <section className="dp-section">
-        <h2 className="dp-section-title">Modal</h2>
-        <ModalDemo />
-      </section>
+      <Group title="Modal" selected={components.modal} options={ModalVariant.options} field="modal">
+        {(variant) => <ModalDemo variant={variant} />}
+      </Group>
 
       <section className="dp-section">
         <h2 className="dp-section-title">Popover</h2>
         <PopoverDemo />
       </section>
 
-      <section className="dp-section">
-        <h2 className="dp-section-title">Toast</h2>
-        <ToastDemo />
-      </section>
+      <Group title="Toast" selected={components.toast} options={ToastVariant.options} field="toast">
+        {(variant) => <ToastDemo variant={variant} />}
+      </Group>
 
-      <section className="dp-section">
-        <h2 className="dp-section-title">Dropdown</h2>
-        <DropdownDemo />
-      </section>
+      <Group title="Dropdown" selected={components.dropdown} options={DropdownVariant.options} field="dropdown">
+        {(variant) => <DropdownDemo variant={variant} />}
+      </Group>
 
-      <section className="dp-section">
-        <h2 className="dp-section-title">Tooltip</h2>
-        <TooltipDemo />
-      </section>
+      <Group title="Tooltip" selected={components.tooltip} options={TooltipVariant.options} field="tooltip">
+        {(variant) => <TooltipDemo variant={variant} />}
+      </Group>
 
-      <section className="dp-section">
-        <h2 className="dp-section-title">Pagination</h2>
-        <PaginationDemo />
-      </section>
+      <Group title="Pagination" selected={components.pagination} options={PaginationVariant.options} field="pagination">
+        {(variant) => <PaginationDemo variant={variant} />}
+      </Group>
 
       <section className="dp-section">
         <h2 className="dp-section-title">Slider</h2>
@@ -178,14 +175,14 @@ function AdvancedInteractive() {
   );
 }
 
-function ModalDemo() {
+function ModalDemo({ variant }: { variant: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button className="dp-btn dp-btn-solid" onClick={() => setOpen(true)}>Open modal</button>
       {open && (
-        <div className="dp-modal-backdrop" onClick={() => setOpen(false)}>
-          <div className="dp-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className={`dp-modal-backdrop dp-modal-backdrop-${variant}`} onClick={() => setOpen(false)}>
+          <div className={`dp-modal dp-modal-${variant}`} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h3 className="dp-card-title">Confirm project</h3>
             <p className="dp-card-body">This will start a new project using the current design direction.</p>
             <div className="dp-row" style={{ justifyContent: "flex-end" }}>
@@ -217,7 +214,7 @@ function PopoverDemo() {
   );
 }
 
-function ToastDemo() {
+function ToastDemo({ variant }: { variant: string }) {
   const [visible, setVisible] = useState(false);
   const show = () => {
     setVisible(true);
@@ -227,7 +224,7 @@ function ToastDemo() {
     <div className="dp-toast-wrap">
       <button className="dp-btn dp-btn-outline" onClick={show}>Trigger toast</button>
       {visible && (
-        <div className="dp-toast dp-toast-success" role="status">
+        <div className={`dp-toast dp-toast-success dp-toast-${variant}`} role="status">
           <span>Changes saved.</span>
         </div>
       )}
@@ -237,7 +234,7 @@ function ToastDemo() {
 
 const DROPDOWN_OPTIONS = ["Newest first", "Oldest first", "Highest price", "Lowest price"];
 
-function DropdownDemo() {
+function DropdownDemo({ variant }: { variant: string }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(DROPDOWN_OPTIONS[0]!);
   return (
@@ -246,14 +243,17 @@ function DropdownDemo() {
         {selected} <span aria-hidden="true">▾</span>
       </button>
       {open && (
-        <div className="dp-dropdown-menu" role="listbox">
+        <div className={`dp-dropdown-menu dp-dropdown-menu-${variant}`} role="listbox">
           {DROPDOWN_OPTIONS.map((option) => (
             <button
               key={option}
-              className="dp-dropdown-item"
+              className={`dp-dropdown-item dp-dropdown-item-${variant}`}
               data-selected={option === selected ? "true" : undefined}
               onClick={() => { setSelected(option); setOpen(false); }}
             >
+              {variant === "check" && (
+                <span className="dp-dropdown-check" aria-hidden="true">{option === selected ? "✓" : ""}</span>
+              )}
               {option}
             </button>
           ))}
@@ -263,20 +263,53 @@ function DropdownDemo() {
   );
 }
 
-function TooltipDemo() {
+function TooltipDemo({ variant }: { variant: string }) {
   return (
     <div className="dp-row">
       <span className="dp-tooltip-wrap">
         <button className="dp-btn dp-btn-ghost">Hover me</button>
-        <span className="dp-tooltip" role="tooltip">Exports as a ZIP file</span>
+        <span className={`dp-tooltip dp-tooltip-${variant}`} role="tooltip">Exports as a ZIP file</span>
       </span>
     </div>
   );
 }
 
-function PaginationDemo() {
+function PaginationDemo({ variant }: { variant: string }) {
   const [page, setPage] = useState(2);
   const total = 5;
+
+  if (variant === "simple") {
+    return (
+      <nav className="dp-pagination dp-pagination-simple" aria-label="Pagination">
+        <button className="dp-btn dp-btn-outline dp-btn-sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+          Previous
+        </button>
+        <span className="dp-pagination-status">Page {page} of {total}</span>
+        <button className="dp-btn dp-btn-outline dp-btn-sm" disabled={page === total} onClick={() => setPage((p) => p + 1)}>
+          Next
+        </button>
+      </nav>
+    );
+  }
+
+  if (variant === "dots") {
+    return (
+      <nav className="dp-pagination dp-pagination-dots" aria-label="Pagination">
+        <button className="dp-pagination-arrow" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹</button>
+        {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            className="dp-pagination-dot"
+            data-active={n === page ? "true" : undefined}
+            onClick={() => setPage(n)}
+            aria-label={`Page ${n}`}
+          />
+        ))}
+        <button className="dp-pagination-arrow" disabled={page === total} onClick={() => setPage((p) => p + 1)}>›</button>
+      </nav>
+    );
+  }
+
   return (
     <nav className="dp-pagination" aria-label="Pagination">
       <button className="dp-pagination-arrow" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹</button>
@@ -363,10 +396,10 @@ const TAB_ITEMS = [
   { label: "Pricing", body: "Fixed-price packages, or a custom quote for larger scopes." },
 ];
 
-function TabsDemo() {
+function TabsDemo({ variant }: { variant: string }) {
   const [active, setActive] = useState(0);
   return (
-    <div className="dp-tabs">
+    <div className={`dp-tabs dp-tabs-${variant}`}>
       <div className="dp-tabs-list" role="tablist">
         {TAB_ITEMS.map((tab, i) => (
           <button
@@ -391,10 +424,10 @@ const ACCORDION_ITEMS = [
   { q: "Can we make changes after launch?", a: "Yes, either yourself through the CMS or through a support arrangement." },
 ];
 
-function AccordionDemo() {
+function AccordionDemo({ variant }: { variant: string }) {
   const [open, setOpen] = useState(0);
   return (
-    <div className="dp-accordion">
+    <div className={`dp-accordion dp-accordion-${variant}`}>
       {ACCORDION_ITEMS.map((item, i) => (
         <div key={item.q} className="dp-accordion-item" data-open={i === open ? "true" : undefined}>
           <button
@@ -476,7 +509,21 @@ function Group<T extends string>({
             data-editable={field ? "true" : undefined}
             role={field ? "button" : undefined}
             tabIndex={field ? 0 : undefined}
-            onClick={field ? () => postSetComponent(field, variant) : undefined}
+            // Capture phase, not bubble: several swatches (Tabs, Modal, Toast, ...)
+            // wrap a genuinely interactive demo, and a normal onClick here would fire
+            // *after* the demo's own handler already ran (e.g. opening a modal) —
+            // selecting a variant would also trigger whatever that variant happens to
+            // do. Stopping propagation during capture means the click never reaches
+            // the demo's own handler at all; only the selection happens.
+            onClickCapture={
+              field
+                ? (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    postSetComponent(field, variant);
+                  }
+                : undefined
+            }
             onKeyDown={
               field
                 ? (e) => {

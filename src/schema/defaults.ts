@@ -126,6 +126,13 @@ export function defaultRecipe(): SiteRecipe {
       cta: "banner",
       footer: "columns",
       cursor: "default",
+      tabs: "underline",
+      accordion: "bordered",
+      modal: "center",
+      toast: "corner",
+      tooltip: "dark",
+      pagination: "numbered",
+      dropdown: "list",
     },
     motion: {
       profile: "professional",

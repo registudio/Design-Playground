@@ -2,9 +2,10 @@
 
 import { useProjectStore } from "@/store/project-store";
 import {
-  AnnouncementVariant, BlogVariant, ButtonVariant, CardVariant, CtaVariant, FaqVariant,
-  FeaturesVariant, FooterVariant, HeroVariant, InputVariant, NavbarVariant,
-  PricingVariant, SocialProofVariant, TeamVariant, CursorVariant,
+  AccordionVariant, AnnouncementVariant, BlogVariant, ButtonVariant, CardVariant,
+  CtaVariant, DropdownVariant, FaqVariant, FeaturesVariant, FooterVariant, HeroVariant,
+  InputVariant, ModalVariant, NavbarVariant, PaginationVariant, PricingVariant,
+  SocialProofVariant, TabsVariant, TeamVariant, ToastVariant, TooltipVariant, CursorVariant,
 } from "@/schema/recipe";
 import { Choice, Panel } from "./controls";
 
@@ -57,6 +58,20 @@ export function ComponentsPanel() {
         <p className="text-[12px] text-chrome-muted">
           Custom cursors fall back to native behaviour on touch devices.
         </p>
+      </Panel>
+
+      <Panel title="Interactive elements">
+        <p className="text-[12px] text-chrome-muted">
+          These don't have a slot on the Sample Page — see them in the Element Gallery,
+          where every variant is also click-to-apply.
+        </p>
+        <Choice label="Tabs" options={TabsVariant.options} value={components.tabs} provenancePath="recipe.components.tabs" onChange={set("tabs")} />
+        <Choice label="Accordion" options={AccordionVariant.options} value={components.accordion} provenancePath="recipe.components.accordion" onChange={set("accordion")} />
+        <Choice label="Modal" options={ModalVariant.options} value={components.modal} provenancePath="recipe.components.modal" onChange={set("modal")} />
+        <Choice label="Toast" options={ToastVariant.options} value={components.toast} provenancePath="recipe.components.toast" onChange={set("toast")} />
+        <Choice label="Tooltip" options={TooltipVariant.options} value={components.tooltip} provenancePath="recipe.components.tooltip" onChange={set("tooltip")} />
+        <Choice label="Pagination" options={PaginationVariant.options} value={components.pagination} provenancePath="recipe.components.pagination" onChange={set("pagination")} />
+        <Choice label="Dropdown" options={DropdownVariant.options} value={components.dropdown} provenancePath="recipe.components.dropdown" onChange={set("dropdown")} />
       </Panel>
     </>
   );

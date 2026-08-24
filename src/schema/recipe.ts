@@ -40,6 +40,25 @@ export const TeamVariant = z.enum(["none", "grid", "list", "featured", "carousel
 export const AnnouncementVariant = z.enum(["none", "banner", "floating"]);
 export const BlogVariant = z.enum(["none", "grid", "list", "featured"]);
 
+// --- Advanced-tier interactive primitives (§Wave F) -------------------------
+// These render in the Element Gallery only (§15.8's fixed-slot Sample Page has no
+// natural place for a modal or a dropdown) — but they still carry a real structural
+// choice, the same as any other component, so they get the same variant + default +
+// click-to-edit treatment. .default(...) keeps a project saved before this field
+// existed loadable: DesignProject.safeParse fills it in rather than rejecting the
+// document (see ProjectMeta.tags/archived for the same pattern).
+// Plain z.enum, not .default() directly on the export — .default() wraps the schema
+// in ZodDefault, which drops .options, and ComponentsPanel/EditableOverlay/Group all
+// read XxxVariant.options directly. .default() is applied only where these are used
+// inside ComponentChoices below.
+export const TabsVariant = z.enum(["underline", "pills", "boxed"]);
+export const AccordionVariant = z.enum(["bordered", "minimal", "filled"]);
+export const ModalVariant = z.enum(["center", "drawer", "sheet"]);
+export const ToastVariant = z.enum(["corner", "banner", "minimal"]);
+export const TooltipVariant = z.enum(["dark", "light", "accent"]);
+export const PaginationVariant = z.enum(["numbered", "simple", "dots"]);
+export const DropdownVariant = z.enum(["list", "compact", "check"]);
+
 /**
  * The Sample Page is a fixed sequence of slots with one variant each — not a
  * composable page. §15.8 excludes arbitrary page composition, and §15.2's shape
@@ -61,6 +80,14 @@ export const ComponentChoices = z.object({
   cta: CtaVariant,
   footer: FooterVariant,
   cursor: CursorVariant,
+
+  tabs: TabsVariant.default("underline"),
+  accordion: AccordionVariant.default("bordered"),
+  modal: ModalVariant.default("center"),
+  toast: ToastVariant.default("corner"),
+  tooltip: TooltipVariant.default("dark"),
+  pagination: PaginationVariant.default("numbered"),
+  dropdown: DropdownVariant.default("list"),
 });
 export type ComponentChoices = z.infer<typeof ComponentChoices>;
 
