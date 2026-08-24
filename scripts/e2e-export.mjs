@@ -1,11 +1,29 @@
-import { chromium } from "playwright";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { unzipSync } from "fflate";
-import { readFileSync, writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
-const OUT = "/tmp/claude-0/-home-user-Design-Playground/015a25f4-7ad4-5ff5-94b9-0786cddc46ca/scratchpad";
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
-const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
-await page.goto("http://localhost:3311/", { waitUntil: "networkidle" });
+/**
+ * Real-browser export smoke test (§Wave F3) — exercises the path vitest can't reach:
+ * a real logo upload triggering colour extraction, a real download, and the resulting
+ * ZIP actually containing valid, non-empty design.tokens.json / site.recipe.json /
+ * asset-manifest.json / globals.css. See e2e-smoke.mjs for the portability notes
+ * (BASE_URL, PLAYWRIGHT_EXECUTABLE_PATH, E2E_OUTPUT_DIR) — same conventions here.
+ */
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:3100";
+const OUT = process.env.E2E_OUTPUT_DIR ?? "./e2e-output";
+mkdirSync(OUT, { recursive: true });
+
+let failures = 0;
+function ok(label, cond) {
+  console.log(cond ? `PASS: ${label}` : `FAIL: ${label}`);
+  if (!cond) failures++;
+}
+
+const browser = await chromium.launch({
+  ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}),
+});
+const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, acceptDownloads: true });
+await page.goto(BASE_URL, { waitUntil: "networkidle" });
 
 const nameInput = page.getByPlaceholder("Project name");
 await nameInput.click();
@@ -34,40 +52,36 @@ const download = await Promise.all([
   page.getByRole("button", { name: "Download ZIP" }).click(),
 ]).then(([d]) => d);
 
-const path = `${OUT}/export.zip`;
-await download.saveAs(path);
-const entries = unzipSync(new Uint8Array(readFileSync(path)));
+const zipPath = `${OUT}/export.zip`;
+await download.saveAs(zipPath);
+const entries = unzipSync(new Uint8Array(readFileSync(zipPath)));
 console.log("=== EXPORT CONTENTS ===");
-for (const name of Object.keys(entries).sort()) {
-  console.log(` ${name}  (${entries[name].length} bytes)`);
-}
+for (const name of Object.keys(entries).sort()) console.log(` ${name}  (${entries[name].length} bytes)`);
 
 const dec = new TextDecoder();
+const REQUIRED = [
+  "design/design.tokens.json",
+  "design/site.recipe.json",
+  "design/asset-manifest.json",
+  "design/globals.css",
+];
+for (const path of REQUIRED) ok(`ZIP contains ${path}`, !!entries[path] && entries[path].length > 0);
+
 const tokens = JSON.parse(dec.decode(entries["design/design.tokens.json"]));
 const recipe = JSON.parse(dec.decode(entries["design/site.recipe.json"]));
 const manifest = JSON.parse(dec.decode(entries["design/asset-manifest.json"]));
 const css = dec.decode(entries["design/globals.css"]);
 
-console.log("\n=== TOKENS ===");
-console.log("schema:", tokens.schema);
-console.log("scales:", Object.keys(tokens.colors.scales).join(", "));
-console.log("semantic tokens:", Object.keys(tokens.colors.light.semantic).length);
-console.log("dark theme:", !!tokens.colors.dark);
-console.log("primary:", JSON.stringify(tokens.colors.light.semantic.primary));
-console.log("type steps:", Object.keys(tokens.typography.scale).length);
-
-console.log("\n=== RECIPE ===");
-console.log("schema:", recipe.schema);
-console.log("components:", JSON.stringify(recipe.components));
-console.log("motion profile:", recipe.motion.profile);
-
-console.log("\n=== MANIFEST ===");
-console.log("root:", manifest.root);
-console.log("logo:", JSON.stringify(manifest.logo));
-console.log("images:", manifest.images.map((i) => `${i.file} ${i.mime} ${i.hash.slice(0,12)}…`).join(", "));
-
-console.log("\n=== GLOBALS.CSS (first 24 lines) ===");
-console.log(css.split("\n").slice(0, 24).join("\n"));
-console.log(`... ${css.split("\n").length} lines total`);
+ok("design.tokens.json has a colour scale", Object.keys(tokens.colors?.scales ?? {}).length > 0);
+ok("design.tokens.json has semantic light tokens", Object.keys(tokens.colors?.light?.semantic ?? {}).length > 0);
+ok("design.tokens.json has a dark theme", !!tokens.colors?.dark);
+ok("design.tokens.json has a typography scale", Object.keys(tokens.typography?.scale ?? {}).length > 0);
+ok("site.recipe.json has component choices", Object.keys(recipe.components ?? {}).length > 0);
+ok("site.recipe.json has a motion profile", typeof recipe.motion?.profile === "string" && recipe.motion.profile.length > 0);
+ok("asset-manifest.json recorded the uploaded logo", !!manifest.logo);
+ok("globals.css is non-trivial", css.split("\n").length > 10);
 
 await browser.close();
+
+console.log(`\n${failures === 0 ? "ALL PASSED" : `${failures} FAILURE(S)`}`);
+process.exit(failures === 0 ? 0 : 1);

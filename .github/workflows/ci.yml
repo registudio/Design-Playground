@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload production build
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: .next
+          retention-days: 1
+
+  e2e:
+    name: Real-browser smoke tests
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Download production build
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+
+      - name: Start server
+        run: |
+          npx next start -p 3100 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3100/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "Server did not become ready in time" >&2
+          exit 1
+        env:
+          BASE_URL: http://localhost:3100
+
+      - name: Run e2e smoke test
+        run: npm run e2e
+        env:
+          BASE_URL: http://localhost:3100
+          E2E_OUTPUT_DIR: ./e2e-output
+
+      - name: Run export smoke test
+        run: npm run e2e:export
+        env:
+          BASE_URL: http://localhost:3100
+          E2E_OUTPUT_DIR: ./e2e-output
+
+      - name: Upload e2e artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-output
+          path: e2e-output
+          retention-days: 7

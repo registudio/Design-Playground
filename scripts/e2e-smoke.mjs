@@ -1,14 +1,37 @@
+import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
 
-const OUT = "/tmp/claude-0/-home-user-Design-Playground/015a25f4-7ad4-5ff5-94b9-0786cddc46ca/scratchpad";
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+/**
+ * Real-browser smoke test (§Wave F3) — the core "does the app actually work" check
+ * that typecheck/vitest/build can't catch: the preview iframe painting through the
+ * postMessage bridge, presets producing a real token change in one undo step, and
+ * responsive device modes triggering real media queries inside the iframe.
+ *
+ * Portable by design: BASE_URL/PLAYWRIGHT_EXECUTABLE_PATH read from the environment
+ * so this runs unmodified in CI (a fresh `npx playwright install chromium`) and
+ * locally (a pre-installed browser at a fixed path, if PLAYWRIGHT_EXECUTABLE_PATH is
+ * set). The caller is responsible for having a server already running at BASE_URL.
+ */
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:3100";
+const OUT = process.env.E2E_OUTPUT_DIR ?? "./e2e-output";
+mkdirSync(OUT, { recursive: true });
+
+let failures = 0;
+function ok(label, cond) {
+  console.log(cond ? `PASS: ${label}` : `FAIL: ${label}`);
+  if (!cond) failures++;
+}
+
+const browser = await chromium.launch({
+  ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}),
+});
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
 
-const errors = [];
-page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
-page.on("console", (m) => { if (m.type() === "error") errors.push(`console: ${m.text()}`); });
+const pageErrors = [];
+page.on("pageerror", (e) => pageErrors.push(`pageerror: ${e.message}`));
+page.on("console", (m) => { if (m.type() === "error") pageErrors.push(`console: ${m.text()}`); });
 
-await page.goto("http://localhost:3311/", { waitUntil: "networkidle" });
+await page.goto(BASE_URL, { waitUntil: "networkidle" });
 
 // Create a project. Type rather than fill, so the value lands after hydration.
 const nameInput = page.getByPlaceholder("Project name");
@@ -27,12 +50,12 @@ const frame = page.frameLocator("iframe[title='Live preview']");
 await frame.locator(".dp-page").waitFor({ timeout: 10000 });
 const swatches = await frame.locator(".dp-swatch").count();
 const ramps = await frame.locator(".dp-ramp").count();
-console.log(`preview: ${swatches} semantic swatches, ${ramps} primitive ramps`);
+ok(`preview paints semantic swatches and primitive ramps (${swatches} swatches, ${ramps} ramps)`, swatches > 0 && ramps > 0);
 
 // Tokens must have reached the iframe as CSS variables.
 const primary = await frame.locator("body").evaluate((el) =>
   getComputedStyle(el).getPropertyValue("--dp-color-primary").trim());
-console.log("--dp-color-primary in iframe:", primary || "(EMPTY)");
+ok(`--dp-color-primary reached the iframe (${primary || "EMPTY"})`, primary.length > 0);
 
 await page.screenshot({ path: `${OUT}/01-system.png` });
 
@@ -48,7 +71,7 @@ await page.getByTitle("Display serif, large type, extreme whitespace, image-led,
 await page.waitForTimeout(600);
 const afterPreset = await frame.locator("body").evaluate((el) =>
   getComputedStyle(el).getPropertyValue("--dp-color-primary").trim());
-console.log("preset changed primary:", beforePreset !== afterPreset);
+ok("applying a preset changes the preview's primary colour", beforePreset !== afterPreset);
 await page.screenshot({ path: `${OUT}/03-editorial.png` });
 
 // One undo must revert the whole preset.
@@ -56,31 +79,36 @@ await page.getByRole("button", { name: "Undo", exact: true }).click();
 await page.waitForTimeout(600);
 const afterUndo = await frame.locator("body").evaluate((el) =>
   getComputedStyle(el).getPropertyValue("--dp-color-primary").trim());
-console.log("single undo reverted preset:", afterUndo === beforePreset);
+ok("a single undo reverts the whole preset application", afterUndo === beforePreset);
 
 // Mobile device mode must trigger REAL media queries inside the iframe.
 await page.getByRole("button", { name: "Mobile" }).click();
 await page.waitForTimeout(500);
-const navHidden = await frame.locator(".dp-navbar-links").evaluate((el) =>
-  getComputedStyle(el).display);
+const navDisplay = await frame.locator(".dp-navbar-links").evaluate((el) => getComputedStyle(el).display);
 const frameWidth = await frame.locator("body").evaluate(() => window.innerWidth);
-console.log(`mobile: iframe innerWidth=${frameWidth}, nav links display=${navHidden}`);
+ok(`mobile device mode narrows the iframe viewport (innerWidth=${frameWidth})`, frameWidth <= 480);
+ok(`mobile device mode hides desktop nav links via a real media query (display=${navDisplay})`, navDisplay === "none");
 await page.screenshot({ path: `${OUT}/04-mobile.png` });
 
 await page.getByRole("button", { name: "Desktop" }).click();
 await page.waitForTimeout(300);
 
 // Components surface.
-await page.getByRole("banner").getByRole("button", { name: "Components" }).click();
+await page.getByRole("button", { name: "Components", exact: true }).click();
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/05-components.png` });
 
 // Dark theme.
 await page.getByRole("button", { name: "Sample Page" }).click();
 await page.waitForTimeout(300);
-await page.getByRole("button", { name: "Light" }).click();
+await page.getByTitle("Toggle preview theme").click();
 await page.waitForTimeout(500);
 await page.screenshot({ path: `${OUT}/06-dark.png` });
 
-console.log(errors.length ? `ERRORS:\n${errors.join("\n")}` : "no page errors");
+ok(`no uncaught page errors (${pageErrors.length})`, pageErrors.length === 0);
+if (pageErrors.length > 0) console.log(pageErrors.join("\n"));
+
 await browser.close();
+
+console.log(`\n${failures === 0 ? "ALL PASSED" : `${failures} FAILURE(S)`}`);
+process.exit(failures === 0 ? 0 : 1);
