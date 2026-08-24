@@ -4,6 +4,7 @@ import { useRef } from "react";
 import type { DesignProject } from "@/schema/project";
 import { CustomCursor } from "../CustomCursor";
 import { useAutoAnimate } from "@/motion/useAutoAnimate";
+import { EditableOverlay } from "@/preview/EditableOverlay";
 
 /**
  * The Sample Page (§13.1): every current choice shown together in a realistic generic
@@ -15,7 +16,7 @@ import { useAutoAnimate } from "@/motion/useAutoAnimate";
  * own colours or type, which always come from Foundation (§11.3).
  */
 
-export function SamplePage({ project }: { project: DesignProject }) {
+export function SamplePage({ project, editable = false }: { project: DesignProject; editable?: boolean }) {
   const { components } = project.recipe;
   const brand = project.client || project.name || "Northwind";
   const rootRef = useRef<HTMLDivElement>(null);
@@ -34,6 +35,7 @@ export function SamplePage({ project }: { project: DesignProject }) {
       data-card={components.card}
       data-input={components.input}
       data-cursor={components.cursor}
+      data-editable={editable ? "true" : undefined}
     >
       <CustomCursor variant={components.cursor} />
       <Announcement variant={components.announcement} />
@@ -47,6 +49,10 @@ export function SamplePage({ project }: { project: DesignProject }) {
       <Blog variant={components.blog} />
       <Cta variant={components.cta} />
       <Footer variant={components.footer} brand={brand} />
+      {/* Never enabled for the static/shareable export (react-dom/server's SSR pass
+          never fires the effect that attaches this anyway, but the prop keeps the
+          intent explicit rather than relying on that). */}
+      {editable && <EditableOverlay rootRef={rootRef} project={project} />}
     </div>
   );
 }

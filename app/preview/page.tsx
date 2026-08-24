@@ -107,7 +107,7 @@ function Surface({
     case "components":
       return <Components project={project} advanced={advanced} />;
     case "sample":
-      return <SamplePage project={project} />;
+      return <SamplePage project={project} editable />;
     default:
       return <System project={project} advanced={advanced} />;
   }

@@ -44,6 +44,18 @@ export type PreviewMessage =
       marker: typeof PREVIEW_ORIGIN_MARKER;
       type: "measurements";
       payload: Array<{ label: string; width: number; height: number }>;
+    }
+  /**
+   * Click-to-edit (§Wave E): the Element Gallery and Sample Page surfaces let a click
+   * on a button/card/section pick a new structural variant right there, instead of
+   * requiring a trip to the Components panel. The popover itself renders inside the
+   * preview document (it needs the click position), but the actual edit has to happen
+   * in the host — the iframe has no access to the Zustand store, only this message.
+   */
+  | {
+      marker: typeof PREVIEW_ORIGIN_MARKER;
+      type: "setComponent";
+      payload: { field: string; value: string };
     };
 
 export const isHostMessage = (data: unknown): data is HostMessage =>
@@ -52,6 +64,17 @@ export const isHostMessage = (data: unknown): data is HostMessage =>
   (data as { marker?: unknown }).marker === PREVIEW_ORIGIN_MARKER;
 
 export const isPreviewMessage = (data: unknown): data is PreviewMessage => isHostMessage(data);
+
+/** Sends a click-to-edit selection up to the host. A no-op outside the preview iframe
+ *  (e.g. during the static-page export's server render, which never fires an event
+ *  handler anyway, but this keeps the helper safe to import from anywhere). */
+export function postSetComponent(field: string, value: string): void {
+  if (typeof window === "undefined" || window === window.parent) return;
+  window.parent.postMessage(
+    { marker: PREVIEW_ORIGIN_MARKER, type: "setComponent", payload: { field, value } } satisfies PreviewMessage,
+    window.location.origin,
+  );
+}
 
 export const DEVICE_WIDTHS: Record<Device, number> = {
   desktop: 1440,

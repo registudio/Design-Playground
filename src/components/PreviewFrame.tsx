@@ -24,6 +24,7 @@ export function PreviewFrame() {
   const device = useProjectStore((s) => s.device);
   const theme = useProjectStore((s) => s.theme);
   const advanced = useProjectStore((s) => s.advanced);
+  const edit = useProjectStore((s) => s.edit);
 
   const frameRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,10 +42,20 @@ export function PreviewFrame() {
       if (event.origin !== window.location.origin) return;
       if (!isPreviewMessage(event.data)) return;
       if (event.data.type === "ready") setReady(true);
+      if (event.data.type === "setComponent") {
+        const { field, value } = event.data.payload;
+        // Same pattern as ComponentsPanel's own set() helper, so a click in the
+        // preview is indistinguishable from the matching sidebar control — one
+        // history entry, provenance marked "user".
+        edit(`Set ${field}`, (draft) => {
+          (draft.recipe.components as Record<string, string>)[field] = value;
+          draft.provenance[`recipe.components.${field}`] = "user";
+        });
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [edit]);
 
   // Full state on connect and whenever anything structural changes.
   useEffect(() => {

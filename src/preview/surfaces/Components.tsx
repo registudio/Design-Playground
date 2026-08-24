@@ -3,17 +3,20 @@
 import { cloneElement, useEffect, useState, type ReactElement } from "react";
 import type { DesignProject } from "@/schema/project";
 import {
-  ButtonVariant, CardVariant, HeroVariant, NavbarVariant,
+  ButtonVariant, CardVariant, HeroVariant, NavbarVariant, type ComponentChoices,
 } from "@/schema/recipe";
 import { useHoverInteraction } from "@/motion/hooks";
 import { ScrollShowcase } from "@/motion/ScrollShowcase";
+import { postSetComponent } from "@/preview/bridge";
 
 /**
  * The Components surface (§13.1): each selected component shown on its own, so a
  * choice can be judged without the surrounding page competing for attention.
  *
  * Variants are listed from the schema rather than hardcoded, so adding a variant to
- * the recipe automatically shows it here.
+ * the recipe automatically shows it here. Every swatch is also click-to-apply
+ * (§Wave E) — the gallery already lays out every option side by side, so clicking one
+ * is a faster path to the same edit the Components sidebar panel makes.
  */
 
 export function Components({ project, advanced = false }: { project: DesignProject; advanced?: boolean }) {
@@ -21,7 +24,7 @@ export function Components({ project, advanced = false }: { project: DesignProje
 
   return (
     <div className="dp-page">
-      <Group title="Button" selected={components.button} options={ButtonVariant.options}>
+      <Group title="Button" selected={components.button} options={ButtonVariant.options} field="button">
         {(variant) => {
           const button = (
             <button className={`dp-btn dp-btn-${variant === "pill" ? "solid" : variant}`}
@@ -37,7 +40,7 @@ export function Components({ project, advanced = false }: { project: DesignProje
         }}
       </Group>
 
-      <Group title="Card" selected={components.card} options={CardVariant.options}>
+      <Group title="Card" selected={components.card} options={CardVariant.options} field="card">
         {(variant) => {
           const card = (
             <article className={`dp-card dp-card-${variant}`} style={cardStyle(variant)}>
@@ -51,7 +54,7 @@ export function Components({ project, advanced = false }: { project: DesignProje
         }}
       </Group>
 
-      <Group title="Navigation" selected={components.navbar} options={NavbarVariant.options}>
+      <Group title="Navigation" selected={components.navbar} options={NavbarVariant.options} field="navbar">
         {(variant) => (
           <div className={`dp-navbar dp-navbar-${variant}`} style={{ position: "static" }}>
             <div className="dp-navbar-inner" style={{ padding: "var(--dp-space-3) var(--dp-space-4)" }}>
@@ -65,7 +68,7 @@ export function Components({ project, advanced = false }: { project: DesignProje
         )}
       </Group>
 
-      <Group title="Hero" selected={components.hero} options={HeroVariant.options}>
+      <Group title="Hero" selected={components.hero} options={HeroVariant.options} field="hero">
         {(variant) => (
           <div className={`dp-hero dp-hero-${variant}`} style={{ paddingBlock: "var(--dp-space-8)" }}>
             <div className="dp-hero-inner" style={{ gap: "var(--dp-space-6)" }}>
@@ -446,17 +449,23 @@ function Group<T extends string>({
   title,
   selected,
   options,
+  field,
   children,
 }: {
   title: string;
   selected: string;
   options: readonly T[];
+  /** ComponentChoices key this group edits. Set to make every swatch click-to-apply
+   *  (§Wave E) — each swatch already *is* one specific option, so there's nothing to
+   *  pick from a popover; clicking it just applies it, like the sidebar control does. */
+  field?: keyof ComponentChoices;
   children: (variant: T) => React.ReactNode;
 }) {
   return (
     <section className="dp-section">
       <h2 className="dp-section-title">
         {title} — {selected}
+        {field && <span className="dp-editable-hint"> · click a swatch to apply</span>}
       </h2>
       <div className="dp-variant-grid">
         {options.map((variant) => (
@@ -464,6 +473,19 @@ function Group<T extends string>({
             key={variant}
             className="dp-variant"
             data-selected={variant === selected ? "true" : undefined}
+            data-editable={field ? "true" : undefined}
+            role={field ? "button" : undefined}
+            tabIndex={field ? 0 : undefined}
+            onClick={field ? () => postSetComponent(field, variant) : undefined}
+            onKeyDown={
+              field
+                ? (e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    postSetComponent(field, variant);
+                  }
+                : undefined
+            }
           >
             <span className="dp-variant-label">{variant}</span>
             <div className="dp-variant-body">{children(variant)}</div>
