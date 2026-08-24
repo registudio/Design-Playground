@@ -27,7 +27,7 @@ const AUTOSAVE_DEBOUNCE_MS = 400;
 export type Theme = "light" | "dark";
 export type Device = "desktop" | "tablet" | "mobile";
 export type PreviewMode = "system" | "components" | "sample";
-export type Section = "foundation" | "components" | "animations";
+export type Section = "components" | "animations";
 
 interface ProjectState {
   project: DesignProject | null;
@@ -99,7 +99,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   customPresets: [],
   status: "idle",
   dirty: false,
-  section: "foundation",
+  section: "components",
   previewMode: "system",
   device: "desktop",
   theme: "light",

@@ -77,7 +77,6 @@ function useActions(onDone: () => void): Action[] {
     }
 
     const sections: Array<{ id: Section; label: string }> = [
-      { id: "foundation", label: "Foundation" },
       { id: "components", label: "Components" },
       { id: "animations", label: "Animations" },
     ];

@@ -17,11 +17,14 @@ import {
 /**
  * The playground shell (§9).
  *
- * Layout follows the recommended arrangement: a narrow control rail, the live preview
- * taking most of the screen, and device switching along the bottom.
+ * Three columns: a left rail for structural, per-section choices (Components,
+ * Animations), the live preview in the middle, and a right rail for the design
+ * system itself — Foundation's global variables (colour, type, geometry, assets)
+ * plus presets, which are just shortcuts for setting a bunch of those same
+ * variables at once. Keeping presets next to the variables they set, rather than
+ * competing for space with Components/Animations, is the point of the split.
  */
 const SECTIONS: Array<{ id: Section; label: string }> = [
-  { id: "foundation", label: "Foundation" },
   { id: "components", label: "Components" },
   { id: "animations", label: "Animations" },
 ];
@@ -60,18 +63,30 @@ export default function Playground() {
           </nav>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {section === "foundation" && <Foundation />}
             {section === "components" && <ComponentsPanel />}
             {section === "animations" && <AnimationsPanel />}
           </div>
-
-          <PresetBar />
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col">
           <PreviewFrame />
           <DeviceBar />
         </main>
+
+        <aside className="flex w-[340px] shrink-0 flex-col border-l border-chrome-border bg-chrome-panel">
+          <div className="shrink-0 border-b border-chrome-border px-3 py-3">
+            <span className="text-[13px] font-medium text-chrome-text">Global variables</span>
+            <p className="mt-0.5 text-[11px] text-chrome-muted">
+              The design system every section draws from — colour, type, geometry, assets.
+            </p>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <Foundation />
+          </div>
+
+          <PresetBar />
+        </aside>
       </div>
 
       {exporting && <ExportPanel onClose={() => setExporting(false)} />}
