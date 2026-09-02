@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { RADIUS_STEPS, SHADOW_STEPS, TYPE_STEPS } from "@/schema/tokens";
-import { Choice, Field, Panel, Slider, Toggle } from "./controls";
+import { fromCss, toHex } from "@/color/oklch";
+import { Choice, Field, NumberField, Panel, Slider, Toggle } from "./controls";
 import { AssetUpload } from "./AssetUpload";
 import { AdditionalAssets } from "./AdditionalAssets";
 import { ColorEditor } from "./ColorEditor";
@@ -140,6 +142,8 @@ export function Foundation() {
             }, "type.scale")
           }
         />
+
+        {advanced && <TypeScaleEditor />}
       </Panel>
 
       <Panel title="Geometry">
@@ -200,6 +204,26 @@ export function Foundation() {
             }, "geometry.shadow")
           }
         />
+
+        {/* Border weights reach globals.css but had no control at all, so a project
+            could never move off the default hairline/1px/2px ramp. */}
+        {advanced &&
+          (["hairline", "default", "thick"] as const).map((weight) => (
+            <NumberField
+              key={weight}
+              label={`Border ${weight}`}
+              unit="px"
+              min={0} max={12} step={0.5}
+              value={tokens.geometry.borderWidth[weight]}
+              provenancePath="tokens.geometry.borderWidth"
+              onChange={(value) =>
+                edit(`Set ${weight} border width`, (draft) => {
+                  draft.tokens.geometry.borderWidth[weight] = value;
+                  draft.provenance["tokens.geometry.borderWidth"] = "user";
+                }, `geometry.border.${weight}`)
+              }
+            />
+          ))}
       </Panel>
 
       <Panel title="Layout">
@@ -234,6 +258,65 @@ export function Foundation() {
             })
           }
         />
+
+        {/* Density is a shortcut for the three measurements below, which is why picking
+            one overwrites them. Exposing them separately is what makes "balanced, but
+            narrower" expressible — previously the only way to get there was to pick a
+            density that was wrong in two other respects. */}
+        {advanced && (
+          <>
+            <p className="text-[11px] text-chrome-muted">
+              Density presets these three. Adjust afterwards to fine-tune.
+            </p>
+            <NumberField
+              label="Max width" unit="rem" min={20} max={120} step={1}
+              value={tokens.layout.maxWidth}
+              provenancePath="tokens.layout.maxWidth"
+              onChange={(maxWidth) =>
+                edit("Set max width", (draft) => {
+                  draft.tokens.layout.maxWidth = maxWidth;
+                  draft.provenance["tokens.layout.maxWidth"] = "user";
+                }, "layout.maxWidth")
+              }
+            />
+            <NumberField
+              label="Gutter" unit="rem" min={0} max={8} step={0.25}
+              value={tokens.layout.gutter}
+              provenancePath="tokens.layout.gutter"
+              onChange={(gutter) =>
+                edit("Set gutter", (draft) => {
+                  draft.tokens.layout.gutter = gutter;
+                  draft.provenance["tokens.layout.gutter"] = "user";
+                }, "layout.gutter")
+              }
+            />
+            <NumberField
+              label="Section spacing" unit="rem" min={0} max={24} step={0.5}
+              value={tokens.layout.sectionSpacing}
+              provenancePath="tokens.layout.sectionSpacing"
+              onChange={(sectionSpacing) =>
+                edit("Set section spacing", (draft) => {
+                  draft.tokens.layout.sectionSpacing = sectionSpacing;
+                  draft.provenance["tokens.layout.sectionSpacing"] = "user";
+                }, "layout.sectionSpacing")
+              }
+            />
+            {/* Honest label: the sample page lays itself out with flex/auto-fit grids
+                rather than a fixed column system, so this one shapes the exported spec
+                the downstream build consumes, not the preview in front of you. */}
+            <NumberField
+              label="Grid columns" min={1} max={24} step={1} hint="exported spec"
+              value={tokens.layout.gridColumns}
+              provenancePath="tokens.layout.gridColumns"
+              onChange={(gridColumns) =>
+                edit("Set grid columns", (draft) => {
+                  draft.tokens.layout.gridColumns = gridColumns;
+                  draft.provenance["tokens.layout.gridColumns"] = "user";
+                }, "layout.gridColumns")
+              }
+            />
+          </>
+        )}
       </Panel>
 
       <Panel title="Imagery">
@@ -264,6 +347,7 @@ export function Foundation() {
         <Toggle
           label="Image borders"
           value={tokens.imagery.border}
+          provenancePath="tokens.imagery.border"
           onChange={(border) =>
             edit("Toggle image borders", (draft) => {
               draft.tokens.imagery.border = border;
@@ -271,8 +355,197 @@ export function Foundation() {
             })
           }
         />
+
+        {/* The overlay reaches globals.css as --dp-image-overlay but had no control,
+            so the one tool for keeping text legible over photography was unreachable. */}
+        <Toggle
+          label="Image overlay"
+          value={tokens.imagery.overlay.enabled}
+          provenancePath="tokens.imagery.overlay"
+          onChange={(enabled) =>
+            edit("Toggle image overlay", (draft) => {
+              draft.tokens.imagery.overlay.enabled = enabled;
+              draft.provenance["tokens.imagery.overlay"] = "user";
+            })
+          }
+        />
+
+        {tokens.imagery.overlay.enabled && (
+          <>
+            <Field label="Overlay colour" provenancePath="tokens.imagery.overlay">
+              <label className="relative h-8 w-full cursor-pointer overflow-hidden rounded-md border border-chrome-border">
+                <span className="absolute inset-0" style={{ background: toHex(tokens.imagery.overlay.color) }} />
+                <input
+                  type="color"
+                  value={toHex(tokens.imagery.overlay.color)}
+                  onChange={(e) => {
+                    const parsed = fromCss(e.target.value);
+                    if (!parsed) return;
+                    edit("Set overlay colour", (draft) => {
+                      draft.tokens.imagery.overlay.color = parsed;
+                      draft.provenance["tokens.imagery.overlay"] = "user";
+                    }, "imagery.overlay.color");
+                  }}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  aria-label="Overlay colour"
+                />
+              </label>
+            </Field>
+            <Slider
+              label="Overlay strength" from="Barely there" to="Heavy"
+              min={0} max={1} step={0.01}
+              value={tokens.imagery.overlay.opacity}
+              format={(v) => `${Math.round(v * 100)}%`}
+              provenancePath="tokens.imagery.overlay"
+              onChange={(opacity) =>
+                edit("Set overlay strength", (draft) => {
+                  draft.tokens.imagery.overlay.opacity = opacity;
+                  draft.provenance["tokens.imagery.overlay"] = "user";
+                }, "imagery.overlay.opacity")
+              }
+            />
+          </>
+        )}
       </Panel>
     </>
+  );
+}
+
+const TYPE_STEP_LABELS: Record<(typeof TYPE_STEPS)[number], string> = {
+  displayXl: "Display XL", displayL: "Display L",
+  heading1: "Heading 1", heading2: "Heading 2", heading3: "Heading 3",
+  bodyL: "Body large", body: "Body", small: "Small", caption: "Caption",
+};
+
+/**
+ * Per-step control over the type ladder (§10.3).
+ *
+ * The Type scale slider above rebuilds all nine steps from one ratio, which is the
+ * right default — a ladder built by hand usually ends up uneven. But it only ever sets
+ * `size`, so weight, line height, tracking and casing were unreachable from the UI
+ * despite being in the schema and the exported tokens. "Heading 1, but heavier and
+ * tighter" is an ordinary request, and this is where it gets answered. Reset applies to
+ * the ladder as a whole, since it is one ramp.
+ */
+function TypeScaleEditor() {
+  const project = useProjectStore((s) => s.project);
+  const edit = useProjectStore((s) => s.edit);
+  const [open, setOpen] = useState(false);
+  if (!project) return null;
+  const { scale } = project.tokens.typography;
+
+  const setStep = (
+    step: (typeof TYPE_STEPS)[number],
+    key: "size" | "weight" | "lineHeight" | "letterSpacing",
+    value: number,
+  ) =>
+    edit(`Set ${TYPE_STEP_LABELS[step]} ${key}`, (draft) => {
+      draft.tokens.typography.scale[step][key] = value;
+      draft.provenance["tokens.typography.scale"] = "user";
+    }, `type.step.${step}.${key}`);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 self-start text-[12px] text-chrome-accent hover:underline"
+      >
+        <span aria-hidden="true">{open ? "▾" : "▸"}</span>
+        Fine-tune each step
+      </button>
+
+      {open &&
+        TYPE_STEPS.map((step) => {
+          const value = scale[step];
+          return (
+            <div
+              key={step}
+              data-type-step={step}
+              className="flex flex-col gap-2 rounded-md border border-chrome-border px-3 py-2.5"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12px] font-medium text-chrome-text">
+                  {TYPE_STEP_LABELS[step]}
+                </span>
+                <span className="font-mono text-[10px] text-chrome-muted">{value.role}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <StepNumber
+                  label="Size" unit="rem" value={value.size} min={0.5} max={12} step={0.05}
+                  onChange={(v) => setStep(step, "size", v)}
+                />
+                <StepNumber
+                  label="Weight" value={value.weight} min={100} max={900} step={50}
+                  onChange={(v) => setStep(step, "weight", v)}
+                />
+                <StepNumber
+                  label="Line height" value={value.lineHeight} min={0.8} max={2.4} step={0.01}
+                  onChange={(v) => setStep(step, "lineHeight", v)}
+                />
+                <StepNumber
+                  label="Tracking" unit="em" value={value.letterSpacing} min={-0.1} max={0.4} step={0.005}
+                  onChange={(v) => setStep(step, "letterSpacing", v)}
+                />
+              </div>
+
+              <label className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-chrome-muted">Casing</span>
+                <select
+                  value={value.transform}
+                  onChange={(e) =>
+                    edit(`Set ${TYPE_STEP_LABELS[step]} casing`, (draft) => {
+                      draft.tokens.typography.scale[step].transform =
+                        e.target.value as typeof value.transform;
+                      draft.provenance["tokens.typography.scale"] = "user";
+                    })
+                  }
+                  className="rounded-md border border-chrome-border bg-chrome-panel px-2 py-1 text-[11px]"
+                >
+                  {["none", "uppercase", "lowercase", "capitalize"].map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+function StepNumber({
+  label, value, onChange, min, max, step, unit,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  unit?: string;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[10px] uppercase tracking-[0.06em] text-chrome-muted">
+        {label}{unit ? ` (${unit})` : ""}
+      </span>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          if (Number.isNaN(next)) return;
+          onChange(Math.min(max, Math.max(min, next)));
+        }}
+        className="w-full rounded-md border border-chrome-border bg-chrome-panel px-2 py-1 text-[11px]"
+      />
+    </label>
   );
 }
 

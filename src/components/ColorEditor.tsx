@@ -4,11 +4,10 @@ import { useProjectStore } from "@/store/project-store";
 import { SEMANTIC_TOKENS, type SemanticToken } from "@/schema/primitives";
 import type { ColorTokens } from "@/schema/tokens";
 import { fromCss, toHex } from "@/color/oklch";
-import { resolveSemantic } from "@/color/semantic";
+import { OWNS_SCALE, resolveSemantic } from "@/color/semantic";
 import { generateScale } from "@/color/scale";
 import { evaluatePair, type ContrastFinding } from "@/color/contrast";
-import { Field, Panel } from "./controls";
-import { provenanceLabel } from "@/store/provenance";
+import { Panel, ProvenanceDot } from "./controls";
 
 /**
  * Semantic colour editing with continuous contrast feedback (§10.2, §13.3).
@@ -79,11 +78,7 @@ export function ColorEditor() {
                 </label>
                 <span className="flex items-center gap-1.5 flex-1 text-[13px] capitalize">
                   {token}
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 cursor-help rounded-full bg-chrome-border"
-                    title={provenanceLabel(project, `tokens.colors.${token}`)}
-                    aria-hidden="true"
-                  />
+                  <ProvenanceDot path={`tokens.colors.${token}`} />
                   {tokenFindings.length > 0 && (
                     <span
                       className="cursor-help text-chrome-danger"
@@ -132,16 +127,6 @@ export function ColorEditor() {
     </>
   );
 }
-
-/** Which semantic token is the canonical owner of each generated ramp. */
-const OWNS_SCALE: Partial<Record<SemanticToken, string>> = {
-  primary: "brand",
-  accent: "accent",
-  secondary: "secondary",
-  success: "success",
-  warning: "warning",
-  error: "error",
-};
 
 /** The pairs worth checking continuously, per §13.3. */
 const PAIRS: Array<[string, SemanticToken, SemanticToken, boolean]> = [

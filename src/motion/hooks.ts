@@ -43,6 +43,8 @@ export interface EntranceOptions {
   duration: number;
   delay: number;
   distance: number;
+  /** Starting scale for scale-based entrances; 1 leaves the element unscaled. */
+  scale: number;
   instant: boolean;
 }
 
@@ -59,13 +61,17 @@ export function resolveEntranceOptions(
     duration: instant ? 0 : secs(binding.overrides?.duration ?? tokens.duration.base),
     delay: instant ? 0 : secs(binding.overrides?.delay ?? delayMs),
     distance: fadeOnly || instant ? 0 : (binding.overrides?.distance ?? tokens.distance),
+    // Every motion profile sets tokens.scale alongside duration/distance/stagger, but
+    // the entrance used to hardcode 0.94 — so the token reached globals.css while the
+    // preview ignored it, and "cinematic" scaled exactly as much as "subtle".
+    scale: fadeOnly || instant ? 1 : tokens.scale,
     instant,
   };
 }
 
 /** Plays an entrance recipe on `el` immediately. Called once the element is in view. */
 export function runEntrance(el: HTMLElement, binding: RecipeBinding, opts: EntranceOptions): void {
-  const { duration, delay, distance, instant } = opts;
+  const { duration, delay, distance, scale, instant } = opts;
 
   if (instant) {
     el.style.opacity = "1";
@@ -86,7 +92,7 @@ export function runEntrance(el: HTMLElement, binding: RecipeBinding, opts: Entra
   }
 
   const withY = binding.properties.includes("y") ? distance : 0;
-  const withScale = binding.properties.includes("scale") ? 0.94 : 1;
+  const withScale = binding.properties.includes("scale") ? scale : 1;
   const withBlur = binding.properties.includes("filter");
 
   if (binding.engine === "gsap") {

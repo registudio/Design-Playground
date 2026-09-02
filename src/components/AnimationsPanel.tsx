@@ -154,10 +154,26 @@ export function AnimationsPanel() {
               }, "motion.stagger")
             }
           />
+          {/* The profile sets this alongside duration/distance/stagger, but unlike those
+              it had no control of its own — so a scale-driven entrance could only be
+              tuned by switching to a whole different profile. */}
+          <Slider
+            label="Entrance scale" from="Subtle" to="Pronounced"
+            min={0.8} max={1} step={0.01}
+            value={tokens.scale}
+            format={(v) => `${v.toFixed(2)}×`}
+            provenancePath="tokens.motion.scale"
+            onChange={(scale) =>
+              edit("Adjust motion scale", (draft) => {
+                draft.tokens.motion.scale = scale;
+                draft.provenance["tokens.motion.scale"] = "user";
+              }, "motion.scale")
+            }
+          />
         </Panel>
       )}
 
-      <Panel title="Accessibility">
+      <Panel title="Accessibility" id="motion-accessibility">
         <p className="text-[12px] text-chrome-muted">
           Every recipe carries a reduced-motion fallback. Movement is removed while state
           changes and content visibility are preserved.

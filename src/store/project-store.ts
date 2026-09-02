@@ -6,6 +6,7 @@ import type { ProjectMeta } from "@/schema/project";
 import type { CustomPreset } from "@/schema/customPreset";
 import { createProject } from "@/schema/defaults";
 import { captureCustomPresetFacets } from "@/presets";
+import { baselineDescription, baselineFor, resetPath } from "./baseline";
 import {
   canRedo, canUndo, commit, emptyHistory, jumpTo, redo, timeline, undo,
   type History, type TimelineEntry,
@@ -63,6 +64,21 @@ interface ProjectState {
   setDevice: (d: Device) => void;
   setTheme: (t: Theme) => void;
   setAdvanced: (v: boolean) => void;
+  /** Collapsed control panels, by title. View state, so it stays out of the export. */
+  collapsedPanels: string[];
+  togglePanel: (title: string) => void;
+
+  /**
+   * Restores one tracked value to what it would be untouched (see store/baseline.ts),
+   * as a normal undoable edit. Paths are the same ones provenance is keyed by.
+   */
+  resetField: (path: string) => void;
+  /** How a reset on the open project would be phrased, for the control's tooltip. */
+  resetLabel: () => string;
+  /** Paths the user has overridden by hand — what "Reset all" would clear. */
+  overriddenPaths: () => string[];
+  /** Reverts every hand-set value at once, as a single undoable edit. */
+  resetAllOverrides: () => void;
 
   // Named snapshots (distinct from linear undo — see schema/project.ts's Snapshot).
   refreshSnapshots: () => Promise<void>;
@@ -104,6 +120,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   device: "desktop",
   theme: "light",
   advanced: false,
+  collapsedPanels: [],
 
   refreshProjects: async () => set({ projects: await listProjects() }),
 
@@ -169,6 +186,48 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setDevice: (device) => set({ device }),
   setTheme: (theme) => set({ theme }),
   setAdvanced: (advanced) => set({ advanced }),
+
+  togglePanel: (title) =>
+    set((state) => ({
+      collapsedPanels: state.collapsedPanels.includes(title)
+        ? state.collapsedPanels.filter((t) => t !== title)
+        : [...state.collapsedPanels, title],
+    })),
+
+  resetField: (path) => {
+    const { project, customPresets, theme } = get();
+    if (!project) return;
+    const baseline = baselineFor(project, customPresets);
+    // A path that resolves to nothing leaves the draft untouched, and `edit` already
+    // drops edits that changed nothing — so a failed reset never reaches the history.
+    get().edit(`Reset ${path.split(".").pop() ?? path}`, (draft) => {
+      resetPath(draft, baseline, path, theme);
+    });
+  },
+
+  resetLabel: () => {
+    const { project, customPresets } = get();
+    return project ? baselineDescription(project, customPresets) : "Reset";
+  },
+
+  overriddenPaths: () => {
+    const { project } = get();
+    if (!project) return [];
+    return Object.keys(project.provenance).filter((path) => project.provenance[path] === "user");
+  },
+
+  resetAllOverrides: () => {
+    const { project, customPresets, theme } = get();
+    if (!project) return;
+    // Snapshot the paths before editing: resetPath rewrites provenance as it goes, so
+    // iterating the live map would skip entries.
+    const paths = get().overriddenPaths();
+    if (paths.length === 0) return;
+    const baseline = baselineFor(project, customPresets);
+    get().edit(`Reset ${paths.length} manual ${paths.length === 1 ? "override" : "overrides"}`, (draft) => {
+      for (const path of paths) resetPath(draft, baseline, path, theme);
+    });
+  },
 
   refreshSnapshots: async () => {
     const { project } = get();

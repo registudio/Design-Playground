@@ -178,8 +178,12 @@ body {
 
 /* --- Imagery ------------------------------------------------------------- */
 
+/* The overlay layer is what keeps copy legible over photography. It only reaches the
+   preview when Imagery > Image overlay is on: the generator emits --dp-image-overlay
+   solely in that case, so the fallback below is what "off" looks like. */
 .dp-image {
   background:
+    linear-gradient(var(--dp-image-overlay, transparent), var(--dp-image-overlay, transparent)),
     linear-gradient(135deg, var(--dp-color-primary) 0%, var(--dp-color-accent) 100%);
   border-radius: var(--dp-image-radius);
   box-shadow: var(--dp-image-shadow);

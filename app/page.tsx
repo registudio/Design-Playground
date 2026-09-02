@@ -174,6 +174,7 @@ function TopBar({ onExport }: { onExport: () => void }) {
 
         <HistoryButton />
         <SnapshotButton />
+        <OverridesButton />
 
         <label className="ml-1 flex cursor-pointer items-center gap-1.5 text-[12px] text-chrome-muted">
           <input
@@ -194,6 +195,36 @@ function TopBar({ onExport }: { onExport: () => void }) {
         </button>
       </div>
     </header>
+  );
+}
+
+/**
+ * A running count of hand-set values, and a way to drop them all at once.
+ *
+ * Each control can already be reset from its own provenance dot, but those dots are
+ * scattered across two rails and any number of collapsed panels — after a working
+ * session, "put everything back the way the preset had it" would otherwise mean
+ * hunting. Renders nothing at all until something has actually been overridden, so it
+ * stays out of the way on a clean project.
+ */
+function OverridesButton() {
+  const resetAllOverrides = useProjectStore((s) => s.resetAllOverrides);
+  const resetLabel = useProjectStore((s) => s.resetLabel);
+  const count = useProjectStore((s) =>
+    s.project ? Object.values(s.project.provenance).filter((source) => source === "user").length : 0,
+  );
+
+  if (count === 0) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={resetAllOverrides}
+      className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
+      title={`${count} value${count === 1 ? "" : "s"} set by hand — ${resetLabel().toLowerCase()} for all of them`}
+    >
+      {count} edited
+    </button>
   );
 }
 

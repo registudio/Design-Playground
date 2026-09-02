@@ -1,6 +1,6 @@
 import type { ColorTokens } from "@/schema/tokens";
 import type { DetectedColor } from "@/schema/project";
-import type { Oklch, SemanticMap } from "@/schema/primitives";
+import type { Oklch, SemanticMap, SemanticToken } from "@/schema/primitives";
 import { generateNeutralScale, generateScale, generateStatusScale, nearestStep } from "./scale";
 import { normalize } from "./oklch";
 
@@ -17,6 +17,23 @@ export interface SuggestionInput {
   /** Fall back to this hue when the logo yields no chromatic colours at all. */
   fallbackHue?: number;
 }
+
+/**
+ * Which semantic token is the canonical owner of each generated ramp.
+ *
+ * Editing (or resetting) one of these regenerates the whole ramp rather than pinning a
+ * single raw colour, so the scale never develops one rung that's out of step with the
+ * rest. Shared by the colour editor and the reset-to-baseline path, which have to agree
+ * about this or resetting would leave the ramp behind.
+ */
+export const OWNS_SCALE: Partial<Record<SemanticToken, string>> = {
+  primary: "brand",
+  accent: "accent",
+  secondary: "secondary",
+  success: "success",
+  warning: "warning",
+  error: "error",
+};
 
 export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput): ColorTokens {
   const chromatic = detected.filter((c) => c.role === "dominant");
