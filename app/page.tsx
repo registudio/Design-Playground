@@ -36,6 +36,7 @@ export default function Playground() {
   const [exporting, setExporting] = useState(false);
 
   useKeyboardShortcuts();
+  useRestoredPreferences();
 
   if (!project) return <ProjectPicker />;
 
@@ -97,6 +98,7 @@ export default function Playground() {
 
 function TopBar({ onExport }: { onExport: () => void }) {
   const project = useProjectStore((s) => s.project)!;
+  const closeProject = useProjectStore((s) => s.closeProject);
   const dirty = useProjectStore((s) => s.dirty);
   const advanced = useProjectStore((s) => s.advanced);
   const setAdvanced = useProjectStore((s) => s.setAdvanced);
@@ -110,12 +112,23 @@ function TopBar({ onExport }: { onExport: () => void }) {
 
   return (
     <header className="flex shrink-0 items-center gap-4 border-b border-chrome-border bg-chrome-panel px-4 py-2.5">
-      <div className="flex min-w-0 flex-col">
-        <span className="truncate text-[13px] font-medium">{project.name}</span>
+      {/* The project name doubles as the way back to the directory. Reopening the last
+          project on load took away the old accidental route (refreshing), so there has
+          to be a deliberate one — and the title is where people already look. */}
+      <button
+        type="button"
+        onClick={closeProject}
+        title="Back to all projects"
+        className="group flex min-w-0 flex-col items-start rounded-md px-2 py-1 -mx-2 text-left hover:bg-chrome-hover"
+      >
+        <span className="flex items-center gap-1.5 truncate text-[13px] font-medium">
+          <span className="text-chrome-muted opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">←</span>
+          {project.name}
+        </span>
         {project.client && (
           <span className="truncate text-[11px] text-chrome-muted">{project.client}</span>
         )}
-      </div>
+      </button>
 
       <span className="text-[11px] text-chrome-muted">{dirty ? "Saving…" : "Saved"}</span>
 
@@ -667,6 +680,16 @@ function Segmented({
       ))}
     </div>
   );
+}
+
+/**
+ * Restores remembered view preferences once, on mount. Deliberately an effect and not
+ * an initial store value: this page is prerendered, and reading localStorage during
+ * render would make the server and client markup disagree.
+ */
+function useRestoredPreferences() {
+  const hydratePreferences = useProjectStore((s) => s.hydratePreferences);
+  useEffect(() => { hydratePreferences(); }, [hydratePreferences]);
 }
 
 function useKeyboardShortcuts() {

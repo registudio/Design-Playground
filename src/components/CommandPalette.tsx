@@ -34,6 +34,10 @@ function useActions(onDone: () => void): Action[] {
   const undo = useProjectStore((s) => s.undo);
   const redo = useProjectStore((s) => s.redo);
   const customPresets = useProjectStore((s) => s.customPresets);
+  const resetAllOverrides = useProjectStore((s) => s.resetAllOverrides);
+  const overrideCount = useProjectStore((s) =>
+    s.project ? Object.values(s.project.provenance).filter((source) => source === "user").length : 0,
+  );
 
   return useMemo(() => {
     const actions: Action[] = [];
@@ -130,9 +134,19 @@ function useActions(onDone: () => void): Action[] {
       { id: "action:redo", label: "Redo", group: "Actions", run: () => { redo(); onDone(); } },
     );
 
+    if (overrideCount > 0) {
+      actions.push({
+        id: "action:reset-overrides",
+        label: `Reset ${overrideCount} manual ${overrideCount === 1 ? "override" : "overrides"}`,
+        group: "Actions",
+        keywords: "revert restore baseline default preset undo changes",
+        run: () => { resetAllOverrides(); onDone(); },
+      });
+    }
+
     return actions;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edit, setSection, setPreviewMode, setDevice, setTheme, setAdvanced, advanced, theme, undo, redo, onDone, customPresets]);
+  }, [edit, setSection, setPreviewMode, setDevice, setTheme, setAdvanced, advanced, theme, undo, redo, onDone, customPresets, resetAllOverrides, overrideCount]);
 }
 
 export const COMMAND_PALETTE_OPEN_EVENT = "dp:open-command-palette";

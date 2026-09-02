@@ -92,6 +92,12 @@ jobs:
           BASE_URL: http://localhost:3100
           E2E_OUTPUT_DIR: ./e2e-output
 
+      - name: Run preferences smoke test
+        run: npm run e2e:preferences
+        env:
+          BASE_URL: http://localhost:3100
+          E2E_OUTPUT_DIR: ./e2e-output
+
       - name: Upload e2e artifacts
         if: always()
         uses: actions/upload-artifact@v4

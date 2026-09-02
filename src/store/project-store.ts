@@ -8,6 +8,10 @@ import { createProject } from "@/schema/defaults";
 import { captureCustomPresetFacets } from "@/presets";
 import { baselineDescription, baselineFor, resetPath } from "./baseline";
 import {
+  loadLastProjectId, loadPreferences, samePreferences, savePreferences, saveLastProjectId,
+  type ViewPreferences,
+} from "./preferences";
+import {
   canRedo, canUndo, commit, emptyHistory, jumpTo, redo, timeline, undo,
   type History, type TimelineEntry,
 } from "./history";
@@ -49,6 +53,12 @@ interface ProjectState {
   refreshProjects: () => Promise<void>;
   newProject: (name: string, client?: string) => Promise<void>;
   open: (id: string) => Promise<void>;
+  /**
+   * Returns to the project directory. Before this existed, reloading the page was the
+   * only way back — which stopped working the moment the last project was reopened
+   * automatically.
+   */
+  closeProject: () => void;
   /** Mutates the project through immer, recording one history entry. */
   edit: (label: string, recipe: (draft: DesignProject) => void, coalesceKey?: string) => void;
   undo: () => void;
@@ -67,6 +77,12 @@ interface ProjectState {
   /** Collapsed control panels, by title. View state, so it stays out of the export. */
   collapsedPanels: string[];
   togglePanel: (title: string) => void;
+  /**
+   * Restores remembered view preferences and keeps them saved from then on. Called
+   * from an effect on mount rather than at module load: the server render has no
+   * localStorage, so seeding the store from it up front would mismatch on hydration.
+   */
+  hydratePreferences: () => void;
 
   /**
    * Restores one tracked value to what it would be untouched (see store/baseline.ts),
@@ -98,6 +114,18 @@ interface ProjectState {
   removeCustomPreset: (id: string) => Promise<void>;
 }
 
+/** Set once hydratePreferences has attached the save subscription, so it attaches once. */
+let unsubscribePreferences: (() => void) | null = null;
+
+const viewPreferencesOf = (state: ProjectState): ViewPreferences => ({
+  section: state.section,
+  previewMode: state.previewMode,
+  device: state.device,
+  theme: state.theme,
+  advanced: state.advanced,
+  collapsedPanels: state.collapsedPanels,
+});
+
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 function scheduleSave(project: DesignProject, done: () => void) {
@@ -128,6 +156,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const project = createProject(name, client);
     await saveProject(project);
     set({ project, history: emptyHistory(), status: "ready", dirty: false, snapshots: [] });
+    saveLastProjectId(project.id);
     await get().refreshProjects();
   },
 
@@ -141,7 +170,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       dirty: false,
       snapshots: [],
     });
+    // Only remember it if it actually loaded — a stale id (deleted elsewhere, or a
+    // cleared database) should fall back to the picker instead of retrying forever.
+    saveLastProjectId(project ? id : null);
     if (project) await get().refreshSnapshots();
+  },
+
+  closeProject: () => {
+    saveLastProjectId(null);
+    set({ project: null, history: emptyHistory(), status: "idle", dirty: false, snapshots: [] });
+    void get().refreshProjects();
   },
 
   edit: (label, recipe, coalesceKey) => {
@@ -186,6 +224,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setDevice: (device) => set({ device }),
   setTheme: (theme) => set({ theme }),
   setAdvanced: (advanced) => set({ advanced }),
+
+  hydratePreferences: () => {
+    set(loadPreferences());
+
+    // Reopen where they left off. Losing your place on every refresh is the loudest
+    // papercut here — and until now a refresh was also the only route back to the
+    // project list, which is why `closeProject` exists alongside this.
+    const lastProjectId = loadLastProjectId();
+    if (lastProjectId && !get().project) void get().open(lastProjectId);
+
+    if (unsubscribePreferences) return;
+    unsubscribePreferences = useProjectStore.subscribe((state, previous) => {
+      const next = viewPreferencesOf(state);
+      if (samePreferences(next, viewPreferencesOf(previous))) return;
+      savePreferences(next);
+    });
+  },
 
   togglePanel: (title) =>
     set((state) => ({
@@ -271,7 +326,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   removeProject: async (id) => {
     await deleteProject(id);
-    if (get().project?.id === id) set({ project: null, history: emptyHistory(), snapshots: [] });
+    if (get().project?.id === id) {
+      saveLastProjectId(null);
+      set({ project: null, history: emptyHistory(), snapshots: [] });
+    }
     await get().refreshProjects();
   },
 
