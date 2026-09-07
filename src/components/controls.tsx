@@ -9,6 +9,7 @@
  * value when Advanced is on.
  */
 
+import { useEffect, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { provenanceLabel, provenanceOf } from "@/store/provenance";
 
@@ -45,6 +46,59 @@ export function ProvenanceDot({ path }: { path: string }) {
       onClick={() => resetField(path)}
     >
       <span className="block h-1.5 w-1.5 rounded-full bg-chrome-accent" />
+    </button>
+  );
+}
+
+/**
+ * A destructive action that asks once before doing anything.
+ *
+ * Snapshots and custom presets live outside the undo history — deleting one is final,
+ * and both delete controls are small targets sitting next to the control you actually
+ * wanted. Losing a named checkpoint or a preset built over several projects to a single
+ * stray click is not a recoverable mistake, so it takes two.
+ *
+ * Arming times out rather than latching: an armed delete button left sitting under the
+ * cursor is its own hazard, and re-arming costs one click.
+ */
+export function ConfirmButton({
+  label, confirmLabel, onConfirm, className, confirmClassName, title, armedTitle,
+}: {
+  label: React.ReactNode;
+  confirmLabel: React.ReactNode;
+  onConfirm: () => void;
+  className?: string;
+  confirmClassName?: string;
+  title?: string;
+  armedTitle?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 4000);
+    return () => clearTimeout(timer);
+  }, [armed]);
+
+  return (
+    <button
+      type="button"
+      title={armed ? (armedTitle ?? "Click again to confirm") : title}
+      onClick={(e) => {
+        // These sit inside rows that open or restore something on click; confirming a
+        // delete must never also trigger the row behind it.
+        e.stopPropagation();
+        if (armed) {
+          onConfirm();
+          setArmed(false);
+        } else {
+          setArmed(true);
+        }
+      }}
+      onBlur={() => setArmed(false)}
+      className={armed ? confirmClassName : className}
+    >
+      {armed ? confirmLabel : label}
     </button>
   );
 }

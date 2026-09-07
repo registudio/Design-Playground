@@ -42,6 +42,8 @@ interface ProjectState {
   customPresets: CustomPreset[];
   status: "idle" | "loading" | "ready";
   dirty: boolean;
+  /** Why the last autosave failed, if it did. Null whenever the project is safely stored. */
+  saveError: string | null;
 
   // View state — deliberately outside the document so it never lands in the export.
   section: Section;
@@ -128,10 +130,23 @@ const viewPreferencesOf = (state: ProjectState): ViewPreferences => ({
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-function scheduleSave(project: DesignProject, done: () => void) {
+/**
+ * Debounced autosave.
+ *
+ * A rejected save used to be an unhandled promise: `dirty` stayed true, so the header
+ * read "Saving…" indefinitely while the user carried on believing their work was being
+ * kept. Storage genuinely can refuse — a private window, a blocked origin, a full quota
+ * — and silently losing a client's project is the worst thing this app could do, so the
+ * failure is reported to the store and surfaced in the header instead.
+ */
+function scheduleSave(project: DesignProject, report: (update: Partial<ProjectState>) => void) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    void saveProject(project).then(done);
+    void saveProject(project).then(
+      () => report({ dirty: false, saveError: null }),
+      (cause: unknown) =>
+        report({ saveError: cause instanceof Error ? cause.message : "Could not save to this browser" }),
+    );
   }, AUTOSAVE_DEBOUNCE_MS);
 }
 
@@ -143,6 +158,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   customPresets: [],
   status: "idle",
   dirty: false,
+  saveError: null,
   section: "components",
   previewMode: "system",
   device: "desktop",
@@ -188,7 +204,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const result = commit(project, history, label, recipe, coalesceKey);
     if (result.state === project) return;
     set({ project: result.state, history: result.history, dirty: true });
-    scheduleSave(result.state, () => set({ dirty: false }));
+    scheduleSave(result.state, set);
   },
 
   undo: () => {
@@ -196,7 +212,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!project) return;
     const result = undo(project, history);
     set({ project: result.state, history: result.history, dirty: true });
-    scheduleSave(result.state, () => set({ dirty: false }));
+    scheduleSave(result.state, set);
   },
 
   redo: () => {
@@ -204,7 +220,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!project) return;
     const result = redo(project, history);
     set({ project: result.state, history: result.history, dirty: true });
-    scheduleSave(result.state, () => set({ dirty: false }));
+    scheduleSave(result.state, set);
   },
 
   jumpToHistory: (position) => {
@@ -212,7 +228,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!project) return;
     const result = jumpTo(project, history, position);
     set({ project: result.state, history: result.history, dirty: true });
-    scheduleSave(result.state, () => set({ dirty: false }));
+    scheduleSave(result.state, set);
   },
 
   historyTimeline: () => timeline(get().history),
@@ -306,7 +322,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
     if (result.state === project) return;
     set({ project: result.state, history: result.history, dirty: true });
-    scheduleSave(result.state, () => set({ dirty: false }));
+    scheduleSave(result.state, set);
   },
 
   removeSnapshot: async (id) => {

@@ -9,6 +9,8 @@ import { AnimationsPanel } from "@/components/AnimationsPanel";
 import { ExportPanel } from "@/components/ExportPanel";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { CommandPalette, openCommandPalette } from "@/components/CommandPalette";
+import { ConfirmButton } from "@/components/controls";
+import { HelpOverlay, openHelp } from "@/components/HelpOverlay";
 import {
   applyPreset, applyPresetFacets, customPresetToPreset, FACET_LABELS, presetThumbnail,
   PRESET_FACETS, PRESET_FAMILIES, PRESETS, type Preset, type PresetFacet,
@@ -92,6 +94,7 @@ export default function Playground() {
 
       {exporting && <ExportPanel onClose={() => setExporting(false)} />}
       <CommandPalette />
+      <HelpOverlay />
     </div>
   );
 }
@@ -100,6 +103,7 @@ function TopBar({ onExport }: { onExport: () => void }) {
   const project = useProjectStore((s) => s.project)!;
   const closeProject = useProjectStore((s) => s.closeProject);
   const dirty = useProjectStore((s) => s.dirty);
+  const saveError = useProjectStore((s) => s.saveError);
   const advanced = useProjectStore((s) => s.advanced);
   const setAdvanced = useProjectStore((s) => s.setAdvanced);
   const previewMode = useProjectStore((s) => s.previewMode);
@@ -130,7 +134,19 @@ function TopBar({ onExport }: { onExport: () => void }) {
         )}
       </button>
 
-      <span className="text-[11px] text-chrome-muted">{dirty ? "Saving…" : "Saved"}</span>
+      {/* A failed save has to be loud. Everything else in this app assumes the project
+          is safely on disk, so silently reading "Saving…" forever would let someone
+          spend a whole client meeting on work that was never persisted. */}
+      {saveError ? (
+        <span
+          className="cursor-help text-[11px] font-medium text-chrome-danger"
+          title={`${saveError}. Export a project file to keep this work.`}
+        >
+          ⚠ Not saved
+        </span>
+      ) : (
+        <span className="text-[11px] text-chrome-muted">{dirty ? "Saving…" : "Saved"}</span>
+      )}
 
       <div className="ml-auto flex items-center gap-1.5">
         <button
@@ -141,6 +157,18 @@ function TopBar({ onExport }: { onExport: () => void }) {
         >
           Search
           <kbd className="rounded border border-chrome-border px-1 font-mono text-[10px]">⌘K</kbd>
+        </button>
+
+        {/* A keyboard-only help panel would be discoverable by exactly the people who
+            need it least, so it gets a visible handle too. */}
+        <button
+          type="button"
+          onClick={openHelp}
+          className="rounded-md border border-chrome-border px-2.5 py-1.5 text-[12px] text-chrome-muted hover:bg-chrome-hover hover:text-chrome-text"
+          title="Shortcuts and tips (?)"
+          aria-label="Shortcuts and tips"
+        >
+          ?
         </button>
 
         {/* Labelled "Viewing" because the left rail also has a "Components" tab, and
@@ -383,14 +411,15 @@ function SnapshotButton() {
                       {new Date(snap.createdAt).toLocaleString()}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void removeSnapshot(snap.id)}
-                    className="shrink-0 text-[11px] text-chrome-muted opacity-0 hover:text-chrome-danger group-hover:opacity-100"
+                  <ConfirmButton
+                    label="Delete"
+                    confirmLabel="Sure?"
+                    onConfirm={() => void removeSnapshot(snap.id)}
                     title="Delete snapshot"
-                  >
-                    Delete
-                  </button>
+                    armedTitle="Click again to delete this snapshot permanently"
+                    className="shrink-0 text-[11px] text-chrome-muted opacity-0 hover:text-chrome-danger group-hover:opacity-100"
+                    confirmClassName="shrink-0 text-[11px] font-medium text-chrome-danger opacity-100"
+                  />
                 </div>
               ))
             )}
@@ -555,14 +584,15 @@ function PresetBar() {
                       </button>
                     )}
                     {preset.family === "Custom" && (
-                      <button
-                        type="button"
+                      <ConfirmButton
+                        label="×"
+                        confirmLabel="Delete?"
+                        onConfirm={() => void removeCustomPreset(preset.id)}
                         title="Delete this saved preset"
-                        onClick={() => void removeCustomPreset(preset.id)}
+                        armedTitle="Click again to delete this preset permanently"
                         className="border-l border-chrome-border px-1.5 py-1.5 text-[11px] hover:bg-chrome-hover hover:text-chrome-danger"
-                      >
-                        ×
-                      </button>
+                        confirmClassName="border-l border-chrome-border px-1.5 py-1.5 text-[11px] font-medium text-chrome-danger"
+                      />
                     )}
                   </div>
                   {pickerOpenFor === preset.id && (

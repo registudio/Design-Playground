@@ -5,6 +5,7 @@ import { useProjectStore } from "@/store/project-store";
 import { saveProject } from "@/store/persistence";
 import { unpackProject } from "@/export/project-file";
 import type { ProjectMeta } from "@/schema/project";
+import { ConfirmButton } from "./controls";
 
 /**
  * Project creation, loading, and the project directory (§15.7 Phase A, §Wave D
@@ -195,7 +196,7 @@ function ProjectRow({
 }) {
   const [editingTags, setEditingTags] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
+
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -265,28 +266,17 @@ function ProjectRow({
           >
             {meta.archived ? "Unarchive" : "Archive"}
           </button>
-          {confirmDelete ? (
-            <>
-              <button type="button" onClick={onDelete} className="text-[10px] font-medium text-chrome-danger">
-                Confirm delete
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="text-[10px] text-chrome-muted hover:text-chrome-text"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="text-[10px] text-chrome-muted hover:text-chrome-danger"
-            >
-              Delete
-            </button>
-          )}
+          {/* Same two-step control as the snapshot and preset deletes, so "click, then
+              click again" means the same thing everywhere something is destroyed. */}
+          <ConfirmButton
+            label="Delete"
+            confirmLabel="Confirm delete"
+            onConfirm={onDelete}
+            title="Delete this project and its snapshots"
+            armedTitle="Click again to delete this project and its snapshots permanently"
+            className="text-[10px] text-chrome-muted hover:text-chrome-danger"
+            confirmClassName="text-[10px] font-medium text-chrome-danger"
+          />
         </div>
       </div>
     </div>
