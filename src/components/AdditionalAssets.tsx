@@ -8,6 +8,8 @@ import { aggregateAssetColors } from "@/color/aggregate";
 import { suggestPalette } from "@/color/semantic";
 import { AssetKind } from "@/schema/assets";
 import { toHex } from "@/color/oklch";
+import { useFileDrop } from "@/hooks/use-file-drop";
+import { ConfirmButton } from "./controls";
 
 /**
  * Additional assets — second logo variants, gradients, photography, illustrations,
@@ -72,11 +74,11 @@ export function AdditionalAssets() {
     draft.suggestion = combined.length > 0 ? suggestPalette({ detected: combined }) : draft.suggestion;
   };
 
-  const handleFiles = async (files: FileList) => {
+  const handleFiles = async (files: File[]) => {
     setBusy(true);
     setError(null);
     try {
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         const hash = await hashBlob(file);
         await putAsset(hash, file.type, file);
 
@@ -121,6 +123,15 @@ export function AdditionalAssets() {
 
   const additional = project.assets.images.filter((i) => i.file !== project.assets.logo.primary);
 
+  const { isDragging, dropProps } = useFileDrop({
+    accept: ACCEPTED,
+    onFiles: (files) => void handleFiles(files),
+    onRejected: (rejected) =>
+      setError(
+        `${rejected.length} file${rejected.length === 1 ? "" : "s"} skipped — not a supported image format (SVG, PNG, JPG, WebP).`,
+      ),
+  });
+
   return (
     <div className="flex flex-col gap-4">
       <input
@@ -130,7 +141,7 @@ export function AdditionalAssets() {
         multiple
         className="hidden"
         onChange={(e) => {
-          if (e.target.files?.length) void handleFiles(e.target.files);
+          if (e.target.files?.length) void handleFiles(Array.from(e.target.files));
           e.target.value = "";
         }}
       />
@@ -139,9 +150,14 @@ export function AdditionalAssets() {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="rounded-lg border border-dashed border-chrome-border px-4 py-6 text-[13px] text-chrome-muted transition-colors hover:border-chrome-accent hover:text-chrome-text disabled:opacity-50"
+        {...dropProps}
+        className={`rounded-lg border border-dashed px-4 py-6 text-[13px] transition-colors disabled:opacity-50 ${
+          isDragging
+            ? "border-chrome-accent bg-chrome-hover text-chrome-text"
+            : "border-chrome-border text-chrome-muted hover:border-chrome-accent hover:text-chrome-text"
+        }`}
       >
-        {busy ? "Analysing…" : "Add assets — second logo, gradients, photography…"}
+        {busy ? "Analysing…" : isDragging ? "Drop to add" : "Add assets — second logo, gradients, photography…"}
       </button>
       <p className="text-[12px] text-chrome-muted">
         Each one is analysed for colour and folded into the palette suggestion below,
@@ -187,9 +203,10 @@ export function AdditionalAssets() {
                     ))}
                   </select>
 
-                  <button
-                    type="button"
-                    onClick={() =>
+                  <ConfirmButton
+                    label="Remove"
+                    confirmLabel="Sure?"
+                    onConfirm={() =>
                       edit(`Remove ${asset.file}`, (draft) => {
                         draft.assets.images = draft.assets.images.filter((i) => i.hash !== asset.hash);
                         for (const slot of ["mark", "light", "dark"] as const) {
@@ -198,11 +215,13 @@ export function AdditionalAssets() {
                         recomputeSuggestion(draft);
                       })
                     }
+                    title={`Remove ${asset.file}`}
+                    armedTitle={`Click again to remove ${asset.file}`}
+                    ariaLabel={`Remove ${asset.file}`}
+                    armedAriaLabel={`Click again to remove ${asset.file} permanently`}
                     className="shrink-0 text-[11px] text-chrome-muted hover:text-chrome-danger"
-                    aria-label={`Remove ${asset.file}`}
-                  >
-                    Remove
-                  </button>
+                    confirmClassName="shrink-0 text-[11px] font-medium text-chrome-danger"
+                  />
                 </div>
               </div>
             </div>

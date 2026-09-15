@@ -417,6 +417,8 @@ function SnapshotButton() {
                     onConfirm={() => void removeSnapshot(snap.id)}
                     title="Delete snapshot"
                     armedTitle="Click again to delete this snapshot permanently"
+                    ariaLabel={`Delete snapshot "${snap.name}"`}
+                    armedAriaLabel={`Click again to delete snapshot "${snap.name}" permanently`}
                     className="shrink-0 text-[11px] text-chrome-muted opacity-0 hover:text-chrome-danger group-hover:opacity-100"
                     confirmClassName="shrink-0 text-[11px] font-medium text-chrome-danger opacity-100"
                   />
@@ -590,6 +592,8 @@ function PresetBar() {
                         onConfirm={() => void removeCustomPreset(preset.id)}
                         title="Delete this saved preset"
                         armedTitle="Click again to delete this preset permanently"
+                        ariaLabel={`Delete preset "${preset.name}"`}
+                        armedAriaLabel={`Click again to delete preset "${preset.name}" permanently`}
                         className="border-l border-chrome-border px-1.5 py-1.5 text-[11px] hover:bg-chrome-hover hover:text-chrome-danger"
                         confirmClassName="border-l border-chrome-border px-1.5 py-1.5 text-[11px] font-medium text-chrome-danger"
                       />

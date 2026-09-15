@@ -9,6 +9,7 @@ import { aggregateAssetColors } from "@/color/aggregate";
 import { suggestPalette } from "@/color/semantic";
 import type { AssetKind } from "@/schema/assets";
 import { toHex } from "@/color/oklch";
+import { useFileDrop } from "@/hooks/use-file-drop";
 
 /**
  * Primary logo upload and analysis (§10.1).
@@ -89,6 +90,12 @@ export function AssetUpload() {
 
   const detected = project.analysis?.colors ?? [];
 
+  const { isDragging, dropProps } = useFileDrop({
+    accept: ACCEPTED,
+    onFiles: ([file]) => void handleFile(file!),
+    onRejected: ([file]) => setError(`"${file!.name}" isn't a supported image format (SVG, PNG, JPG, WebP).`),
+  });
+
   return (
     <div className="flex flex-col gap-4">
       <input
@@ -107,9 +114,18 @@ export function AssetUpload() {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="rounded-lg border border-dashed border-chrome-border px-4 py-6 text-[13px] text-chrome-muted transition-colors hover:border-chrome-accent hover:text-chrome-text disabled:opacity-50"
+        {...dropProps}
+        className={`rounded-lg border border-dashed px-4 py-6 text-[13px] transition-colors disabled:opacity-50 ${
+          isDragging
+            ? "border-chrome-accent bg-chrome-hover text-chrome-text"
+            : "border-chrome-border text-chrome-muted hover:border-chrome-accent hover:text-chrome-text"
+        }`}
       >
-        {busy ? "Analysing…" : project.assets.logo.primary ?? "Upload a logo (SVG, PNG, JPG, WebP)"}
+        {busy
+          ? "Analysing…"
+          : isDragging
+            ? "Drop to upload"
+            : (project.assets.logo.primary ?? "Upload a logo (SVG, PNG, JPG, WebP)")}
       </button>
 
       {/* §10.1 — the analyser is skippable entirely when a company has no logo. */}

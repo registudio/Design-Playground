@@ -63,6 +63,7 @@ export function ProvenanceDot({ path }: { path: string }) {
  */
 export function ConfirmButton({
   label, confirmLabel, onConfirm, className, confirmClassName, title, armedTitle,
+  ariaLabel, armedAriaLabel,
 }: {
   label: React.ReactNode;
   confirmLabel: React.ReactNode;
@@ -71,6 +72,16 @@ export function ConfirmButton({
   confirmClassName?: string;
   title?: string;
   armedTitle?: string;
+  /**
+   * Accessible name, when the visible label alone doesn't identify which row this
+   * button belongs to — e.g. every row's visible label is "Remove", but a screen
+   * reader needs "Remove hero-photo.jpg" to tell them apart. Falls back to the
+   * visible label (the native default for a <button>) when omitted.
+   */
+  ariaLabel?: string;
+  /** Accessible name once armed. Defaults to `ariaLabel` — silence here would leave
+   *  the state change (now one more click deletes something) unannounced. */
+  armedAriaLabel?: string;
 }) {
   const [armed, setArmed] = useState(false);
 
@@ -84,6 +95,7 @@ export function ConfirmButton({
     <button
       type="button"
       title={armed ? (armedTitle ?? "Click again to confirm") : title}
+      aria-label={armed ? (armedAriaLabel ?? ariaLabel) : ariaLabel}
       onClick={(e) => {
         // These sit inside rows that open or restore something on click; confirming a
         // delete must never also trigger the row behind it.

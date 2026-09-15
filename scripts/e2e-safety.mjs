@@ -58,12 +58,16 @@ await page.waitForTimeout(500);
 const snapshotRow = page.locator("div").filter({ hasText: /^Before\?$/ }).last();
 ok("Snapshot was created", await page.getByText("Before?", { exact: true }).isVisible());
 
-const deleteSnapshot = page.getByRole("button", { name: "Delete", exact: true }).first();
+// The button's accessible name is set explicitly (there can be several snapshots, each
+// with a visibly identical "Delete"/"Sure?" label — a screen reader needs the name to
+// say which one), so it's queried by that name rather than the shared visible text.
+const deleteSnapshot = page.getByRole("button", { name: /Delete snapshot "Before\?"/ });
 await deleteSnapshot.click();
 await page.waitForTimeout(300);
 ok("One click on delete only arms it", await page.getByText("Before?", { exact: true }).isVisible());
-ok("Armed delete asks for confirmation", await page.getByRole("button", { name: "Sure?" }).isVisible());
-await page.getByRole("button", { name: "Sure?" }).click();
+const confirmSnapshotDelete = page.getByRole("button", { name: /Click again to delete snapshot "Before\?"/ });
+ok("Armed delete asks for confirmation", await confirmSnapshotDelete.isVisible());
+await confirmSnapshotDelete.click();
 await page.waitForTimeout(500);
 ok("Second click deletes the snapshot", (await page.getByText("Before?", { exact: true }).count()) === 0);
 void snapshotRow;
@@ -77,11 +81,12 @@ await presetInput.press("Enter");
 await page.waitForTimeout(600);
 ok("Custom preset was saved", await page.getByText("Delete Me Preset", { exact: true }).isVisible());
 
-const presetDelete = page.getByRole("button", { name: "×", exact: true }).first();
+// Same explicit-accessible-name reasoning as the snapshot delete above.
+const presetDelete = page.getByRole("button", { name: /Delete preset "Delete Me Preset"/ });
 await presetDelete.click();
 await page.waitForTimeout(300);
 ok("One click only arms the preset delete", await page.getByText("Delete Me Preset", { exact: true }).isVisible());
-await page.getByRole("button", { name: "Delete?", exact: true }).click();
+await page.getByRole("button", { name: /Click again to delete preset "Delete Me Preset"/ }).click();
 await page.waitForTimeout(600);
 ok("Second click deletes the preset", (await page.getByText("Delete Me Preset", { exact: true }).count()) === 0);
 

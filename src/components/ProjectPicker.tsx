@@ -274,6 +274,8 @@ function ProjectRow({
             onConfirm={onDelete}
             title="Delete this project and its snapshots"
             armedTitle="Click again to delete this project and its snapshots permanently"
+            ariaLabel={`Delete project "${meta.name}" and its snapshots`}
+            armedAriaLabel={`Click again to delete project "${meta.name}" and its snapshots permanently`}
             className="text-[10px] text-chrome-muted hover:text-chrome-danger"
             confirmClassName="text-[10px] font-medium text-chrome-danger"
           />
