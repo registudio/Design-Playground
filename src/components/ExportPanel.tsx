@@ -8,7 +8,7 @@ import {
 } from "@/export/deliver";
 import { packProject, downloadProject } from "@/export/project-file";
 import { downloadRationale } from "@/export/rationale";
-import { downloadStaticPage } from "@/export/staticPage";
+import { buildStaticPage, downloadStaticPage } from "@/export/staticPage";
 import { getAsset } from "@/store/persistence";
 
 /**
@@ -23,6 +23,7 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
   const [issues, setIssues] = useState<ValidationIssue[] | null>(null);
   const [directory, setDirectory] = useState<FileSystemDirectoryHandle | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!project) return null;
 
@@ -37,11 +38,21 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
   };
 
   const run = async (deliver: (files: ReturnType<typeof buildExport>["files"]) => Promise<void> | void) => {
+    if (busy) return;
+    setBusy(true);
     setStatus(null);
-    const result = buildExport(project, await collectAssets());
-    setIssues(result.issues);
-    if (result.issues.some((i) => i.severity === "error")) return;
-    await deliver(result.files);
+    try {
+      const result = buildExport(project, await collectAssets());
+      setIssues(result.issues);
+      if (result.issues.some((i) => i.severity === "error")) return;
+      const response = await fetch("/api/preview-css");
+      if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
+      const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
+      result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
+      await deliver(result.files);
+      setStatus("Your design handoff is ready.");
+    } catch (cause) { setStatus(cause instanceof Error ? cause.message : "Export failed. Please try again."); }
+    finally { setBusy(false); }
   };
 
   const errors = issues?.filter((i) => i.severity === "error") ?? [];
@@ -53,10 +64,10 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         className="w-full max-w-lg rounded-xl border border-chrome-border bg-chrome-panel p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[15px] font-semibold">Export design</h2>
+        <h2 className="text-[20px] font-semibold">Your ideas, ready to go.</h2>
         <p className="mt-1 text-[13px] text-chrome-muted">
-          Writes design.tokens.json, site.recipe.json, asset-manifest.json and a generated
-          globals.css into a <code className="font-mono">design/</code> folder.
+          Download a complete design handoff: a sample page, Markdown brief, ordered sections,
+          design tokens, uploaded assets, element notes, and runnable built-in effects.
           {project.selections.length > 0 && (
             <>
               {" "}
@@ -71,9 +82,10 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={() => run((files) => downloadZip(files, `${slug(project.name)}-design.zip`))}
+            disabled={busy}
             className="rounded-md bg-chrome-accent px-4 py-2.5 text-[13px] font-medium text-white hover:opacity-90"
           >
-            Download ZIP
+            {busy ? "Preparing ZIP…" : "Download ZIP"}
           </button>
 
           {supportsDirectoryAccess() && (

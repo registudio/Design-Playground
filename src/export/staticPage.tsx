@@ -17,7 +17,7 @@ import { escapeHtml } from "./htmlUtil";
  * final look of the page, styled by the exact same tokens CSS and component
  * stylesheet the live preview uses, so it can never drift from what was approved.
  */
-export function buildStaticPage(project: DesignProject, previewCss: string): string {
+export function buildStaticPage(project: DesignProject, previewCss: string, assetUrls: Record<string, string> = {}): string {
   const tokensCss = generateCss(project.tokens, { tailwindTheme: false });
 
   const fontEntries = [
@@ -29,7 +29,7 @@ export function buildStaticPage(project: DesignProject, previewCss: string): str
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
   const fontHref = googleFontUrl(fontEntries);
 
-  const markup = renderToStaticMarkup(<SamplePage project={project} />);
+  const markup = renderToStaticMarkup(<SamplePage project={project} assetUrls={assetUrls} />);
   const title = project.client ? `${project.name} — ${project.client}` : project.name;
 
   return `<!doctype html>

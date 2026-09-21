@@ -7,6 +7,7 @@ import { SEMANTIC_TOKENS } from "@/schema/primitives";
 import { createProject } from "@/schema/defaults";
 import type { CustomPreset } from "@/schema/customPreset";
 import { markProvenance } from "@/store/provenance";
+import { SECTION_ORDER } from "@/schema/composition";
 
 /**
  * Design presets (§14).
@@ -53,6 +54,8 @@ export interface Preset {
 /** Applies every facet — the "normal" full preset application. */
 export function applyPreset(draft: DesignProject, preset: Preset): void {
   for (const facet of PRESET_FACETS) preset.facets[facet](draft);
+  if (draft.recipe.sectionOrder) draft.recipe.sectionOrder = SECTION_ORDER.filter(key => draft.recipe.components[key] !== "none");
+  if (draft.recipe.unset) draft.recipe.unset = [];
 }
 
 /** Applies only the chosen facets, leaving everything else as it was. */
@@ -536,6 +539,16 @@ export const PRESETS: Preset[] = [
     motion: "professional",
   }),
 ];
+
+PRESETS.push(definePreset({
+  id: "tuition", name: "Tuition & Education", family: "Industry",
+  description: "Approachable learning, clear programmes, parent testimonials and easy enrolment",
+  seed: "#427c65", pairing: "friendly-rounded", typeScale: 1.25, radius: 0.75,
+  layout: { density: "spacious", maxWidth: 72, gutter: 2, sectionSpacing: 7, alignment: "left" },
+  imagery: { radius: "lg", shadow: "sm", treatment: "contained", border: false },
+  components: { hero: "split", features: "cards", navbar: "floating", socialProof: "testimonial-grid", team: "grid", faq: "accordion", cta: "booking", footer: "columns", cursor: "default" },
+  motion: "subtle",
+}));
 
 export const PRESET_FAMILIES = ["Professional", "Editorial", "Expressive", "Technical", "Industry", "Custom"] as const;
 

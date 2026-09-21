@@ -13,7 +13,7 @@ import { useEffect, useRef } from "react";
  * Rendering is skipped entirely on touch-primary devices so native behaviour is
  * preserved, which the build spec requires.
  */
-export function CustomCursor({ variant }: { variant: string }) {
+export function CustomCursor({ variant, image }: { variant: string; image?: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,8 +45,8 @@ export function CustomCursor({ variant }: { variant: string }) {
 
   if (variant === "default") return null;
   return (
-    <div ref={ref} className="dp-cursor" aria-hidden="true">
-      {variant === "label" ? "View" : null}
+    <div ref={ref} className="dp-cursor" aria-hidden="true" style={image ? { width: 32, height: 32, background: "transparent", border: 0, borderRadius: 0, mixBlendMode: "normal" } : undefined}>
+      {image ? <img src={image} alt="" style={{ width: 32, height: 32, objectFit: "contain" }}/> : variant === "label" ? "View" : null}
     </div>
   );
 }

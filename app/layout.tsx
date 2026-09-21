@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Design Playground",
-  description: "Visual configuration layer for the website-delivery engine",
+  description: "Explore motion and interactions, compose a website, and export your design handoff.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

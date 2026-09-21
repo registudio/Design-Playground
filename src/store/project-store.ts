@@ -228,7 +228,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   edit: (label, recipe, coalesceKey) => {
     const { project, history } = get();
     if (!project) return;
-    const result = commit(project, history, label, recipe, coalesceKey);
+    const result = commit(project, history, label, (draft) => {
+      recipe(draft);
+      for (const key of ["colors", "typography"] as const) {
+        if (!label.startsWith("Leave ") && project.recipe.unset?.includes(key) && JSON.stringify(project.tokens[key]) !== JSON.stringify(draft.tokens[key])) {
+          draft.recipe.unset = draft.recipe.unset?.filter(item => item !== key);
+        }
+      }
+    }, coalesceKey);
     if (result.state === project) return;
     set({ project: result.state, history: result.history, dirty: true });
     scheduleSave(result.state, set);

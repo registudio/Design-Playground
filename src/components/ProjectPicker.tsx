@@ -16,7 +16,7 @@ import { ConfirmButton } from "./controls";
  * Also the import path for a .dpproj.zip, which is what makes a project portable
  * between machines and recoverable if browser storage is cleared.
  */
-export function ProjectPicker() {
+export function ProjectPicker({ onSelect }: { onSelect?: () => void }) {
   const projects = useProjectStore((s) => s.projects);
   const refresh = useProjectStore((s) => s.refreshProjects);
   const newProject = useProjectStore((s) => s.newProject);
@@ -39,6 +39,7 @@ export function ProjectPicker() {
       const project = await unpackProject(new Uint8Array(await file.arrayBuffer()));
       await saveProject(project);
       await open(project.id);
+      onSelect?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not read that project file");
     }
@@ -76,7 +77,7 @@ export function ProjectPicker() {
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (name.trim()) void newProject(name.trim(), client.trim());
+          if (name.trim()) void newProject(name.trim(), client.trim()).then(() => onSelect?.()).catch(() => setError("Could not create project. Please try again."));
         }}
       >
         <input
@@ -172,7 +173,7 @@ export function ProjectPicker() {
               <ProjectRow
                 key={meta.id}
                 meta={meta}
-                onOpen={() => void open(meta.id)}
+                onOpen={() => void open(meta.id).then(() => onSelect?.())}
                 onSetTags={(tags) => void setProjectTags(meta.id, tags)}
                 onToggleArchived={() => void setProjectArchived(meta.id, !meta.archived)}
                 onDelete={() => void removeProject(meta.id)}

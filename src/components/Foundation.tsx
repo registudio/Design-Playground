@@ -17,7 +17,7 @@ import { ALL_FONTS, FONT_PAIRINGS, GOOGLE_FONTS, SYSTEM_FONTS, findFont } from "
  * value — with numbers revealed only under Advanced (§9, §13.2). Sliders pass a
  * coalesce key so a drag collapses to a single undo step.
  */
-export function Foundation() {
+export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
   const project = useProjectStore((s) => s.project);
   const edit = useProjectStore((s) => s.edit);
   const advanced = useProjectStore((s) => s.advanced);
@@ -27,13 +27,13 @@ export function Foundation() {
 
   return (
     <>
-      <Panel title="Company assets">
+      {!hideAssets && <><Panel title="Company assets">
         <AssetUpload />
       </Panel>
 
       <Panel title="Additional assets">
         <AdditionalAssets />
-      </Panel>
+      </Panel></>}
 
       <ColorEditor />
 

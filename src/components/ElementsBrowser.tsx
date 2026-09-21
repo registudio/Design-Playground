@@ -36,12 +36,12 @@ import {
  * exact command that installs it. Each links out to its source's own docs, which is
  * where the visual lives.
  */
-export function ElementsBrowser({ onClose }: { onClose: () => void }) {
+export function ElementsBrowser({ onClose, readOnly = false }: { onClose: () => void; readOnly?: boolean }) {
   const registry = useProjectStore((s) => s.registry);
   const registryState = useProjectStore((s) => s.registryState);
   const registryError = useProjectStore((s) => s.registryError);
   const refreshRegistry = useProjectStore((s) => s.refreshRegistry);
-  const selections = useProjectStore((s) => s.project?.selections ?? []);
+  const selections = useProjectStore((s) => s.project?.selections);
   const selectElement = useProjectStore((s) => s.selectElement);
   const deselectElement = useProjectStore((s) => s.deselectElement);
 
@@ -71,7 +71,7 @@ export function ElementsBrowser({ onClose }: { onClose: () => void }) {
   );
   const byEngine = useMemo(() => engineCounts(registry.elements, query), [registry.elements, query]);
   const staleness = useMemo(() => stalenessOf(registry), [registry]);
-  const selectedIds = useMemo(() => new Set(selections.map((s) => s.id)), [selections]);
+  const selectedIds = useMemo(() => new Set((selections ?? []).map((s) => s.id)), [selections]);
 
   const toggle = <T,>(list: T[], value: T): T[] =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -202,7 +202,7 @@ export function ElementsBrowser({ onClose }: { onClose: () => void }) {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           <p className="mb-3 text-[12px] text-chrome-muted" aria-live="polite">
             {results.length} {results.length === 1 ? "element" : "elements"}
-            {selections.length > 0 && ` · ${selections.length} selected`}
+            {!readOnly && selections && selections.length > 0 && ` · ${selections.length} selected`}
           </p>
 
           {results.length === 0 ? (
@@ -213,6 +213,7 @@ export function ElementsBrowser({ onClose }: { onClose: () => void }) {
                 <ElementCard
                   key={element.id}
                   element={element}
+                  readOnly={readOnly}
                   selected={selectedIds.has(element.id)}
                   onAdd={() => selectElement(element)}
                   onRemove={() => deselectElement(element.id)}
@@ -356,17 +357,21 @@ function EmptyState({ empty, filtered }: { empty: boolean; filtered: boolean }) 
 
 function ElementCard({
   element,
+  readOnly = false,
   selected,
   onAdd,
   onRemove,
 }: {
   element: DesignElement;
+  readOnly?: boolean;
   selected: boolean;
   onAdd: () => void;
   onRemove: () => void;
 }) {
   const source = sourceById(element.source);
   const [copied, setCopied] = useState(false);
+  const note = useProjectStore(s => s.project?.selections.find(item => item.id === element.id)?.intendedUse ?? "");
+  const setIntendedUse = useProjectStore(s => s.setIntendedUse);
 
   const copy = async () => {
     try {
@@ -388,7 +393,7 @@ function ElementCard({
         <div className="min-w-0">
           <h3 className="truncate text-[13px] font-medium text-chrome-text">{element.title}</h3>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-chrome-muted">
-            <span>{source?.label ?? element.source}</span>
+            <a className="registry-source-badge" href={source?.homepage} target="_blank" rel="noreferrer noopener" title={`Source: ${source?.label ?? element.source}`}>{source?.label ?? element.source} ↗</a>
             <span aria-hidden="true">·</span>
             <span>{ROUTING_CATEGORY_LABELS[element.category]}</span>
           </p>
@@ -396,6 +401,7 @@ function ElementCard({
         <button
           type="button"
           onClick={selected ? onRemove : onAdd}
+          disabled={readOnly}
           aria-label={`${selected ? "Remove" : "Select"} ${element.title}`}
           className={`shrink-0 rounded-md px-2.5 py-1 text-[12px] transition-colors ${
             selected
@@ -403,7 +409,7 @@ function ElementCard({
               : "bg-chrome-accent text-white hover:opacity-90"
           }`}
         >
-          {selected ? "Selected" : "Select"}
+          {readOnly ? "Explore" : selected ? "Selected" : "Select"}
         </button>
       </div>
 
@@ -412,6 +418,7 @@ function ElementCard({
           {element.description}
         </p>
       )}
+      {selected && !readOnly && <textarea aria-label={`Note for ${element.title}`} placeholder="Add a note for this component…" value={note} onChange={e => setIntendedUse(element.id, e.target.value)} className="rounded-md border border-chrome-border bg-chrome-bg p-2 text-[12px]"/>}
 
       <div className="flex flex-wrap gap-1">
         {/* §1c — Componentry is "inspect and adapt", not a one-click install. Saying so

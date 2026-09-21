@@ -6,6 +6,9 @@ import { SiteRecipe, findEngineConflicts, findDisabledEngineUses } from "@/schem
 import { toSelectionDocument } from "@/schema/selection";
 import { stableStringify, assertDeterministic } from "./serialize";
 import { generateCss } from "./css";
+import { buildHandoff } from "./handoff";
+import { ELEMENTS, elementDocument } from "@/elements/catalogue";
+import { REGISTRY_SOURCES } from "@/registry/sources";
 
 /**
  * Builds the export bundle (§15).
@@ -153,16 +156,21 @@ export function buildExport(
   for (const doc of [tokensDoc, recipeDoc, manifestDoc, selectionDoc]) assertDeterministic(doc);
 
   const files: ExportFile[] = [
+    { path: "README.md", content: buildHandoff(project) },
     { path: "design/design.tokens.json", content: stableStringify(tokensDoc) },
     { path: "design/site.recipe.json", content: stableStringify(recipeDoc) },
     { path: "design/asset-manifest.json", content: stableStringify(manifestDoc) },
     { path: "design/globals.css", content: generateCss(tokensDoc) },
   ];
+  for (const element of project.recipe.elements ?? []) {
+    if (ELEMENTS.some(item => item.id === element.id)) files.push({ path: `elements/${element.id}.html`, content: elementDocument(element.id) });
+  }
 
   // Omitted entirely when nothing is selected: §5 has Phase 2 skip its sourcing
   // question when the file is *present*, so shipping an empty one would suppress that
   // question while answering nothing.
   if (selectionDoc.selections.length) {
+    files.push({ path: "components.registries.json", content: stableStringify({ registries: Object.fromEntries(REGISTRY_SOURCES.map(source => [`@${source.id}`, source.endpoint.replace("registry.json", "{name}.json")])) }) });
     files.push({
       path: "design-playground-selection.json",
       content: stableStringify(selectionDoc),
@@ -176,7 +184,7 @@ export function buildExport(
   }
 
   // Stable file order, so the ZIP itself is reproducible.
-  files.sort((a, b) => a.path.localeCompare(b.path));
+  files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
   return { files, issues };
 }

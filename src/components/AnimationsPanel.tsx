@@ -62,7 +62,7 @@ export function AnimationsPanel() {
           label="Default entrance"
           options={ENTRANCE_RECIPES.map((r) => r.id)}
           value={motion.entrance.default?.recipe ?? ENTRANCE_RECIPES[0]!.id}
-          describe={(id) => ENTRANCE_RECIPES.find((r) => r.id === id)?.label ?? id}
+          describe={(id) => { const r = ENTRANCE_RECIPES.find(r => r.id === id); return r ? `${r.label} · ${r.binding.engine === "motion" ? "Motion" : r.binding.engine.toUpperCase()}` : id; }}
           provenancePath="recipe.motion.entrance.default"
           onChange={(id) =>
             edit("Set entrance animation", (draft) => {
@@ -81,7 +81,7 @@ export function AnimationsPanel() {
             label={`${target === "button" ? "Button" : "Card"} hover`}
             options={HOVER_RECIPES[target].map((r) => r.id)}
             value={motion.interaction[target]?.recipe ?? HOVER_RECIPES[target][0]!.id}
-            describe={(id) => HOVER_RECIPES[target].find((r) => r.id === id)?.label ?? id}
+            describe={(id) => { const r = HOVER_RECIPES[target].find(r => r.id === id); return r ? `${r.label} · ${r.binding.engine === "motion" ? "Motion" : r.binding.engine.toUpperCase()}` : id; }}
             provenancePath={`recipe.motion.interaction.${target}`}
             onChange={(id) =>
               edit(`Set ${target} hover`, (draft) => {
@@ -99,7 +99,7 @@ export function AnimationsPanel() {
           label="Scroll behaviour"
           options={SCROLL_RECIPES.map((r) => r.id)}
           value={motion.scroll.default?.recipe ?? SCROLL_RECIPES[0]!.id}
-          describe={(id) => SCROLL_RECIPES.find((r) => r.id === id)?.label ?? id}
+          describe={(id) => { const r = SCROLL_RECIPES.find(r => r.id === id); return r ? `${r.label} · ${r.binding.engine === "motion" ? "Motion" : r.binding.engine.toUpperCase()}` : id; }}
           provenancePath="recipe.motion.scroll.default"
           onChange={(id) =>
             edit("Set scroll behaviour", (draft) => {

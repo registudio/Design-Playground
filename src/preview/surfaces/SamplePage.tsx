@@ -1,10 +1,15 @@
 "use client";
 
-import { useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { DesignProject } from "@/schema/project";
 import { CustomCursor } from "../CustomCursor";
 import { useAutoAnimate } from "@/motion/useAutoAnimate";
 import { EditableOverlay } from "@/preview/EditableOverlay";
+import { pageSections, type PageSection } from "@/schema/composition";
+import { ELEMENTS, elementDocument } from "@/elements/catalogue";
+import { getAsset } from "@/store/persistence";
+import { toHex } from "@/color/oklch";
+import { resolveSemantic } from "@/color/semantic";
 
 /**
  * The Sample Page (§13.1): every current choice shown together in a realistic generic
@@ -16,7 +21,7 @@ import { EditableOverlay } from "@/preview/EditableOverlay";
  * own colours or type, which always come from Foundation (§11.3).
  */
 
-export function SamplePage({ project, editable = false }: { project: DesignProject; editable?: boolean }) {
+export function SamplePage({ project, editable = false, assetUrls = {} }: { project: DesignProject; editable?: boolean; assetUrls?: Record<string, string> }) {
   const { components } = project.recipe;
   const brand = project.client || project.name || "Northwind";
   const rootRef = useRef<HTMLDivElement>(null);
@@ -24,6 +29,36 @@ export function SamplePage({ project, editable = false }: { project: DesignProje
   // Wires §12's entrance/hover recipes onto the page in one pass — see
   // useAutoAnimate for why this is a query-and-attach rather than per-element hooks.
   useAutoAnimate(rootRef, project);
+  const [loadedAssets, setLoadedAssets] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const urls: string[] = [];
+    Promise.all(project.assets.images.map(async image => {
+      const blob = await getAsset(image.hash);
+      if (!blob || cancelled) return null;
+      const url = URL.createObjectURL(blob); urls.push(url);
+      return [image.file, url] as const;
+    })).then(entries => { if (!cancelled) setLoadedAssets(Object.fromEntries(entries.filter(e => e !== null))); }).catch(() => {});
+    return () => { cancelled = true; urls.forEach(url => URL.revokeObjectURL(url)); };
+  }, [project.assets.images]);
+  const images = { ...loadedAssets, ...assetUrls };
+  const logoFile = project.assets.logo.primary ?? project.assets.logo.light ?? project.assets.logo.dark;
+  const logo = logoFile ? images[logoFile] : undefined;
+  const heroImage = project.assets.images.find(image => !Object.values(project.assets.logo).includes(image.file));
+  const order = pageSections(project.recipe);
+  const sections: Record<PageSection, React.ReactNode> = {
+    announcement: <Announcement variant={components.announcement}/>,
+    navbar: <Navbar variant={components.navbar} brand={brand} logo={logo}/>,
+    hero: <Hero variant={components.hero} brand={brand} image={heroImage ? images[heroImage.file] : undefined}/>,
+    features: <Features variant={components.features}/>, socialProof: <SocialProof variant={components.socialProof}/>,
+    pricing: <Pricing variant={components.pricing}/>, faq: <Faq variant={components.faq}/>, team: <Team variant={components.team}/>,
+    blog: <Blog variant={components.blog}/>, cta: <Cta variant={components.cta}/>, footer: <Footer variant={components.footer} brand={brand}/>,
+  };
+  const accent = toHex(resolveSemantic(project.tokens.colors, "light", "primary"));
+  const renderElements = (placement: string) => (project.recipe.elements ?? []).filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => {
+    const item = ELEMENTS.find(item => item.id === e.id);
+    return item ? <section key={e.id} className="dp-selected-effect" data-element={e.id}><iframe title={item.title} sandbox="allow-scripts" srcDoc={elementDocument(e.id, accent)} style={{ width: "100%", height: 360, border: 0, display: "block" }}/></section> : null;
+  });
 
   return (
     // Element variants are applied via data attributes on the root so a card or
@@ -37,18 +72,11 @@ export function SamplePage({ project, editable = false }: { project: DesignProje
       data-cursor={components.cursor}
       data-editable={editable ? "true" : undefined}
     >
-      <CustomCursor variant={components.cursor} />
-      <Announcement variant={components.announcement} />
-      <Navbar variant={components.navbar} brand={brand} />
-      <Hero variant={components.hero} brand={brand} />
-      <Features variant={components.features} />
-      <SocialProof variant={components.socialProof} />
-      <Pricing variant={components.pricing} />
-      <Faq variant={components.faq} />
-      <Team variant={components.team} />
-      <Blog variant={components.blog} />
-      <Cta variant={components.cta} />
-      <Footer variant={components.footer} brand={brand} />
+      <CustomCursor variant={components.cursor} image={project.recipe.cursorImage} />
+      {order.map(key => <Fragment key={key}>{sections[key]}{renderElements(key)}</Fragment>)}
+      {renderElements("page")}
+      {!order.length && !project.recipe.elements?.length && <div style={{ padding: "100px 30px", textAlign: "center" }}>Your blank canvas. Add sections or elements to bring it to life.</div>}
+      {project.selections.length > 0 && <aside style={{ padding: "24px", borderTop: "1px solid currentColor", opacity: .8 }}><strong>Registry selections · implementation references</strong><p>These third-party components are included in the handoff for installation. Open their source documentation to see the original demos.</p>{project.selections.map(s => <p key={s.id}>{s.title}{s.intendedUse && ` — ${s.intendedUse}`}</p>)}</aside>}
       {/* Never enabled for the static/shareable export (react-dom/server's SSR pass
           never fires the effect that attaches this anyway, but the prop keeps the
           intent explicit rather than relying on that). */}
@@ -57,12 +85,12 @@ export function SamplePage({ project, editable = false }: { project: DesignProje
   );
 }
 
-function Navbar({ variant, brand }: { variant: string; brand: string }) {
+function Navbar({ variant, brand, logo }: { variant: string; brand: string; logo?: string }) {
   const links = ["Services", "Work", "About", "Contact"];
   return (
     <header className={`dp-navbar dp-navbar-${variant}`} data-animate="nav">
       <div className="dp-navbar-inner">
-        <span className="dp-navbar-brand">{brand}</span>
+        <span className="dp-navbar-brand">{logo ? <img src={logo} alt={brand} style={{ maxHeight: 36, maxWidth: 160 }}/> : brand}</span>
         <nav className="dp-navbar-links">
           {links.map((link) => (
             <a key={link} className="dp-navbar-link" href="#0">{link}</a>
@@ -74,7 +102,7 @@ function Navbar({ variant, brand }: { variant: string; brand: string }) {
   );
 }
 
-function Hero({ variant, brand }: { variant: string; brand: string }) {
+function Hero({ variant, brand, image }: { variant: string; brand: string; image?: string }) {
   const content = (
     <div className="dp-hero-content" data-animate="entrance">
       <span className="dp-badge dp-badge-primary">Trusted by 200+ teams</span>
@@ -96,7 +124,7 @@ function Hero({ variant, brand }: { variant: string; brand: string }) {
     <section className={`dp-hero dp-hero-${variant}`}>
       <div className="dp-hero-inner">
         {content}
-        {variant !== "centered" && <div className="dp-hero-media dp-image" />}
+        {variant !== "centered" && <div className="dp-hero-media dp-image" style={image ? { backgroundImage: `url("${image}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />}
       </div>
     </section>
   );

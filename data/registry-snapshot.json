@@ -1,6 +1,47 @@
 {
   "schema": "dp-registry-index/v1",
   "fetchedAt": null,
-  "sources": [],
+  "sources": [
+    {
+      "id": "bklit",
+      "ok": false,
+      "itemCount": 0,
+      "skipped": 0,
+      "lastVerified": null,
+      "error": "fetch failed"
+    },
+    {
+      "id": "kokonutui",
+      "ok": false,
+      "itemCount": 0,
+      "skipped": 0,
+      "lastVerified": null,
+      "error": "fetch failed"
+    },
+    {
+      "id": "soralabs",
+      "ok": false,
+      "itemCount": 0,
+      "skipped": 0,
+      "lastVerified": null,
+      "error": "fetch failed"
+    },
+    {
+      "id": "componentry",
+      "ok": false,
+      "itemCount": 0,
+      "skipped": 0,
+      "lastVerified": null,
+      "error": "fetch failed"
+    },
+    {
+      "id": "react-bits",
+      "ok": false,
+      "itemCount": 0,
+      "skipped": 0,
+      "lastVerified": null,
+      "error": "fetch failed"
+    }
+  ],
   "elements": []
 }

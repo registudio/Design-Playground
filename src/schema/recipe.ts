@@ -145,6 +145,11 @@ export const SiteRecipe = z.object({
   schema: z.literal(RECIPE_SCHEMA_ID),
   components: ComponentChoices,
   motion: MotionChoices,
+  /** Absent on legacy projects; an empty list is an intentionally empty page. */
+  sectionOrder: z.array(z.enum(["announcement", "navbar", "hero", "features", "socialProof", "pricing", "faq", "team", "blog", "cta", "footer"])).refine((items) => new Set(items).size === items.length, "Sections must be unique").optional(),
+  unset: z.array(z.enum(["colors", "typography"])).optional(),
+  cursorImage: z.string().max(400000).regex(/^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/).optional(),
+  elements: z.array(z.object({ id: z.string(), note: z.string(), placement: z.string() })).optional(),
   /**
    * §1b. `.default()` for the same backward-compatibility reason as the Advanced
    * primitives above: a project saved before engines were tracked must still open.
