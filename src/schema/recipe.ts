@@ -1,4 +1,14 @@
 import { z } from "zod";
+import { ElementChoices, ELEMENT_SLOT_IDS } from "./elements";
+
+/** Every slot empty — the shape a project starts in, and the backfill for older saves. */
+const defaultElementChoices = (): z.infer<typeof ElementChoices> => ({
+  slots: Object.fromEntries(ELEMENT_SLOT_IDS.map((id) => [id, "none"])) as Record<
+    (typeof ELEMENT_SLOT_IDS)[number],
+    string
+  >,
+  params: {},
+});
 
 /**
  * site.recipe.json — structural and interaction decisions (§15.2).
@@ -144,6 +154,12 @@ export const SiteRecipe = z.object({
   schema: z.literal(RECIPE_SCHEMA_ID),
   components: ComponentChoices,
   motion: MotionChoices,
+  /**
+   * §Wave G. `.default()` for the same backward-compatibility reason as the Advanced
+   * primitives above: a project saved before elements existed must still open, with the
+   * slots filled in rather than the document rejected.
+   */
+  elements: ElementChoices.default(defaultElementChoices),
 });
 export type SiteRecipe = z.infer<typeof SiteRecipe>;
 

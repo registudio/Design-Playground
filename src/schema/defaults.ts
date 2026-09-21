@@ -6,6 +6,7 @@ import { ASSET_ROOT } from "./assets";
 import { PROJECT_SCHEMA_ID } from "./project";
 import { TOKENS_SCHEMA_ID } from "./tokens";
 import { RECIPE_SCHEMA_ID } from "./recipe";
+import { ELEMENT_SLOT_IDS } from "./elements";
 import { suggestPalette } from "@/color/semantic";
 
 /**
@@ -166,6 +167,12 @@ export function defaultRecipe(): SiteRecipe {
           reducedMotion: "instant",
         },
       },
+    },
+    // Every slot starts empty (§Wave G). A new project is deliberately motionless:
+    // elements are a decision the designer makes, not a default the tool imposes.
+    elements: {
+      slots: Object.fromEntries(ELEMENT_SLOT_IDS.map((id) => [id, "none"])) as SiteRecipe["elements"]["slots"],
+      params: {},
     },
   };
 }
