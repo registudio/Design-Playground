@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DesignTokens } from "./tokens";
 import { SiteRecipe } from "./recipe";
 import { AssetManifest } from "./assets";
+import { SelectedElement } from "./selection";
 import { Oklch, ValueSource } from "./primitives";
 
 /**
@@ -52,6 +53,13 @@ export const DesignProject = z.object({
   tokens: DesignTokens,
   recipe: SiteRecipe,
   assets: AssetManifest,
+
+  /**
+   * Registry components chosen in the Elements browser (§5). `.default([])` so a
+   * project saved before Elements existed still opens rather than being rejected —
+   * the same backward-compatibility pattern as ProjectMeta.tags.
+   */
+  selections: z.array(SelectedElement).default([]),
 
   analysis: LogoAnalysis.nullable().default(null),
   /**

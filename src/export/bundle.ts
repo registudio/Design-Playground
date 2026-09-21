@@ -2,7 +2,8 @@ import { zipSync, type Zippable } from "fflate";
 import type { DesignProject } from "@/schema/project";
 import { AssetManifest, ASSET_ROOT } from "@/schema/assets";
 import { DesignTokens } from "@/schema/tokens";
-import { SiteRecipe, findEngineConflicts } from "@/schema/recipe";
+import { SiteRecipe, findEngineConflicts, findDisabledEngineUses } from "@/schema/recipe";
+import { toSelectionDocument } from "@/schema/selection";
 import { stableStringify, assertDeterministic } from "./serialize";
 import { generateCss } from "./css";
 
@@ -17,6 +18,11 @@ import { generateCss } from "./css";
  *   design/asset-manifest.json
  *   design/globals.css          (generated, so the contract is proven at export time)
  *   design/assets/<files>
+ *   design-playground-selection.json
+ *
+ * The selection file sits at the bundle root rather than under design/ because §5
+ * specifies it at the target project's root — that is where web-stack-init's Phase 2
+ * looks for it. The other three keep their existing location; this one has its own.
  */
 
 export interface ExportFile {
@@ -70,12 +76,42 @@ export function validate(project: DesignProject): ValidationIssue[] {
     }
   }
 
+  // §1b — the engine list tells the consumer what to install. A binding that needs an
+  // engine the project switched off would export a recipe that cannot run.
+  for (const use of findDisabledEngineUses(project.recipe)) {
+    issues.push({
+      severity: "error",
+      message: `motion.${use.group}.${use.binding} uses "${use.engine}", but that engine is switched off`,
+    });
+  }
+
   // §10.1 — an uploaded face without a recorded licence must not reach a client build.
   for (const font of project.assets.fonts) {
     if (!font.license.trim()) {
       issues.push({
         severity: "error",
         message: `assets.fonts: "${font.family}" has no recorded licence`,
+      });
+    }
+  }
+
+  // §5's intendedUse is what turns a selection into an answered design-interview
+  // question downstream ("hero headline reveal"). Without it the consumer gets a bare
+  // install command and has to ask anyway, so this is worth flagging — but not
+  // blocking, since a selection with no stated use is still a real selection.
+  for (const selection of project.selections) {
+    if (!selection.intendedUse.trim()) {
+      issues.push({
+        severity: "warning",
+        message: `selections: "${selection.title}" has no intended use recorded`,
+      });
+    }
+    // §1c — Componentry is "inspect and customize", not "install as-is". Exporting it
+    // alongside four installable registries without a word would misrepresent it.
+    if (selection.referenceOnly) {
+      issues.push({
+        severity: "warning",
+        message: `selections: "${selection.title}" is a reference-only source — adapt it rather than installing as-is`,
       });
     }
   }
@@ -100,8 +136,9 @@ export function buildExport(
   const tokensDoc = project.tokens;
   const recipeDoc = project.recipe;
   const manifestDoc = project.assets;
+  const selectionDoc = toSelectionDocument(project.selections);
 
-  for (const doc of [tokensDoc, recipeDoc, manifestDoc]) assertDeterministic(doc);
+  for (const doc of [tokensDoc, recipeDoc, manifestDoc, selectionDoc]) assertDeterministic(doc);
 
   const files: ExportFile[] = [
     { path: "design/design.tokens.json", content: stableStringify(tokensDoc) },
@@ -109,6 +146,16 @@ export function buildExport(
     { path: "design/asset-manifest.json", content: stableStringify(manifestDoc) },
     { path: "design/globals.css", content: generateCss(tokensDoc) },
   ];
+
+  // Omitted entirely when nothing is selected: §5 has Phase 2 skip its sourcing
+  // question when the file is *present*, so shipping an empty one would suppress that
+  // question while answering nothing.
+  if (selectionDoc.selections.length) {
+    files.push({
+      path: "design-playground-selection.json",
+      content: stableStringify(selectionDoc),
+    });
+  }
 
   // Binary assets, keyed in the map by the same `file` value the manifest records.
   for (const entry of [...manifestDoc.images, ...manifestDoc.fonts]) {

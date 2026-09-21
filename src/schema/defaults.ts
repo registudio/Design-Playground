@@ -6,7 +6,7 @@ import { ASSET_ROOT } from "./assets";
 import { PROJECT_SCHEMA_ID } from "./project";
 import { TOKENS_SCHEMA_ID } from "./tokens";
 import { RECIPE_SCHEMA_ID } from "./recipe";
-import { ELEMENT_SLOT_IDS } from "./elements";
+import { defaultEngines } from "./engines";
 import { suggestPalette } from "@/color/semantic";
 
 /**
@@ -168,12 +168,8 @@ export function defaultRecipe(): SiteRecipe {
         },
       },
     },
-    // Every slot starts empty (§Wave G). A new project is deliberately motionless:
-    // elements are a decision the designer makes, not a default the tool imposes.
-    elements: {
-      slots: Object.fromEntries(ELEMENT_SLOT_IDS.map((id) => [id, "none"])) as SiteRecipe["elements"]["slots"],
-      params: {},
-    },
+    // Motion and GSAP on because the bindings above use them; Lenis and Vanta opt-in.
+    engines: defaultEngines(),
   };
 }
 
@@ -192,6 +188,7 @@ export function createProject(name: string, client = ""): DesignProject {
     tokens: defaultTokens(),
     recipe: defaultRecipe(),
     assets: defaultManifest(),
+    selections: [],
     analysis: null,
     suggestion: null,
     provenance: {},

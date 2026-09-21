@@ -1,14 +1,5 @@
 import { z } from "zod";
-import { ElementChoices, ELEMENT_SLOT_IDS } from "./elements";
-
-/** Every slot empty — the shape a project starts in, and the backfill for older saves. */
-const defaultElementChoices = (): z.infer<typeof ElementChoices> => ({
-  slots: Object.fromEntries(ELEMENT_SLOT_IDS.map((id) => [id, "none"])) as Record<
-    (typeof ELEMENT_SLOT_IDS)[number],
-    string
-  >,
-  params: {},
-});
+import { EngineChoices, defaultEngines } from "./engines";
 
 /**
  * site.recipe.json — structural and interaction decisions (§15.2).
@@ -155,13 +146,36 @@ export const SiteRecipe = z.object({
   components: ComponentChoices,
   motion: MotionChoices,
   /**
-   * §Wave G. `.default()` for the same backward-compatibility reason as the Advanced
-   * primitives above: a project saved before elements existed must still open, with the
-   * slots filled in rather than the document rejected.
+   * §1b. `.default()` for the same backward-compatibility reason as the Advanced
+   * primitives above: a project saved before engines were tracked must still open.
    */
-  elements: ElementChoices.default(defaultElementChoices),
+  engines: EngineChoices.default(defaultEngines),
 });
 export type SiteRecipe = z.infer<typeof SiteRecipe>;
+
+/**
+ * Motion bindings naming an engine the project has switched off.
+ *
+ * Without this, the §1b toggles would be decorative — a project could export a recipe
+ * whose scroll animation is driven by GSAP while its engine list tells the consumer
+ * not to install GSAP. Checked at export rather than blocked at toggle time so turning
+ * an engine off to see what depends on it is a reversible question, not an argument.
+ */
+export function findDisabledEngineUses(
+  recipe: SiteRecipe,
+): Array<{ group: string; binding: string; engine: string }> {
+  const uses: Array<{ group: string; binding: string; engine: string }> = [];
+  for (const group of ["entrance", "interaction", "scroll"] as const) {
+    for (const [binding, value] of Object.entries(recipe.motion[group])) {
+      // "css" is not an engine anyone installs, so it is never disabled.
+      if (value.engine === "css") continue;
+      if (!recipe.engines[value.engine]) {
+        uses.push({ group, binding, engine: value.engine });
+      }
+    }
+  }
+  return uses;
+}
 
 /** Returns pairs of bindings that would let two engines fight over one property. */
 export function findEngineConflicts(
