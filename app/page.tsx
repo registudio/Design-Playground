@@ -6,6 +6,7 @@ import { PreviewFrame } from "@/components/PreviewFrame";
 import { Foundation } from "@/components/Foundation";
 import { ComponentsPanel } from "@/components/ComponentsPanel";
 import { AnimationsPanel } from "@/components/AnimationsPanel";
+import { ElementsPanel } from "@/components/ElementsPanel";
 import { ExportPanel } from "@/components/ExportPanel";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { CommandPalette, openCommandPalette } from "@/components/CommandPalette";
@@ -29,6 +30,7 @@ import {
 const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: "components", label: "Components" },
   { id: "animations", label: "Animations" },
+  { id: "elements", label: "Elements" },
 ];
 
 export default function Playground() {
@@ -68,6 +70,7 @@ export default function Playground() {
           <div className="min-h-0 flex-1 overflow-y-auto">
             {section === "components" && <ComponentsPanel />}
             {section === "animations" && <AnimationsPanel />}
+            {section === "elements" && <ElementsPanel />}
           </div>
         </aside>
 

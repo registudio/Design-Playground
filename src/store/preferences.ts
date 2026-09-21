@@ -27,7 +27,7 @@ export interface ViewPreferences {
   collapsedPanels: string[];
 }
 
-const SECTIONS: Section[] = ["components", "animations"];
+const SECTIONS: Section[] = ["components", "animations", "elements"];
 const PREVIEW_MODES: PreviewMode[] = ["system", "components", "sample"];
 const DEVICES: Device[] = ["desktop", "tablet", "mobile"];
 const THEMES: Theme[] = ["light", "dark"];

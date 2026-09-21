@@ -16,6 +16,8 @@
     "e2e:preferences": "node scripts/e2e-preferences.mjs",
     "e2e:safety": "node scripts/e2e-safety.mjs",
     "e2e:dropzone": "node scripts/e2e-dropzone.mjs",
+    "e2e:elements": "node scripts/e2e-elements.mjs",
+    "fixture:registry": "node scripts/fixture-registry.mjs",
     "verify": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

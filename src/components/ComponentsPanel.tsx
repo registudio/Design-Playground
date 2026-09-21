@@ -27,7 +27,10 @@ export function ComponentsPanel() {
 
   return (
     <>
-      <Panel title="Elements">
+      {/* "Primitives", not "Elements": Elements is now a tab of its own meaning
+          registry components, and two different things under one name in the same rail
+          is a trap for anyone reading the UI rather than the code. */}
+      <Panel title="Primitives">
         <Choice label="Button" options={ButtonVariant.options} value={components.button} provenancePath="recipe.components.button" onChange={set("button")} />
         <Choice label="Card" options={CardVariant.options} value={components.card} provenancePath="recipe.components.card" onChange={set("card")} />
         <Choice label="Input" options={InputVariant.options} value={components.input} provenancePath="recipe.components.input" onChange={set("input")} />

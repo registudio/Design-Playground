@@ -41,14 +41,16 @@ const cssVar = (name) =>
   );
 
 // ---------------------------------------------------------------- collapsible panels
-const elementsPanel = page.getByRole("button", { name: /^Elements$/ });
-ok("Panel heading is a collapse control", (await elementsPanel.getAttribute("aria-expanded")) === "true");
+// The Button/Card/Input panel, renamed from "Elements" to "Primitives" once Elements
+// became a rail tab of its own meaning registry components.
+const primitivesPanel = page.getByRole("button", { name: /^Primitives$/ });
+ok("Panel heading is a collapse control", (await primitivesPanel.getAttribute("aria-expanded")) === "true");
 const solidBefore = await page.getByRole("button", { name: "solid", exact: true }).isVisible();
-await elementsPanel.click();
+await primitivesPanel.click();
 await page.waitForTimeout(200);
 const solidAfter = await page.getByRole("button", { name: "solid", exact: true }).isVisible().catch(() => false);
 ok("Collapsing a panel hides its controls", solidBefore && !solidAfter);
-await elementsPanel.click();
+await primitivesPanel.click();
 await page.waitForTimeout(200);
 ok("Expanding restores them", await page.getByRole("button", { name: "solid", exact: true }).isVisible());
 

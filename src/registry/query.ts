@@ -74,6 +74,22 @@ export function categoryCounts(
   return tally(base, (element) => element.category);
 }
 
+/**
+ * Counted separately from the others because an element can need both engines, so the
+ * counts legitimately sum past the number of rows — tally() would undercount.
+ */
+export function engineCounts(
+  elements: DesignElement[],
+  query: ElementQuery,
+): Record<string, number> {
+  const base = filterElements(elements, { ...query, engines: [] });
+  const counts: Record<string, number> = { motion: 0, gsap: 0 };
+  for (const element of base) {
+    for (const engine of element.engineDependency) counts[engine] = (counts[engine] ?? 0) + 1;
+  }
+  return counts;
+}
+
 function tally<T>(items: T[], key: (item: T) => string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const item of items) counts[key(item)] = (counts[key(item)] ?? 0) + 1;

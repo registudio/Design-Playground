@@ -19,7 +19,12 @@ import { emptyIndex, RegistryIndex } from "./schema";
  * Server-only: imports node:fs.
  */
 
-const SNAPSHOT_PATH = path.join(process.cwd(), "data/registry-snapshot.json");
+/**
+ * Overridable so a test run can point at a fixture index, and so a deployment can keep
+ * the snapshot on a writable volume rather than inside the read-only app directory.
+ */
+const SNAPSHOT_PATH =
+  process.env.DP_REGISTRY_SNAPSHOT ?? path.join(process.cwd(), "data/registry-snapshot.json");
 
 export async function readSnapshot(): Promise<RegistryIndex> {
   try {

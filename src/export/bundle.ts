@@ -114,6 +114,18 @@ export function validate(project: DesignProject): ValidationIssue[] {
         message: `selections: "${selection.title}" is a reference-only source — adapt it rather than installing as-is`,
       });
     }
+    // §1b's one real intersection between the two halves: an element carries the
+    // engines it depends on, and installing one whose engine the project has switched
+    // off gives a component that cannot run. A warning rather than an error, because
+    // the fix might equally be to turn the engine on after seeing this.
+    for (const engine of selection.engineDependency) {
+      if (!project.recipe.engines[engine]) {
+        issues.push({
+          severity: "warning",
+          message: `selections: "${selection.title}" needs the ${engine} engine, which is switched off`,
+        });
+      }
+    }
   }
 
   // Referenced logo files must actually be present in the manifest.

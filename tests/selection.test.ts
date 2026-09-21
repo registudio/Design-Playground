@@ -106,6 +106,25 @@ describe("selection export wiring", () => {
     expect(validate(project).some((i) => i.message.includes("reference-only"))).toBe(true);
   });
 
+  it("warns when a selection needs an engine the project switched off (§1b)", () => {
+    const project = fixtureProject();
+    project.selections = [selected({ engineDependency: ["gsap"] })];
+    project.recipe.engines.gsap = false;
+    // The motion binding that also needs GSAP raises its own error; this asserts the
+    // separate, selection-level warning.
+    expect(
+      validate(project).some(
+        (i) => i.severity === "warning" && i.message.includes("needs the gsap engine"),
+      ),
+    ).toBe(true);
+  });
+
+  it("stays quiet when the engine a selection needs is on", () => {
+    const project = fixtureProject();
+    project.selections = [selected({ engineDependency: ["gsap"] })];
+    expect(validate(project).some((i) => i.message.includes("needs the gsap engine"))).toBe(false);
+  });
+
   it("neither warning blocks the export", () => {
     const project = fixtureProject();
     project.selections = [selected({ intendedUse: "", referenceOnly: true })];

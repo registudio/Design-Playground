@@ -57,6 +57,14 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         <p className="mt-1 text-[13px] text-chrome-muted">
           Writes design.tokens.json, site.recipe.json, asset-manifest.json and a generated
           globals.css into a <code className="font-mono">design/</code> folder.
+          {project.selections.length > 0 && (
+            <>
+              {" "}
+              Selected elements are written alongside it as{" "}
+              <code className="font-mono">design-playground-selection.json</code>, at the
+              project root where the build step looks for them.
+            </>
+          )}
         </p>
 
         <div className="mt-5 flex flex-col gap-2">

@@ -9,6 +9,7 @@ import {
 import {
   categoryCounts,
   emptyQuery,
+  engineCounts,
   filterElements,
   sourceCounts,
   stalenessOf,
@@ -297,6 +298,17 @@ describe("search and faceting", () => {
     const counts = categoryCounts(elements, { ...emptyQuery(), text: "spark" });
     expect(counts["micro-interactions"]).toBe(1);
     expect(counts["layout-blocks"]).toBeUndefined();
+  });
+
+  it("counts an element needing both engines under each of them", () => {
+    // Deliberately not tallied like the other facets: these counts may legitimately
+    // sum past the row count, where a single-key tally would undercount.
+    const both = [element({ id: "e", engineDependency: ["motion", "gsap"] })];
+    expect(engineCounts(both, emptyQuery())).toEqual({ motion: 1, gsap: 1 });
+  });
+
+  it("reports zero for an engine nothing needs, rather than omitting it", () => {
+    expect(engineCounts([element({})], emptyQuery())).toEqual({ motion: 0, gsap: 0 });
   });
 
   it("counts agree with the number of rows actually shown", () => {

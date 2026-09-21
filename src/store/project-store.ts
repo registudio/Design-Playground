@@ -4,6 +4,8 @@ import { create } from "zustand";
 import type { DesignProject, Snapshot } from "@/schema/project";
 import type { ProjectMeta } from "@/schema/project";
 import type { CustomPreset } from "@/schema/customPreset";
+import type { SelectedElement } from "@/schema/selection";
+import { emptyIndex, RegistryIndex, type DesignElement } from "@/registry/schema";
 import { createProject } from "@/schema/defaults";
 import { captureCustomPresetFacets } from "@/presets";
 import { baselineDescription, baselineFor, resetPath } from "./baseline";
@@ -32,7 +34,7 @@ const AUTOSAVE_DEBOUNCE_MS = 400;
 export type Theme = "light" | "dark";
 export type Device = "desktop" | "tablet" | "mobile";
 export type PreviewMode = "system" | "components" | "sample";
-export type Section = "components" | "animations";
+export type Section = "components" | "animations" | "elements";
 
 interface ProjectState {
   project: DesignProject | null;
@@ -114,6 +116,28 @@ interface ProjectState {
   refreshCustomPresets: () => Promise<void>;
   saveCurrentAsPreset: (name: string, description?: string) => Promise<void>;
   removeCustomPreset: (id: string) => Promise<void>;
+
+  /**
+   * The aggregated registry index (§1a–§3).
+   *
+   * Cache, not document: it belongs to the machine rather than to any one project, is
+   * rebuilt from upstream on demand, and must never reach the export. The selections
+   * made *from* it live on the project, which is why they survive an empty index.
+   */
+  registry: RegistryIndex;
+  registryState: "idle" | "loading" | "refreshing" | "ready";
+  /** Why the last load or refresh failed. Null when the index is trustworthy. */
+  registryError: string | null;
+  /** Reads the committed snapshot. Cheap, offline, runs on first open of the tab. */
+  loadRegistry: () => Promise<void>;
+  /** Re-fetches all five registries. Explicit, because it depends on five third parties. */
+  refreshRegistry: () => Promise<void>;
+
+  // Element selections (§5).
+  selectElement: (element: DesignElement, intendedUse?: string) => void;
+  deselectElement: (id: string) => void;
+  setIntendedUse: (id: string, intendedUse: string) => void;
+  setEngine: (engine: "motion" | "gsap" | "lenis" | "vanta", enabled: boolean) => void;
 }
 
 /** Set once hydratePreferences has attached the save subscription, so it attaches once. */
@@ -165,6 +189,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   theme: "light",
   advanced: false,
   collapsedPanels: [],
+  registry: emptyIndex(),
+  registryState: "idle",
+  registryError: null,
 
   refreshProjects: async () => set({ projects: await listProjects() }),
 
@@ -368,5 +395,99 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   removeCustomPreset: async (id) => {
     await deleteCustomPreset(id);
     await get().refreshCustomPresets();
+  },
+
+  loadRegistry: async () => {
+    // Already loaded or in flight — opening the tab repeatedly shouldn't re-request.
+    if (get().registryState !== "idle") return;
+    set({ registryState: "loading", registryError: null });
+    try {
+      const response = await fetch("/api/registry");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const parsed = RegistryIndex.safeParse(await response.json());
+      if (!parsed.success) throw new Error("The stored index could not be read");
+      set({ registry: parsed.data, registryState: "ready" });
+    } catch (cause) {
+      // An empty index is a valid state the UI already handles (it prompts a refresh),
+      // so a failed load degrades to "nothing indexed yet" plus a visible reason.
+      set({
+        registryState: "ready",
+        registryError: cause instanceof Error ? cause.message : "Could not read the element index",
+      });
+    }
+  },
+
+  refreshRegistry: async () => {
+    set({ registryState: "refreshing", registryError: null });
+    try {
+      const response = await fetch("/api/registry", { method: "POST" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body: unknown = await response.json();
+      const parsed = RegistryIndex.safeParse(body);
+      if (!parsed.success) throw new Error("The refreshed index could not be read");
+
+      // A refresh where every source failed keeps whatever was already indexed: the
+      // per-source errors are reported through registry.sources, and replacing good
+      // data with nothing would be a worse outcome than showing it as stale.
+      const persisted = (body as { persisted?: boolean }).persisted;
+      set({
+        registry: parsed.data,
+        registryState: "ready",
+        registryError: persisted === false
+          ? "Refreshed, but the index could not be written to disk — it will be re-fetched next time."
+          : null,
+      });
+    } catch (cause) {
+      set({
+        registryState: "ready",
+        registryError: cause instanceof Error ? cause.message : "Could not reach the registries",
+      });
+    }
+  },
+
+  selectElement: (element, intendedUse = "") => {
+    get().edit(`Select ${element.title}`, (draft) => {
+      if (draft.selections.some((s) => s.id === element.id)) return;
+      const selection: SelectedElement = {
+        id: element.id,
+        name: element.name,
+        title: element.title,
+        description: element.description,
+        source: element.source,
+        category: element.category,
+        installCommand: element.installCommand,
+        intendedUse,
+        referenceOnly: element.referenceOnly,
+        variant: element.variant,
+        engineDependency: element.engineDependency,
+        addedAt: Date.now(),
+      };
+      draft.selections.push(selection);
+    });
+  },
+
+  deselectElement: (id) => {
+    const title = get().project?.selections.find((s) => s.id === id)?.title ?? id;
+    get().edit(`Remove ${title}`, (draft) => {
+      draft.selections = draft.selections.filter((s) => s.id !== id);
+    });
+  },
+
+  setIntendedUse: (id, intendedUse) => {
+    // Coalesced on the selection id so typing a sentence is one undo step, not thirty.
+    get().edit(
+      "Set intended use",
+      (draft) => {
+        const selection = draft.selections.find((s) => s.id === id);
+        if (selection) selection.intendedUse = intendedUse;
+      },
+      `intended-use:${id}`,
+    );
+  },
+
+  setEngine: (engine, enabled) => {
+    get().edit(`${enabled ? "Enable" : "Disable"} ${engine}`, (draft) => {
+      draft.recipe.engines[engine] = enabled;
+    });
   },
 }));
