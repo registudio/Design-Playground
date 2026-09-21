@@ -187,6 +187,44 @@ describe("semantic suggestion", () => {
     const bg = resolveSemantic(fallback, "light", "background");
     expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
+
+  // A dark logo colour (teal, L≈0.38) anchors near the dark end of the brand scale.
+  // The old dark.primary formula was a fixed offset from that anchor — `max(300,
+  // anchorStep - 200)` — which for an anchor this dark landed on step 700 (2.64:1
+  // against the generated dark background, well under the 4.5:1 AA floor): a failing,
+  // largely illegible primary button and link colour, shipped as the *default*
+  // suggestion before a user has touched anything. A lighter logo colour didn't
+  // reliably expose this, since a lighter anchor's fixed offset happened to still land
+  // somewhere legible — which is exactly why a fixed offset was the wrong tool.
+  it("keeps primary legible in dark theme even when the source colour is dark", () => {
+    const darkTeal = fromCss("#0f4c4c")!;
+    const darkTokens = suggestPalette({
+      detected: [{ color: darkTeal, weight: 1, role: "dominant", label: "Brand Teal" }],
+    });
+
+    const primary = resolveSemantic(darkTokens, "dark", "primary");
+    const background = resolveSemantic(darkTokens, "dark", "background");
+    expect(contrastRatio(primary, background)).toBeGreaterThanOrEqual(4.5);
+
+    // This is the exact pairing a solid-fill primary button renders as text-on-fill,
+    // and (order-independent, since contrastRatio only cares about which is lighter)
+    // the same ratio an outline/text-style button renders as primary-coloured text
+    // directly on the page background.
+  });
+
+  it("still anchors primary near the brand colour's own intensity when it was already legible", () => {
+    // A mid-lightness brand colour (L≈0.55) should barely need adjusting — this guards
+    // against the fix overcorrecting into a washed-out primary for cases that were
+    // already fine.
+    const midBlue = fromCss("#3b6fd6")!;
+    const tokensForMidBlue = suggestPalette({
+      detected: [{ color: midBlue, weight: 1, role: "dominant", label: "Brand Blue" }],
+    });
+    const primary = resolveSemantic(tokensForMidBlue, "dark", "primary");
+    const background = resolveSemantic(tokensForMidBlue, "dark", "background");
+    expect(contrastRatio(primary, background)).toBeGreaterThanOrEqual(4.5);
+    expect(primary.l).toBeLessThan(0.75);
+  });
 });
 
 describe("google font url", () => {

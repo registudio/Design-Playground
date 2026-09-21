@@ -1,8 +1,9 @@
 import type { ColorTokens } from "@/schema/tokens";
 import type { DetectedColor } from "@/schema/project";
-import type { Oklch, SemanticMap, SemanticToken } from "@/schema/primitives";
+import { SCALE_STEPS, type ColorScale, type Oklch, type ScaleStep, type SemanticMap, type SemanticToken } from "@/schema/primitives";
 import { generateNeutralScale, generateScale, generateStatusScale, nearestStep } from "./scale";
 import { normalize } from "./oklch";
+import { contrastRatio } from "./contrast";
 
 /**
  * Proposes an initial semantic palette from detected logo colours (§10.1).
@@ -34,6 +35,30 @@ export const OWNS_SCALE: Partial<Record<SemanticToken, string>> = {
   warning: "warning",
   error: "error",
 };
+
+/**
+ * The darkest rung of `scale` that still clears WCAG AA (4.5:1) against `background`,
+ * no lighter than `floor`.
+ *
+ * Dark-mode primary used to be `max(floor, lightModeStep - 200)` — a fixed offset from
+ * wherever the light-mode anchor happened to land. For a logo dark enough to anchor
+ * near step 900 (a common case — plenty of brand colours are already fairly dark),
+ * that lands on step 700, which measures 2.6:1 against the generated dark background:
+ * a failing, largely illegible primary button and link colour, shipped as the
+ * *suggested* default before a user has touched anything. Searching for a rung that
+ * actually clears AA — rather than assuming a fixed offset always will — fixes that
+ * by construction while still staying as close to the brand's own intensity as the
+ * contrast requirement allows.
+ */
+function accessibleDarkStep(scale: ColorScale, background: Oklch, floor: ScaleStep = 300): ScaleStep {
+  const candidates = SCALE_STEPS.filter((step) => step >= floor).reverse();
+  for (const step of candidates) {
+    if (contrastRatio(scale[step], background) >= 4.5) return step;
+  }
+  // Every candidate failed (only possible for an extreme hue/chroma combination) —
+  // fall back to the lightest rung tried, which is at least the closest available.
+  return candidates[candidates.length - 1] ?? floor;
+}
 
 export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput): ColorTokens {
   const chromatic = detected.filter((c) => c.role === "dominant");
@@ -73,8 +98,10 @@ export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput)
     error: { kind: "scale", scale: "error", step: 600 },
   };
 
+  const darkBackground = scales.neutral[950];
+
   const dark: SemanticMap = {
-    primary: { kind: "scale", scale: "brand", step: Math.max(300, primaryStep - 200) },
+    primary: { kind: "scale", scale: "brand", step: accessibleDarkStep(scales.brand, darkBackground) },
     secondary: { kind: "scale", scale: "secondary", step: 400 },
     accent: { kind: "scale", scale: "accent", step: 400 },
     background: { kind: "scale", scale: "neutral", step: 950 },
