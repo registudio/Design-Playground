@@ -107,7 +107,7 @@ Run the focused catalogue audit while the development server is active:
 npm run audit:previews
 ```
 
-The audit requests all 436 registry entries and fails if any route returns an error document. It also reports how many entries use generated helper demonstrations. The current verified result is zero errors, 427 source-compiled previews and nine generated helper or unavailable-source demonstrations.
+The HTTP audit requests all registry entries and fails for error documents or generated replacement demos. Earlier HTTP-only results did not verify browser rendering; the previous claim of 427 source previews and nine helper demos must not be read as a visual pass. Use `npm run audit:render` for runtime status, errors, timings, and screenshots, then review those screenshots.
 
 Run the complete project validation before release:
 
@@ -117,4 +117,12 @@ npm run verify
 
 For visual QA, search for at least one item from each source, confirm the loading poster is replaced by a visual iframe, scroll far enough to exercise teardown and remounting, and check a WebGL or canvas item such as React Bits `ASCIIText`.
 
-The interactive latency check is measured from a search edit to the target card's loading poster disappearing. The current local measurement for React Bits `BlurText` is 406 ms, within the three-second budget. A cold direct compile of the same source completed in 389 ms before browser rendering.
+An earlier local BlurText sample measured 406 ms from search edit to poster removal and 389 ms for a direct compile. Those are historical single-item observations, not proof of correct rendering or a catalogue-wide three-second guarantee.
+
+## Local engine demos and curated media (23 September)
+
+Motion.dev, Lenis, and Vanta each have a Playground-authored demo using their actual runtime. `scripts/build-engine-demos.mjs` produces separate local bundles before development and production builds. Bundles load only in the relevant sandboxed demo frame and are embedded in ZIP/standalone HTML exports with license notices.
+
+Nine curated carousel designs and seven gallery/media designs now have distinct browse categories. Existing registry entries are retained. Every card supports a viewport-sized expanded preview; background card runtimes pause while it is open. Phone filters start collapsed.
+
+Read [QA fixes and verification limits](./QA-FIXES-2026-09-23.md) for remaining limitations and [future improvements](./FUTURE-IMPROVEMENTS.md) for the proposed next round.

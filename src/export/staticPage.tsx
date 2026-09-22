@@ -5,6 +5,7 @@ import { findFont, googleFontUrl } from "@/fonts/catalogue";
 import { SamplePage } from "@/preview/surfaces/SamplePage";
 import { escapeHtml } from "./htmlUtil";
 import { getAsset } from "@/store/persistence";
+import { embedEngineAssets } from "./engine-assets";
 
 /**
  * A shareable, standalone Sample Page (§Wave D Features-3): a frozen HTML bundle a
@@ -66,7 +67,9 @@ export async function downloadStaticPage(project: DesignProject): Promise<void> 
       reader.readAsDataURL(blob);
     });
   }));
-  const html = buildStaticPage(project, previewCss, assetUrls);
+  const files = [{ path: "preview.html", content: buildStaticPage(project, previewCss, assetUrls) }];
+  await embedEngineAssets(files);
+  const html = files[0].content + (files[1] ? `<!-- Engine licenses\n${files[1].content.replaceAll("--", "—")} -->` : "");
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

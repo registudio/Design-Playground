@@ -20,6 +20,7 @@ export const BROWSE_CATEGORIES = [
   "Hover effects",
   "Scroll effects",
   "Cursor effects",
+  "Carousels",
   "Galleries & media",
   "Layout blocks",
   "Buttons & inputs",
@@ -54,6 +55,7 @@ const HOOK_WORD = /^use-|\butils?\b|^index$|-hook|\bhooks\b/i;
  * catalogue, so the cases that fixed each position are covered in tests.
  */
 const RULES: Array<{ category: BrowseCategory; match: RegExp }> = [
+  { category: "Carousels", match: /\bcarousel|slideshow|coverflow\b/ },
   { category: "Charts & data viz", match: /\bchart|graph|plot|axis|sparkline|candlestick|histogram|heatmap|treemap|funnel|radar|scatter|gauge|calendar|bar|line|pie|donut|series|legend|tick\b/ },
   { category: "Cursor effects", match: /\bcursor|pointer|crosshair|mouse|trail|eye track\b/ },
   // Before text: "Scroll Reveal Text" is a scroll effect, not a text animation.
@@ -62,7 +64,7 @@ const RULES: Array<{ category: BrowseCategory; match: RegExp }> = [
   { category: "Loaders & feedback", match: /\bloader|loading|spinner|skeleton|progress|toast|notification|alert\b/ },
   // Before backgrounds: "Magnet Button" pulls particles, but the effect is the hover.
   { category: "Hover effects", match: /\bhover|tilt|magnet|magnetic|spotlight|glow|shine|lift|proximity|ripple\b/ },
-  { category: "Galleries & media", match: /\bgallery|carousel|slider|lightbox|image|photo|masonry|media|video|album|slideshow|stack|folder\b/ },
+  { category: "Galleries & media", match: /\bgallery|slider|lightbox|image|photo|masonry|media|video|album|stack|folder\b/ },
   { category: "Backgrounds", match: /\bbackground|backdrop|aurora|particle|starfield|noise|beam|plasma|wave|mesh|orb|ambient|grain|dither|blob|fluid|squares|liquid|chrome|prism|pixel|matrix|laser|tunnel|hyperspeed|ballpit|ribbon|webgl|shader|glass|metallic|ether|snow|spectral|circuit|balatro|antigravity|aero|acid\b/ },
   { category: "Layout blocks", match: /\bhero|pricing|footer|nav|header|bento|testimonial|feature|faq|banner|section|layout|sidebar|dashboard|profile|team|keyboard|player|list\b/ },
   { category: "Buttons & inputs", match: /\bbutton|input|form|field|select|checkbox|radio|toggle|switch|dropdown|menu|search|textarea|combobox|tabs|accordion|dialog|modal|popover|tooltip|chip|drawer|icons?\b/ },

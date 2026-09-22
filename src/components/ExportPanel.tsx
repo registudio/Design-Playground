@@ -10,6 +10,7 @@ import { packProject, downloadProject } from "@/export/project-file";
 import { downloadRationale } from "@/export/rationale";
 import { buildStaticPage, downloadStaticPage } from "@/export/staticPage";
 import { getAsset } from "@/store/persistence";
+import { embedEngineAssets } from "@/export/engine-assets";
 
 /**
  * Export (§15). Schema validation runs first and errors block the export, per §15.7.
@@ -68,6 +69,7 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
       if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
       const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
       result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
+      await embedEngineAssets(result.files);
       await deliver(result.files);
       setStatus("Your design handoff is ready.");
     } catch (cause) { setStatus(cause instanceof Error ? cause.message : "Export failed. Please try again."); }

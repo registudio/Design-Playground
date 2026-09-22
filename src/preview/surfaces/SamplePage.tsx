@@ -5,7 +5,7 @@ import type { DesignProject } from "@/schema/project";
 import { CustomCursor } from "../CustomCursor";
 import { useAutoAnimate } from "@/motion/useAutoAnimate";
 import { EditableOverlay } from "@/preview/EditableOverlay";
-import { pageSections, type PageSection } from "@/schema/composition";
+import { pageSections, SECTION_LABELS, type PageSection } from "@/schema/composition";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
 import { sourceById } from "@/registry/sources";
 import { RegistryPreview } from "@/components/RegistryPreview";
@@ -50,7 +50,7 @@ export function SamplePage({ project, editable = false, assetUrls = {}, staticEx
   const order = pageSections(project.recipe);
   const sections: Record<PageSection, React.ReactNode> = {
     announcement: <Announcement variant={components.announcement}/>,
-    navbar: <Navbar variant={components.navbar} brand={brand} logo={logo}/>,
+    navbar: <Navbar variant={components.navbar} brand={brand} logo={logo} order={order}/>,
     hero: <Hero variant={components.hero} brand={brand} image={heroImage ? images[heroImage.file] : undefined}/>,
     features: <Features variant={components.features}/>, socialProof: <SocialProof variant={components.socialProof}/>,
     pricing: <Pricing variant={components.pricing}/>, faq: <Faq variant={components.faq}/>, team: <Team variant={components.team}/>,
@@ -87,18 +87,18 @@ export function SamplePage({ project, editable = false, assetUrls = {}, staticEx
   );
 }
 
-function Navbar({ variant, brand, logo }: { variant: string; brand: string; logo?: string }) {
-  const links = ["Services", "Work", "About", "Contact"];
+function Navbar({ variant, brand, logo, order }: { variant: string; brand: string; logo?: string; order: PageSection[] }) {
+  const links = order.filter(key => !["navbar", "footer", "announcement"].includes(key));
   return (
     <header className={`dp-navbar dp-navbar-${variant}`} data-animate="nav">
       <div className="dp-navbar-inner">
         <span className="dp-navbar-brand">{logo ? <img src={logo} alt={brand} style={{ maxHeight: 36, maxWidth: 160 }}/> : brand}</span>
         <nav className="dp-navbar-links">
           {links.map((link) => (
-            <a key={link} className="dp-navbar-link" href="#0">{link}</a>
+            <a key={link} className="dp-navbar-link" href={`#section-${link}`}>{link === "cta" ? "Contact" : SECTION_LABELS[link]}</a>
           ))}
         </nav>
-        <details className="dp-mobile-menu"><summary>Menu</summary><nav aria-label="Mobile navigation">{links.map((link, i) => <a key={link} href={`#section-${["features", "hero", "team", "cta"][i]}`}>{link}</a>)}</nav></details>
+        <details className="dp-mobile-menu"><summary>Menu</summary><nav aria-label="Mobile navigation">{links.map(link => <a key={link} href={`#section-${link}`}>{link === "cta" ? "Contact" : SECTION_LABELS[link]}</a>)}</nav></details>
         <button className="dp-btn dp-btn-solid dp-btn-sm">Get in touch</button>
       </div>
     </header>

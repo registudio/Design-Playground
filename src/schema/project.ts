@@ -47,6 +47,7 @@ export const DesignProject = z.object({
   name: z.string(),
   client: z.string().default(""),
   notes: z.string().default(""),
+  workflow: z.record(z.string(), z.enum(["reviewed", "skipped"])).default({}),
   /** Which preset from §14 was last applied, if any. */
   appliedPreset: z.string().nullable().default(null),
 

@@ -22,9 +22,10 @@ async function worker() {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
       const html = await response.text();
-      if (html.includes('data-generated="true"')) generated += 1;
-      if (!response.ok || html.includes("Preview unavailable")) {
-        const reason = html.match(/<span hidden>([\s\S]*?)<\/span>/)?.[1] ?? `HTTP ${response.status}`;
+      const fallback = html.includes('data-generated="true"');
+      if (fallback) generated += 1;
+      if (!response.ok || fallback || html.includes("Preview unavailable")) {
+        const reason = html.match(/<span hidden>([\s\S]*?)<\/span>/)?.[1] ?? (fallback ? "Generated replacement, not the original component" : `HTTP ${response.status}`);
         failures.push({ id: element.id, reason: reason.replace(/&quot;/g, '"').replace(/&amp;/g, "&").slice(0, 500) });
       }
     } catch (error) {
@@ -42,5 +43,5 @@ if (failures.length) {
   console.error(JSON.stringify(failures, null, 2));
   process.exitCode = 1;
 } else {
-  console.log(`All ${elements.length} registry elements produced renderable preview documents (${generated} helper or unavailable-source demos).`);
+  console.log(`HTTP document checks passed for ${elements.length} entries. No browser rendering or three-second timing was verified. Run audit:render for runtime checks and screenshots.`);
 }

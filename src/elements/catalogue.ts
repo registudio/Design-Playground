@@ -1,5 +1,7 @@
-/** Authored, dependency-free effects. The same documents run in the gallery, sample and ZIP. */
+import { EXTENDED_ELEMENTS, engineFor } from "./extended-catalogue";
+/** Authored effects. The same documents run in the gallery, sample and ZIP. */
 export const ELEMENTS = [
+  ...EXTENDED_ELEMENTS,
   { id: "aurora", title: "Aurora mesh", category: "Backgrounds", description: "Slow-moving fields of colour. A little atmosphere, a lot of possibility.", tag: "AMBIENT", html: '<div class="aurora"></div><div class="center"><small>MAKE ROOM FOR POSSIBILITY</small><h1>Something<br>extraordinary.</h1></div>', css: '.aurora{position:absolute;inset:-60%;background:radial-gradient(ellipse at 35% 50%,#a3e63588,transparent 35%),radial-gradient(ellipse at 65% 45%,#8b5cf699,transparent 30%),radial-gradient(ellipse at 50% 70%,#22d3ee66,transparent 30%);filter:blur(35px);animation:drift 12s ease-in-out infinite alternate}@keyframes drift{to{transform:rotate(35deg) scale(1.2)}}', js: "" },
   { id: "split-text", title: "Split text reveal", category: "Text animations", description: "A staggered entrance that gives every letter a moment.", tag: "TEXT", html: '<div class="center"><small>WORDS WITH A LITTLE MORE</small><h1 class="split">Character.</h1><span class="hint">Click to replay ↻</span></div>', css: '.split{display:flex;overflow:hidden}.split span{display:inline-block;animation:rise 3.5s both infinite;animation-delay:calc(var(--i)*70ms)}@keyframes rise{0%,10%{transform:translateY(110%) rotate(8deg);opacity:0}35%,90%{transform:none;opacity:1}100%{opacity:0}}', js: 'const text=document.querySelector(".split");text.innerHTML=[...text.textContent].map((c,i)=>`<span style="--i:${i}">${c}</span>`).join("");document.body.onclick=()=>{text.getAnimations({subtree:true}).forEach(a=>a.currentTime=0)};' },
   { id: "orbit", title: "Orbital system", category: "Backgrounds", description: "An animated constellation for your next big idea.", tag: "LOOP", html: '<div class="orbit"><div class="ring r1"><i></i></div><div class="ring r2"><i></i></div><div class="ring r3"><i></i></div><b>✳</b></div>', css: '.orbit{width:230px;height:230px;position:relative;display:grid;place-items:center}.orbit b{font-size:65px;color:var(--accent)}.ring{position:absolute;border:1px solid #ffffff22;border-radius:50%;inset:15px;animation:spin 12s linear infinite}.ring i{position:absolute;left:50%;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 20px var(--accent)}.r2{inset:45px;animation-duration:8s;animation-direction:reverse;transform:rotate(80deg)}.r3{inset:0;animation-duration:19s}.r3 i{background:#b5a0f5}@keyframes spin{to{transform:rotate(360deg)}}', js: "" },
@@ -63,7 +65,8 @@ export const ELEMENTS = [
 export type ElementId = (typeof ELEMENTS)[number]["id"];
 export function elementOrigin(id: string) {
   const item = ELEMENTS.find(e => e.id === id);
-  return { name: "Playground Originals", runtime: item?.js ? "CSS + JavaScript" : "CSS" };
+  const engine = engineFor(id);
+  return { name: engine ? `${engine.label} · Playground demo` : "Playground Originals", runtime: engine?.label ?? (item?.js ? "CSS + JavaScript" : "CSS"), url: engine?.url };
 }
 export function elementDocument(id: string, accent = "#d2ef9e"): string {
   const item = ELEMENTS.find((e) => e.id === id);
@@ -72,5 +75,5 @@ export function elementDocument(id: string, accent = "#d2ef9e"): string {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${item.title}</title><style>
   :root{--accent:${safeAccent};color-scheme:dark}*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111412;color:#f2f3ed;font-family:Arial,sans-serif;position:relative}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.center{position:relative;text-align:center;display:flex;align-items:center;flex-direction:column;gap:20px}h1{font-size:clamp(28px,8vw,55px);letter-spacing:-.065em;line-height:1.05;margin:0;font-weight:600}h2{letter-spacing:-.04em}small{font-size:9px;letter-spacing:2px;color:#a4af9b}.hint{font-size:10px;color:#8b968b}${item.css}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.split span,.reveal-block{opacity:1!important;transform:none!important}}
-  </style><body>${item.html}<script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}</script></body></html>`;
+  </style><body>${item.html}<script>${id.startsWith("carousel-") || id === "gallery-lightbox" ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? `<script src="/engine-demos/${engineFor(id)!.id}.js"></script>` : ""}</body></html>`;
 }

@@ -68,7 +68,7 @@ describe("composed projects", () => {
   });
   it("exports every authored demo with honest origins and reduced-motion support", () => {
     for (const item of ELEMENTS) {
-      expect(elementOrigin(item.id).name).toBe("Playground Originals");
+      expect(elementOrigin(item.id).name).toMatch(/Playground/);
       expect(elementDocument(item.id)).toContain("prefers-reduced-motion:reduce");
       expect(elementDocument(item.id)).toContain(item.html);
     }

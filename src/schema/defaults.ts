@@ -184,6 +184,7 @@ export function createProject(name: string, client = ""): DesignProject {
     name,
     client,
     notes: "",
+    workflow: {},
     appliedPreset: null,
     tokens: defaultTokens(),
     recipe: defaultRecipe(),

@@ -7,3 +7,5 @@ build
 next-env.d.ts
 .env*
 coverage
+public/engine-demos/
+artifacts/render-audit/
