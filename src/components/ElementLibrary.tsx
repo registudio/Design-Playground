@@ -6,7 +6,8 @@ import { useProjectStore } from "@/store/project-store";
 import { ElementsBrowser } from "./ElementsBrowser";
 import { pageSections, SECTION_LABELS } from "@/schema/composition";
 import type { DesignElement } from "@/registry/schema";
-import { ROUTING_CATEGORY_LABELS, REGISTRY_SOURCES, sourceById } from "@/registry/sources";
+import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
+import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
 
 /**
  * The element library.
@@ -37,6 +38,9 @@ type LibraryItem = {
 
 /** Rendered per scroll batch. Large enough to fill a tall screen, small enough to stay cheap. */
 const BATCH = 36;
+
+/** Source id for the authored elements, which have no registry behind them. */
+const ORIGINALS = "playground";
 
 export function ElementLibrary({ exploring = false, onCreate }: { exploring?: boolean; onCreate?: () => void }) {
   const project = useProjectStore(s => s.project);
@@ -82,16 +86,19 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       id: e.id,
       title: e.title,
       description: e.description,
-      category: ROUTING_CATEGORY_LABELS[e.category],
+      // Browsed by subject rather than by publisher — see elements/taxonomy.ts.
+      category: browseCategory(e),
       preview: false,
       registry: e,
     })),
   ], [registry.elements]);
 
-  const categories = useMemo(
-    () => ["All elements", ...new Set(items.map(i => i.category))],
-    [items],
-  );
+  // Ordered by the taxonomy rather than by first appearance, so the chip row does not
+  // reshuffle as the registry loads, and only categories that actually have entries show.
+  const categories = useMemo(() => {
+    const present = new Set(items.map(i => i.category));
+    return ["All elements", ...BROWSE_CATEGORIES.filter(c => present.has(c))];
+  }, [items]);
 
   const isSelected = (item: LibraryItem) =>
     item.registry ? picked.some(s => s.id === item.id) : selected.some(s => s.id === item.id);
@@ -100,7 +107,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     const text = query.trim().toLowerCase();
     return items.filter(item =>
       (category === "All elements" || category === item.category) &&
-      (!source || item.registry?.source === source) &&
+      (!source || (source === ORIGINALS ? !item.registry : item.registry?.source === source)) &&
       (!text || `${item.title} ${item.description} ${item.category}`.toLowerCase().includes(text)) &&
       (!onlySelected || isSelected(item)));
   }, [items, category, source, query, onlySelected, selected, picked]);
@@ -146,7 +153,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     <div className="library-heading"><div><div className="eyebrow">THE GOOD STUFF</div><h1>Small details.<br className="mobile-break" /> Big possibilities<span className="lime">.</span></h1><p>Motion, interactions, and a little unexpected delight. Find your next signature detail.</p></div><span className="collection-stamp"><span>✳</span> A collection<br/>for the curious.</span></div>
     <div className="library-toolbar"><label className="search-field"><span>⌕</span><input ref={searchRef} aria-label="Search curated elements" placeholder="Find your next idea…" value={query} onChange={e => setQuery(e.target.value)}/><kbd>/</kbd></label><button className="quiet-button" onClick={() => setPaused(!paused)}>{paused ? "▶ Play previews" : "Ⅱ Pause previews"}</button><button className="quiet-button" onClick={() => setRegistryOpen(true)}>Registry detail ↗</button></div>
     <div className="filter-row">{categories.map(c => <button key={c} className={category === c ? "active" : ""} onClick={() => setCategory(c)}>{c}{c === "All elements" && <span>{items.length}</span>}</button>)}{!exploring && <button className={onlySelected ? "active" : ""} onClick={() => setOnlySelected(!onlySelected)}>Selected · {totalSelected}</button>}</div>
-    <div className="filter-row source-row"><button className={!source ? "active" : ""} onClick={() => setSource(null)}>Every source</button>{REGISTRY_SOURCES.map(s => <button key={s.id} className={source === s.id ? "active" : ""} onClick={() => setSource(source === s.id ? null : s.id)}>{s.label}<span>{registry.elements.filter(e => e.source === s.id).length}</span></button>)}</div>
+    <div className="filter-row source-row"><button className={!source ? "active" : ""} onClick={() => setSource(null)}>Every source</button><button className={source === ORIGINALS ? "active" : ""} onClick={() => setSource(source === ORIGINALS ? null : ORIGINALS)}>Playground originals<span>{ELEMENTS.length}</span></button>{REGISTRY_SOURCES.map(s => <button key={s.id} className={source === s.id ? "active" : ""} onClick={() => setSource(source === s.id ? null : s.id)}>{s.label}<span>{registry.elements.filter(e => e.source === s.id).length}</span></button>)}</div>
     <div className="gallery-meta"><span>{results.length} elements to explore{registryState === "loading" && " · loading the registries…"}</span><span>LIVE PREVIEWS <i/> HOVER. SCROLL. PLAY.</span></div>
 
     <div className="element-grid">{shown.map((item, index) => {
