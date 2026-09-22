@@ -78,9 +78,17 @@ export function RegistryPreview({
   element,
   /** Set when a narrow search has already decided this is one of a handful of results. */
   eager = false,
+  /**
+   * Set while previews are paused. The pause control used to reach only the authored
+   * iframes, so someone who paused because their machine was working hard stopped the
+   * 54 cheap previews and left every compiled one running — the opposite of what they
+   * asked for.
+   */
+  paused = false,
 }: {
   element: DesignElement;
   eager?: boolean;
+  paused?: boolean;
 }) {
   const [active, setActive] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -91,6 +99,15 @@ export function RegistryPreview({
     const node = host.current;
     if (!node) return;
     const id = element.id;
+
+    // Paused: give up the slot outright rather than merely declining new ones, so
+    // pausing frees whatever is already running.
+    if (paused) {
+      releaseSlot(id);
+      setActive(false);
+      setLoaded(false);
+      return;
+    }
 
     const cancelTeardown = () => {
       if (teardown.current) clearTimeout(teardown.current);
@@ -132,7 +149,7 @@ export function RegistryPreview({
       cancelTeardown();
       releaseSlot(id);
     };
-  }, [element.id, eager]);
+  }, [element.id, eager, paused]);
 
   const source = sourceById(element.source);
   const src = `/api/element-preview?source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(element.name)}`;
@@ -160,7 +177,7 @@ export function RegistryPreview({
             ))}
             {element.npmDependencies.length > 3 && <i>+{element.npmDependencies.length - 3}</i>}
           </div>
-          <small>{active ? "Compiling preview…" : "Preview loads as you scroll"}</small>
+          <small>{paused ? "Previews paused" : active ? "Compiling preview…" : "Preview loads as you scroll"}</small>
           {source && (
             <a
               href={source.homepage}

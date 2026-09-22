@@ -37,27 +37,40 @@ export const OWNS_SCALE: Partial<Record<SemanticToken, string>> = {
 };
 
 /**
- * The darkest rung of `scale` that still clears WCAG AA (4.5:1) against `background`,
- * no lighter than `floor`.
+ * Walks a scale from `from` until a rung clears WCAG AA against `background`.
+ *
+ * Both themes need this and they need it in opposite directions, so it is one function
+ * with a direction rather than two near-copies. "Darker" means a higher step number,
+ * since SCALE_STEPS runs light to dark.
  *
  * Dark-mode primary used to be `max(floor, lightModeStep - 200)` — a fixed offset from
  * wherever the light-mode anchor happened to land. For a logo dark enough to anchor
- * near step 900 (a common case — plenty of brand colours are already fairly dark),
- * that lands on step 700, which measures 2.6:1 against the generated dark background:
- * a failing, largely illegible primary button and link colour, shipped as the
- * *suggested* default before a user has touched anything. Searching for a rung that
- * actually clears AA — rather than assuming a fixed offset always will — fixes that
- * by construction while still staying as close to the brand's own intensity as the
- * contrast requirement allows.
+ * near step 900 that lands on 700, which measures 2.6:1 against the generated dark
+ * background: a failing, largely illegible primary button and link colour, shipped as
+ * the *suggested* default. Light mode had the mirror of the same problem — a light
+ * brand colour (an amber at 2.13:1) anchored wherever it fell and was never checked.
+ *
+ * Searching for a rung that actually clears AA, rather than assuming an offset will,
+ * fixes both by construction while staying as close to the brand's own intensity as
+ * the contrast requirement allows.
  */
-function accessibleDarkStep(scale: ColorScale, background: Oklch, floor: ScaleStep = 300): ScaleStep {
-  const candidates = SCALE_STEPS.filter((step) => step >= floor).reverse();
+function accessibleStep(
+  scale: ColorScale,
+  background: Oklch,
+  from: ScaleStep,
+  direction: "darker" | "lighter",
+  bound: ScaleStep,
+): ScaleStep {
+  const ordered = direction === "darker" ? SCALE_STEPS : [...SCALE_STEPS].reverse();
+  const candidates = ordered.filter((step) =>
+    direction === "darker" ? step >= from && step <= bound : step <= from && step >= bound,
+  );
   for (const step of candidates) {
     if (contrastRatio(scale[step], background) >= 4.5) return step;
   }
-  // Every candidate failed (only possible for an extreme hue/chroma combination) —
-  // fall back to the lightest rung tried, which is at least the closest available.
-  return candidates[candidates.length - 1] ?? floor;
+  // Every candidate failed, which an extreme hue/chroma combination can still produce.
+  // The bound is the highest-contrast rung tried, so it is the closest available.
+  return candidates[candidates.length - 1] ?? bound;
 }
 
 export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput): ColorTokens {
@@ -81,8 +94,14 @@ export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput)
     error: generateStatusScale("error"),
   };
 
-  // Anchor primary at whichever rung actually holds the brand colour.
-  const primaryStep = nearestStep(primarySource.l);
+  // Anchor primary at whichever rung actually holds the brand colour, then darken only
+  // as far as legibility demands. Checked against `background` rather than `surface`:
+  // surface is pure white and background is a step off it, so background is the
+  // stricter of the two and clearing it clears both.
+  const lightBackground = scales.neutral[50];
+  const primaryStep = accessibleStep(
+    scales.brand, lightBackground, nearestStep(primarySource.l), "darker", 900,
+  );
 
   const light: SemanticMap = {
     primary: { kind: "scale", scale: "brand", step: primaryStep },
@@ -91,7 +110,8 @@ export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput)
     background: { kind: "scale", scale: "neutral", step: 50 },
     surface: { kind: "raw", color: normalize({ l: 1, c: 0, h: primarySource.h }) },
     foreground: { kind: "scale", scale: "neutral", step: 950 },
-    muted: { kind: "scale", scale: "neutral", step: 600 },
+    // Secondary text, so it carries the same AA duty as body text.
+    muted: { kind: "scale", scale: "neutral", step: accessibleStep(scales.neutral, lightBackground, 600, "darker", 800) },
     border: { kind: "scale", scale: "neutral", step: 200 },
     success: { kind: "scale", scale: "success", step: 600 },
     warning: { kind: "scale", scale: "warning", step: 600 },
@@ -101,13 +121,15 @@ export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput)
   const darkBackground = scales.neutral[950];
 
   const dark: SemanticMap = {
-    primary: { kind: "scale", scale: "brand", step: accessibleDarkStep(scales.brand, darkBackground) },
+    primary: { kind: "scale", scale: "brand", step: accessibleStep(scales.brand, darkBackground, 950, "lighter", 300) },
     secondary: { kind: "scale", scale: "secondary", step: 400 },
     accent: { kind: "scale", scale: "accent", step: 400 },
     background: { kind: "scale", scale: "neutral", step: 950 },
     surface: { kind: "scale", scale: "neutral", step: 900 },
     foreground: { kind: "scale", scale: "neutral", step: 50 },
-    muted: { kind: "scale", scale: "neutral", step: 400 },
+    // Checked against surface, not background: surface (900) is one rung lighter than
+    // the dark background (950), so it is the harder of the two to sit legibly on.
+    muted: { kind: "scale", scale: "neutral", step: accessibleStep(scales.neutral, scales.neutral[900], 400, "lighter", 200) },
     border: { kind: "scale", scale: "neutral", step: 800 },
     success: { kind: "scale", scale: "success", step: 400 },
     warning: { kind: "scale", scale: "warning", step: 400 },

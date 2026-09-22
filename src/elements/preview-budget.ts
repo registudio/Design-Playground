@@ -27,8 +27,26 @@ export const OFFSCREEN_GRACE_MS = 12_000;
  */
 export const NARROW_SEARCH_LIMIT = 8;
 
+/**
+ * How long the search box must be still before the catalogue re-filters.
+ *
+ * Long enough to skip the intermediate states of a typed word, short enough that the
+ * grid still feels answerable to the keyboard.
+ */
+export const SEARCH_DEBOUNCE_MS = 180;
+
 /** Cards added to the DOM per scroll batch. */
 export const CATALOGUE_BATCH = 36;
+
+/**
+ * The most cards allowed in the DOM at once, as a multiple of the batch.
+ *
+ * Batching alone only ever grew the list: scrolling to the end of "All elements" left
+ * every one of ~490 cards mounted, each with its own listeners and layout. Four batches
+ * is enough to cover a tall screen plus a screenful of slack above and below, so the
+ * window never catches up with a fast scroll.
+ */
+export const MAX_MOUNTED_BATCHES = 4;
 
 /** Compiled documents held on the server. */
 export const DOCUMENT_CACHE_ENTRIES = 96;

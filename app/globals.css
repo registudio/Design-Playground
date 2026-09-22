@@ -166,6 +166,9 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .element-advanced small { font-size:8px;color:#7f9270; }
 /* The observed sentinel doubles as the progress readout, so a long list never looks
    like it has simply ended. */
+/* Stands in for the rows outside the mounted window, so the scrollbar still describes
+   the whole result set and scroll position survives cards being dropped. */
+.grid-spacer { flex:none;pointer-events:none; }
 .grid-sentinel { display:flex;align-items:center;justify-content:center;gap:10px;padding:34px 0;font-size:10px;color:#87997b; }
 .grid-sentinel span { font-size:9px;color:#657a55; }
 
