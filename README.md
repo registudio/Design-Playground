@@ -4,30 +4,29 @@ The visual configuration layer for the website-delivery engine. It turns client 
 inputs and design decisions into a structured, machine-readable design specification
 that `web-stack-init` and Claude Code can consume.
 
-It is **not** a website builder. It exports design *intent*, not generated code.
+Explore visual effects, compose a sample website, and export a design handoff. The bundle includes runnable original effects and a review page; it is not a production application.
 
 ```
 business.md → assets → Design Playground → live preview → approval → /design/*.json → web-stack-init
 ```
 
-## Status
+## Workflow
 
-The internal MVP vertical slice is built and verified end to end: upload a logo,
-extract its palette, edit Foundation, preview live, export, and compile the result
-with Tailwind v4.
+1. Explore without a project, create one, or resume a saved project.
+2. Optionally upload brand assets and choose a website template, including a blank canvas.
+3. Choose colours, typography and a cursor, including a custom image. Colours and typography can remain undecided.
+4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
+5. Browse 12 interactive original effects with source/runtime labels, expanded previews, notes and placement. Browse the five external registries for additional component selections.
+6. Visualise the composition at desktop, tablet or mobile sizes. Return to editing as often as needed.
+7. Download the ZIP handoff, a standalone review page, or a restorable project backup.
 
-| Area | State |
-|---|---|
-| Schemas, provenance, validation | Complete |
-| Colour engine (OKLCH, contrast, extraction) | Complete |
-| Persistence, undo/redo, project files | Complete |
-| Preview (System / Components / Sample Page) | Complete |
-| Foundation, Components, Animations panels | Complete |
-| Elements: registry index, browser, selection export | Complete; ships with an empty index |
-| Deterministic export + globals.css | Complete |
-| Presets | 5 authored, values need design review |
-| Motion runtime (Motion/GSAP in preview) | Recipes selectable; runtime not yet wired |
-| Custom font upload | Schema and validation ready; upload UI pending |
+Basic/Advanced modes, history, undo/redo, snapshots, saved templates, overrides, command search, the style guide and component gallery remain available.
+
+## Preview coverage
+
+Original effects run in isolated iframe documents in the library, sample and export. Motion/GSAP page recipes run in the live sample. Each registry selection displays its actual source and links to that source; external registry components remain installation references and are not executed in the sample page. The standalone page preserves the composed appearance and original effects; React-driven page recipes and custom cursors require integration in the target application.
+
+Custom font upload is not yet available. Typography includes the existing font catalogue and pairings.
 
 ## Getting started
 
@@ -42,8 +41,7 @@ npm run e2e          # browser smoke test (needs a server running)
 npm run e2e:export   # verifies the exported bundle end to end
 ```
 
-The Elements browser check needs a populated index, which the committed snapshot
-deliberately is not (see **Elements** below), so it runs against a fixture:
+The Elements browser regression check uses a deterministic fixture instead of depending on changing upstream registry content:
 
 ```bash
 npm run fixture:registry -- /tmp/fixture-index.json
@@ -53,7 +51,7 @@ npm run e2e:elements
 
 ## Export contract
 
-Export writes a `design/` folder, plus the element selections at the project root:
+Export writes the design specification, a human-readable brief, the composed review page, and selected effect files:
 
 ```
 design/
@@ -116,14 +114,9 @@ properties it animates, and export fails if two engines would drive the same one
 
 ## Elements
 
-Elements are real components from the five shadcn-compatible registries this stack
-installs from — Bklit, KokonutUI, Sora UI, Componentry and React Bits. Choosing one
-records an install command, not code: the playground still exports intent.
+The visual collection contains authored CSS/JavaScript effects, credited as Playground Originals. Each has an interactive preview and exports its runnable document. The registry browser additionally indexes Bklit, KokonutUI, Sora UI, Componentry and React Bits. Choosing a registry item records its source, install command and intended-use note. These third-party selections export installation references rather than vendored source.
 
-**The index ships empty, on purpose.** Registry contents move week to week (Sora UI was
-observed going 139 items to 69 inside one week), so a hand-written entry produces an
-install command that fails when someone runs it. A wrong entry is worse than a missing
-one. The first refresh fetches the real ones.
+**The index includes a verified snapshot.** It contains 436 entries fetched from all five published registries on 22 September 2026. Refresh retrieves current metadata; failed sources retain their last known entries. No component names or install commands are invented.
 
 **Refresh is server-side.** Registry hosts do not reliably send permissive CORS headers,
 and fetching from the browser would also expose the whole index to the page. The route
@@ -150,9 +143,7 @@ packages with no registry to browse — they are turned on once for the whole pr
 motion binding that needs a switched-off engine blocks the export, since that recipe
 could not run.
 
-**There is no per-component visual preview.** No registry publishes a preview image, so
-a thumbnail grid would mean executing arbitrary third-party React per card. Each card
-links to its source's own docs instead.
+**Preview coverage is explicit.** Every original effect has a live visualiser. Registry entries link to their source documentation; automatic third-party React rendering is not implemented.
 
 ## Deviations from the build specification
 
@@ -169,12 +160,10 @@ each entry carries mime type, intrinsic dimensions and a content hash.
 ## Not yet built
 
 Out of scope for the internal MVP per §15.8, and deliberately absent: Figma integration,
-multi-framework export, full React code export, drag-and-drop page building, CMS,
+multi-framework export, full React application export, freeform page building, CMS,
 real-time collaboration, and the public lead-generation playground (§15A).
 
-From the Elements spec's own non-goals: per-component preview rendering, write access
-back to the registries, indexing the engines or Codrops as browsable items, and
-per-component category inference.
+The newer playground flow takes precedence over the older spec where it asks for previews and section reordering. Remaining work includes live third-party registry component rendering, write access back to registries, and per-component category inference.
 
 Its open questions are still open, and each would change the shape of the index rather
 than just add to it: whether React Bits' JS/CSS variants are ever wanted here (if never,

@@ -1,5 +1,6 @@
 import type { DesignProject } from "@/schema/project";
 import { pageSections, SECTION_LABELS } from "@/schema/composition";
+import { sourceById } from "@/registry/sources";
 import { ELEMENTS, elementOrigin } from "@/elements/catalogue";
 
 export function buildHandoff(project: DesignProject): string {
@@ -17,7 +18,7 @@ export function buildHandoff(project: DesignProject): string {
     `Enabled engines: ${Object.entries(project.recipe.engines).filter(([, enabled]) => enabled).map(([engine]) => engine).join(", ") || "None"}`, "",
     "## Page order", "", ...(sections.length ? sections.map((key, i) => `${i + 1}. ${SECTION_LABELS[key]} — ${project.recipe.components[key]}`) : ["Intentionally empty. Do not add sections without agreement."]), "",
     "## Selected effects & notes", "", ...(project.recipe.elements ?? []).map(e => `### ${ELEMENTS.find(item => item.id === e.id)?.title ?? e.id}\nOrigin: ${elementOrigin(e.id).name} (${elementOrigin(e.id).runtime})\nPlacement: ${e.placement === "page" ? "End of page" : `after ${e.placement}`}\n\n${e.note || "No additional note."}\n\nSource: elements/${e.id}.html\n`),
-    ...project.selections.map(e => `### ${e.title}\nSource: ${e.source}${e.referenceOnly ? " (reference only)" : ""}\n\n${e.intendedUse || "No additional note."}\n\nInstall: ${e.installCommand}\n`),
+    ...project.selections.map(e => `### ${e.title}\nSource: [${sourceById(e.source)?.label ?? e.source}](${sourceById(e.source)?.homepage ?? ""})${e.referenceOnly ? " (reference only)" : ""}\n\n${e.intendedUse || "No additional note."}\n\nInstall: ${e.installCommand}\n`),
     "## Project notes", "", project.notes || "No additional notes.", "",
     "## Implementation checklist", "", "- Preserve the section order, omitted sections and undecided choices.",
     "- Apply design tokens and replace sample copy with approved content.", "- Integrate selected effects at their recorded placements; notes describe intent.",

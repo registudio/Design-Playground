@@ -339,9 +339,8 @@ function EmptyState({ empty, filtered }: { empty: boolean; filtered: boolean }) 
       <div className="rounded-lg border border-dashed border-chrome-border px-6 py-10 text-center">
         <p className="text-[13px] font-medium text-chrome-text">No elements indexed yet</p>
         <p className="mx-auto mt-1 max-w-md text-[12px] text-chrome-muted">
-          The index ships empty on purpose. Filling it with hand-written entries would
-          mean guessing component names, and a guessed name produces an install command
-          that fails when you run it. Refresh to fetch the real ones.
+          No cached registry entries are available. Refresh to fetch the published
+          component catalogue and its source credits.
         </p>
       </div>
     );

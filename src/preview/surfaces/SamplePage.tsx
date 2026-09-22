@@ -7,6 +7,7 @@ import { useAutoAnimate } from "@/motion/useAutoAnimate";
 import { EditableOverlay } from "@/preview/EditableOverlay";
 import { pageSections, type PageSection } from "@/schema/composition";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
+import { sourceById } from "@/registry/sources";
 import { getAsset } from "@/store/persistence";
 import { toHex } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
@@ -44,7 +45,7 @@ export function SamplePage({ project, editable = false, assetUrls = {} }: { proj
   const images = { ...loadedAssets, ...assetUrls };
   const logoFile = project.assets.logo.primary ?? project.assets.logo.light ?? project.assets.logo.dark;
   const logo = logoFile ? images[logoFile] : undefined;
-  const heroImage = project.assets.images.find(image => !Object.values(project.assets.logo).includes(image.file));
+  const heroImage = project.assets.images.find(image => image.kind === "hero-image") ?? project.assets.images.find(image => !Object.values(project.assets.logo).includes(image.file) && !["icon", "logo", "logo-mark", "logo-light", "logo-dark"].includes(image.kind));
   const order = pageSections(project.recipe);
   const sections: Record<PageSection, React.ReactNode> = {
     announcement: <Announcement variant={components.announcement}/>,
@@ -76,7 +77,7 @@ export function SamplePage({ project, editable = false, assetUrls = {} }: { proj
       {order.map(key => <Fragment key={key}>{sections[key]}{renderElements(key)}</Fragment>)}
       {renderElements("page")}
       {!order.length && !project.recipe.elements?.length && <div style={{ padding: "100px 30px", textAlign: "center" }}>Your blank canvas. Add sections or elements to bring it to life.</div>}
-      {project.selections.length > 0 && <aside style={{ padding: "24px", borderTop: "1px solid currentColor", opacity: .8 }}><strong>Registry selections · implementation references</strong><p>These third-party components are included in the handoff for installation. Open their source documentation to see the original demos.</p>{project.selections.map(s => <p key={s.id}>{s.title}{s.intendedUse && ` — ${s.intendedUse}`}</p>)}</aside>}
+      {project.selections.length > 0 && <aside style={{ padding: "24px", borderTop: "1px solid currentColor", opacity: .8 }}><strong>Registry selections · implementation references</strong><p>These third-party components are included in the handoff for installation. Open their source documentation to see the original demos.</p>{project.selections.map(s => <p key={s.id}>{s.title} · <a href={sourceById(s.source)?.homepage} target="_blank" rel="noreferrer">{sourceById(s.source)?.label ?? s.source} ↗</a>{s.intendedUse && ` — ${s.intendedUse}`}</p>)}</aside>}
       {/* Never enabled for the static/shareable export (react-dom/server's SSR pass
           never fires the effect that attaches this anyway, but the prop keeps the
           intent explicit rather than relying on that). */}

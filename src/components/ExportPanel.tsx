@@ -61,7 +61,10 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-xl border border-chrome-border bg-chrome-panel p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Export project"
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-chrome-border bg-chrome-panel p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-[20px] font-semibold">Your ideas, ready to go.</h2>

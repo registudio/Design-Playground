@@ -4,6 +4,7 @@ import { generateCss } from "./css";
 import { findFont, googleFontUrl } from "@/fonts/catalogue";
 import { SamplePage } from "@/preview/surfaces/SamplePage";
 import { escapeHtml } from "./htmlUtil";
+import { getAsset } from "@/store/persistence";
 
 /**
  * A shareable, standalone Sample Page (§Wave D Features-3): a frozen HTML bundle a
@@ -52,8 +53,20 @@ ${markup}
 
 export async function downloadStaticPage(project: DesignProject): Promise<void> {
   const response = await fetch("/api/preview-css");
+  if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
   const previewCss = await response.text();
-  const html = buildStaticPage(project, previewCss);
+  const assetUrls: Record<string, string> = {};
+  await Promise.all(project.assets.images.map(async entry => {
+    const blob = await getAsset(entry.hash);
+    if (!blob) return;
+    assetUrls[entry.file] = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error(`Could not read ${entry.file}.`));
+      reader.readAsDataURL(blob);
+    });
+  }));
+  const html = buildStaticPage(project, previewCss, assetUrls);
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

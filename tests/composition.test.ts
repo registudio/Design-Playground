@@ -7,6 +7,8 @@ import { buildExport, toZip } from "@/export/bundle";
 import { unzipSync, strFromU8 } from "fflate";
 import { commit, emptyHistory, undo, redo } from "@/store/history";
 import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
+import { toHex } from "@/color/oklch";
+import { resolveSemantic } from "@/color/semantic";
 
 describe("composed projects", () => {
   it("opens legacy projects with the original order, but respects an explicitly empty page", () => {
@@ -36,6 +38,7 @@ describe("composed projects", () => {
     expect(strFromU8(zip["README.md"]!)).toContain("Keep it calm.");
     expect(strFromU8(zip["README.md"]!)).toContain("Playground Originals");
     expect(strFromU8(zip["elements/aurora.html"]!)).toContain("@keyframes drift");
+    expect(strFromU8(zip["elements/aurora.html"]!)).toContain(`--accent:${toHex(resolveSemantic(restored.tokens.colors, "light", "primary"))}`);
     expect(JSON.parse(strFromU8(zip["design/site.recipe.json"]!)).sectionOrder).toEqual(["socialProof", "hero", "footer"]);
   });
   it("keeps effects visible at the end if their target section is removed", () => {
@@ -43,6 +46,17 @@ describe("composed projects", () => {
     p.recipe.sectionOrder = [];
     p.recipe.elements = [{ id: "stack", placement: "hero", note: "" }];
     expect(buildStaticPage(p, "")).toContain('data-element="stack"');
+  });
+  it("includes uploaded image references in the standalone review page", () => {
+    const p = createProject("Assets");
+    p.assets.logo.primary = "brand.png";
+    p.assets.images = [
+      { file: "brand.png", kind: "logo", mime: "image/png", bytes: 1, hash: "logo" },
+      { file: "hero.png", kind: "hero-image", mime: "image/png", bytes: 1, hash: "hero" },
+    ];
+    const html = buildStaticPage(p, "", { "brand.png": "data:image/png;base64,bG9nbw==", "hero.png": "design/assets/hero.png" });
+    expect(html).toContain('src="data:image/png;base64,bG9nbw=="');
+    expect(html).toContain("design/assets/hero.png");
   });
   it("rejects duplicate sections and non-image cursor payloads", () => {
     const p = createProject("Invalid");

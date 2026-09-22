@@ -9,6 +9,8 @@ import { generateCss } from "./css";
 import { buildHandoff } from "./handoff";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
 import { REGISTRY_SOURCES } from "@/registry/sources";
+import { toHex } from "@/color/oklch";
+import { resolveSemantic } from "@/color/semantic";
 
 /**
  * Builds the export bundle (§15).
@@ -163,7 +165,7 @@ export function buildExport(
     { path: "design/globals.css", content: generateCss(tokensDoc) },
   ];
   for (const element of project.recipe.elements ?? []) {
-    if (ELEMENTS.some(item => item.id === element.id)) files.push({ path: `elements/${element.id}.html`, content: elementDocument(element.id) });
+    if (ELEMENTS.some(item => item.id === element.id)) files.push({ path: `elements/${element.id}.html`, content: elementDocument(element.id, toHex(resolveSemantic(project.tokens.colors, "light", "primary"))) });
   }
 
   // Omitted entirely when nothing is selected: §5 has Phase 2 skip its sourcing

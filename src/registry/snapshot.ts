@@ -11,10 +11,8 @@ import { emptyIndex, RegistryIndex } from "./schema";
  * reach the registries (a sandbox with a restrictive egress policy, an aeroplane)
  * still opens rather than showing an error where the UI should be.
  *
- * It ships genuinely empty. Seeding it by hand would mean inventing registry item
- * names, and an invented name produces an install command that fails at the moment
- * someone runs it — §3's point that a wrong entry is worse than a missing one.
- * The first successful refresh fills it in.
+ * A verified snapshot ships with the app. Live refresh updates it without inventing
+ * component names or losing entries when a source is temporarily unreachable.
  *
  * Server-only: imports node:fs.
  */
