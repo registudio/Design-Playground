@@ -6,6 +6,7 @@ import { ElementsBrowser } from "./ElementsBrowser";
 import { ConfirmButton, Panel, Toggle } from "./controls";
 import { ENGINES, engineRequirements } from "@/schema/engines";
 import { sourceById } from "@/registry/sources";
+import { pageSections, SECTION_LABELS } from "@/schema/composition";
 
 /**
  * The Elements rail (spec §1b, §5).
@@ -129,9 +130,11 @@ function EnginesPanel() {
 }
 
 function SelectionsPanel() {
+  const recipe = useProjectStore((s) => s.project?.recipe);
   const selections = useProjectStore((s) => s.project?.selections ?? []);
   const deselectElement = useProjectStore((s) => s.deselectElement);
   const setIntendedUse = useProjectStore((s) => s.setIntendedUse);
+  const setSelectionPlacement = useProjectStore((s) => s.setSelectionPlacement);
 
   return (
     <Panel title={`Selected (${selections.length})`} id="Selected elements">
@@ -180,6 +183,20 @@ function SelectionsPanel() {
                   placeholder="What it's for — e.g. hero headline reveal"
                   className="w-full rounded border border-chrome-border bg-chrome-bg px-2 py-1 text-[12px] text-chrome-text outline-none placeholder:text-chrome-muted focus:border-chrome-accent"
                 />
+                <label className="flex items-center gap-2 text-[11px] text-chrome-muted">
+                  Place after
+                  <select
+                    aria-label={`Placement for ${selection.title}`}
+                    value={selection.placement}
+                    onChange={(e) => setSelectionPlacement(selection.id, e.target.value)}
+                    className="min-w-0 flex-1 rounded border border-chrome-border bg-chrome-bg px-1.5 py-1 text-[11px] text-chrome-text"
+                  >
+                    <option value="page">End of page</option>
+                    {recipe && pageSections(recipe).map((key) => (
+                      <option key={key} value={key}>{SECTION_LABELS[key]}</option>
+                    ))}
+                  </select>
+                </label>
               </li>
             ))}
         </ul>

@@ -24,12 +24,23 @@ import { ElementVariant, RoutingCategoryEnum, SourceIdEnum } from "@/registry/sc
 
 export const SELECTION_SCHEMA_ID = "design-playground-selection/v1" as const;
 
-/** Exactly §5's shape. Widening this is a change to the contract with web-stack-init. */
+/**
+ * §5's shape, plus placement.
+ *
+ * §5 specifies id, installCommand and intendedUse. `placement` is added because the
+ * authored elements have carried it from the start and registry selections did not, so
+ * the export could say a component was chosen but not where it goes — which is most of
+ * what makes the handoff actionable. It is optional, so a consumer written against the
+ * original three fields is unaffected, and it is omitted entirely when unplaced rather
+ * than exported as an empty string.
+ */
 export const ElementSelection = z.object({
   id: z.string(),
   installCommand: z.string(),
   /** Free text: "hero headline reveal". What the component is *for* on this site. */
   intendedUse: z.string(),
+  /** A section key from the page order, or "page" for the end of the page. */
+  placement: z.string().optional(),
 });
 export type ElementSelection = z.infer<typeof ElementSelection>;
 
@@ -49,6 +60,8 @@ export const SelectedElement = z.object({
   category: RoutingCategoryEnum,
   installCommand: z.string(),
   intendedUse: z.string().default(""),
+  /** Matches the authored elements' own field, so both kinds place the same way. */
+  placement: z.string().default("page"),
   referenceOnly: z.boolean().default(false),
   variant: ElementVariant.optional(),
   engineDependency: z.array(z.enum(["motion", "gsap"])).default([]),
@@ -70,6 +83,13 @@ export function toSelectionDocument(selected: SelectedElement[]): SelectionDocum
     schema: SELECTION_SCHEMA_ID,
     selections: [...selected]
       .sort((a, b) => a.id.localeCompare(b.id))
-      .map(({ id, installCommand, intendedUse }) => ({ id, installCommand, intendedUse })),
+      .map(({ id, installCommand, intendedUse, placement }) => ({
+        id,
+        installCommand,
+        intendedUse,
+        // Omitted rather than exported as "page": an unplaced selection has not been
+        // decided, and saying so is more useful than a default that looks deliberate.
+        ...(placement && placement !== "page" ? { placement } : {}),
+      })),
   };
 }

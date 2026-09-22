@@ -1,10 +1,15 @@
+import { createHash } from "node:crypto";
+import { mkdir, readFile, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
 import * as esbuild from "esbuild";
 import { REGISTRY_SOURCES, type SourceId } from "@/registry/sources";
 import {
   BROWSER_FRESH_SECONDS,
   BROWSER_STALE_SECONDS,
+  DISK_CACHE_ENTRIES,
   DOCUMENT_CACHE_ENTRIES,
 } from "@/elements/preview-budget";
+import { propRecipe } from "@/elements/preview-props";
 
 /**
  * Compiles one published registry component into a self-contained preview document.
@@ -36,6 +41,60 @@ const TIMEOUT_MS = 20_000;
  * one compile instead of racing.
  */
 const documents = new Map<string, Promise<string>>();
+
+/**
+ * A second tier behind the in-memory cache, so a restart does not mean recompiling
+ * everything.
+ *
+ * Each compile costs a registry fetch plus one npm fetch per dependency, and the memory
+ * cache dies with the process — so in development, where the server restarts on every
+ * edit, the same handful of previews were being rebuilt from the network all day. The
+ * directory is disposable: anything unreadable or stale is simply recompiled.
+ */
+const DISK_CACHE = process.env.DP_PREVIEW_CACHE ?? path.join(process.cwd(), ".next/cache/element-preview");
+
+/** Keyed by source, name and the route's own version, so a change here invalidates it. */
+const CACHE_VERSION = "1";
+const diskKey = (source: string, name: string) =>
+  createHash("sha256").update(`${CACHE_VERSION}:${source}:${name}`).digest("hex").slice(0, 32);
+
+async function readDisk(key: string): Promise<string | null> {
+  try {
+    return await readFile(path.join(DISK_CACHE, `${key}.html`), "utf-8");
+  } catch {
+    return null;
+  }
+}
+
+async function writeDisk(key: string, html: string): Promise<void> {
+  try {
+    await mkdir(DISK_CACHE, { recursive: true });
+    await writeFile(path.join(DISK_CACHE, `${key}.html`), html, "utf-8");
+    await evictDisk();
+  } catch {
+    // A read-only or full filesystem costs the cache, not the request.
+  }
+}
+
+/** Trims the oldest entries. Best-effort: losing the race just means trimming later. */
+async function evictDisk(): Promise<void> {
+  try {
+    const names = await readdir(DISK_CACHE);
+    if (names.length <= DISK_CACHE_ENTRIES) return;
+    const entries = await Promise.all(
+      names.map(async (name) => {
+        const file = path.join(DISK_CACHE, name);
+        return { file, at: (await stat(file)).mtimeMs };
+      }),
+    );
+    entries.sort((a, b) => a.at - b.at);
+    await Promise.all(
+      entries.slice(0, entries.length - DISK_CACHE_ENTRIES).map((entry) => unlink(entry.file)),
+    );
+  } catch {
+    // Ignored for the same reason as above.
+  }
+}
 
 function remember(key: string, produce: () => Promise<string>): Promise<string> {
   const existing = documents.get(key);
@@ -118,7 +177,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const html = await remember(`${source}:${name}`, () => compile(source as SourceId, name));
+    const key = diskKey(source, name);
+    const html = await remember(`${source}:${name}`, async () => {
+      const cached = await readDisk(key);
+      if (cached) return cached;
+      const compiled = await compile(source as SourceId, name);
+      await writeDisk(key, compiled);
+      return compiled;
+    });
     return new Response(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
@@ -143,7 +209,7 @@ async function compile(source: SourceId, name: string): Promise<string> {
   if (!entry) throw new Error("This item publishes no React component");
 
   const bundle = await esbuild.build({
-    stdin: { contents: harness(entry.path), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
+    stdin: { contents: harness(entry.path, propRecipe(source, name)), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
     bundle: true,
     write: false,
     format: "esm",
@@ -262,22 +328,14 @@ export default pass("div");
  * items, a progress value, and no-op callbacks. An error boundary keeps a component
  * that rejects this environment inside its own card.
  */
-const harness = (entryPath: string) => `
+const harness = (entryPath: string, props: string) => `
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import * as mod from ${JSON.stringify(`./${normalize(entryPath)}`)};
 
 const Component = mod.default ?? Object.values(mod).find((v) => typeof v === "function");
 
-const PROPS = {
-  children: "Design Playground",
-  text: "Design Playground", title: "Small details", label: "Explore",
-  value: 62, progress: 62, percentage: 62, count: 3,
-  items: [{ id: 1, title: "One", label: "One" }, { id: 2, title: "Two", label: "Two" }, { id: 3, title: "Three", label: "Three" }],
-  src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='260'%3E%3Crect width='400' height='260' fill='%23334423'/%3E%3C/svg%3E",
-  alt: "Placeholder", className: "",
-  onClick: () => {}, onChange: () => {}, onSelect: () => {}, onValueChange: () => {},
-};
+const PROPS = ${props};
 
 class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { error: null }; }

@@ -21,6 +21,7 @@ function selected(overrides: Partial<SelectedElement> = {}): SelectedElement {
     category: "text-scroll-effects",
     installCommand: "npx shadcn@latest add @soralabs/text-effect",
     intendedUse: "hero headline reveal",
+    placement: "page",
     referenceOnly: false,
     engineDependency: [],
     addedAt: 1,
@@ -31,7 +32,7 @@ function selected(overrides: Partial<SelectedElement> = {}): SelectedElement {
 const SELECTION_PATH = "design-playground-selection.json";
 
 describe("design-playground-selection/v1 (§5)", () => {
-  it("emits exactly the three fields the contract specifies", () => {
+  it("emits exactly §5's three fields when nothing is placed", () => {
     const document = toSelectionDocument([selected()]);
     expect(document).toEqual({
       schema: SELECTION_SCHEMA_ID,
@@ -43,6 +44,23 @@ describe("design-playground-selection/v1 (§5)", () => {
         },
       ],
     });
+  });
+
+  it("adds placement only when a section was actually chosen", () => {
+    // Exported as an addition to §5's shape, and omitted when left at the default —
+    // "page" means undecided, and saying so beats a default that looks deliberate.
+    const placed = toSelectionDocument([selected({ placement: "hero" })]);
+    expect(placed.selections[0]).toMatchObject({ placement: "hero" });
+    const unplaced = toSelectionDocument([selected({ placement: "page" })]);
+    expect(unplaced.selections[0]).not.toHaveProperty("placement");
+  });
+
+  it("keeps a consumer written against the original three fields working", () => {
+    // placement is optional, so the older shape still parses.
+    expect(SelectionDocument.safeParse({
+      schema: SELECTION_SCHEMA_ID,
+      selections: [{ id: "a:b", installCommand: "x", intendedUse: "y" }],
+    }).success).toBe(true);
   });
 
   it("matches the shape §5 documents", () => {

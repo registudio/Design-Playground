@@ -12,6 +12,7 @@ import {
   type ElementQuery,
 } from "@/registry/query";
 import type { DesignElement } from "@/registry/schema";
+import { describeElement } from "@/elements/descriptions";
 import {
   REGISTRY_SOURCES,
   ROUTING_CATEGORY_LABELS,
@@ -412,11 +413,9 @@ function ElementCard({
         </button>
       </div>
 
-      {element.description && (
-        <p className="line-clamp-3 text-[12px] leading-relaxed text-chrome-muted">
-          {element.description}
-        </p>
-      )}
+      <p className="line-clamp-3 text-[12px] leading-relaxed text-chrome-muted">
+        {describeElement(element)}
+      </p>
       {selected && !readOnly && <textarea aria-label={`Note for ${element.title}`} placeholder="Add a note for this component…" value={note} onChange={e => setIntendedUse(element.id, e.target.value)} className="rounded-md border border-chrome-border bg-chrome-bg p-2 text-[12px]"/>}
 
       <div className="flex flex-wrap gap-1">

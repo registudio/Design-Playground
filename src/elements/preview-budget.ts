@@ -51,6 +51,15 @@ export const MAX_MOUNTED_BATCHES = 4;
 /** Compiled documents held on the server. */
 export const DOCUMENT_CACHE_ENTRIES = 96;
 
+/**
+ * Compiled documents kept on disk, behind the memory cache.
+ *
+ * Larger than the memory tier because a file is far cheaper to hold than a live entry,
+ * and the whole point is surviving restarts — a cache that only held the last session's
+ * few previews would rarely hit.
+ */
+export const DISK_CACHE_ENTRIES = 400;
+
 /** Browser freshness, then how long a stale copy may be served while revalidating. */
 export const BROWSER_FRESH_SECONDS = 60 * 60;
 export const BROWSER_STALE_SECONDS = 60 * 60 * 24;

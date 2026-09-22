@@ -16,7 +16,7 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 12 interactive original effects with source/runtime labels, expanded previews, notes and placement. Browse the five external registries for additional component selections.
+5. Browse 54 interactive original effects with source/runtime labels, expanded previews, notes and placement, alongside every indexed registry component in the same grid. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes. Return to editing as often as needed.
 7. Download the ZIP handoff, a standalone review page, or a restorable project backup.
 
@@ -134,9 +134,13 @@ row keys off the base name, so a selection survives a variant being dropped upst
 while the install command targets the concrete published item. This scaffold is always
 TypeScript + Tailwind, so `-TS-TW` is the default.
 
-**Category is assigned per source, never per item.** Ownership is defined at the source
-level upstream; there is no per-component classifier to borrow, and inventing one would
-be a larger and much shakier project than this.
+**Routing category is per source; browsing category is derived.** Ownership is defined
+at the source level upstream, and the `RoutingCategory` carried into the export keeps
+that. Per-source is the wrong axis for *browsing*, though — it put every React Bits entry
+under one heading and left "Hover effects" showing three, while text animations from four
+registries sat in four buckets. The grid therefore groups by a derived facet computed
+from published metadata, matching name and title before description and falling back to
+the source when nothing is decisive.
 
 **Engines are toggles, not search results.** Motion, GSAP, Lenis and Vanta are npm
 packages with no registry to browse — they are turned on once for the whole project. A
@@ -164,6 +168,26 @@ multi-framework export, full React application export, freeform page building, C
 real-time collaboration, and the public lead-generation playground (§15A).
 
 The newer playground flow takes precedence over the older spec where it asks for previews and section reordering. Remaining work includes live third-party registry component rendering, write access back to registries, and per-component category inference.
+
+## Known gaps, deliberately deferred
+
+Three improvements are understood and not yet built. They are recorded here rather than
+left implicit, because each is a real shortcoming rather than a nice-to-have.
+
+**The element grid has no keyboard navigation.** Reaching a card partway down the
+catalogue means tabbing through every control on every card before it. A roving
+tabindex with arrow keys would fix it. This is the concrete core of the wider
+accessibility pass, and it is the one gap here that excludes people rather than
+inconveniencing them.
+
+**Hooks and utilities appear in a grid of previews.** The taxonomy identifies them
+correctly, but they still render as cards that can never show anything. They should be
+filtered out by default with an opt-in toggle — findable by search, not occupying a tile.
+
+**No licence information is captured for third-party components.** An uploaded font
+without a recorded licence blocks the export; a registry component carries no equivalent
+check, even though most publishers state one. For work delivered to a client that is a
+real gap.
 
 Its open questions are still open, and each would change the shape of the index rather
 than just add to it: whether React Bits' JS/CSS variants are ever wanted here (if never,

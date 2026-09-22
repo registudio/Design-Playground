@@ -8,6 +8,7 @@ import { pageSections, SECTION_LABELS } from "@/schema/composition";
 import type { DesignElement } from "@/registry/schema";
 import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
 import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
+import { describeElement } from "@/elements/descriptions";
 import { RegistryPreview } from "./RegistryPreview";
 import { CATALOGUE_BATCH, MAX_MOUNTED_BATCHES, NARROW_SEARCH_LIMIT, SEARCH_DEBOUNCE_MS } from "@/elements/preview-budget";
 
@@ -107,7 +108,8 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       ...registry.elements.map(e => ({
         id: e.id,
         title: e.title,
-        description: e.description,
+        // Filled in where the publisher left it blank or wrote build boilerplate.
+        description: describeElement(e),
         // Browsed by subject rather than by publisher — see elements/taxonomy.ts.
         category: browseCategory(e),
         preview: false,
@@ -269,15 +271,18 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
           : <div className="element-origin"><span title="Authored for this playground; included as source in your export">✳ {elementOrigin(item.id).name}</span><small>{elementOrigin(item.id).runtime}</small></div>}
         {advanced && item.registry && <ElementAdvanced element={item.registry} selected={chosen}/>}
         {chosen && note && "note" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="Add a note… What do you have in mind?" value={note.note} onChange={e => edit(`Note for ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.note = e.target.value; }, `element-note:${item.id}`)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => edit(`Place ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.placement = e.target.value; })}><option value="page">End of page</option>{project && pageSections(project.recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
-        {chosen && note && "intendedUse" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="What's it for? e.g. hero headline reveal" value={note.intendedUse} onChange={e => useProjectStore.getState().setIntendedUse(item.id, e.target.value)}/></div>}
+        {chosen && note && "intendedUse" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="What's it for? e.g. hero headline reveal" value={note.intendedUse} onChange={e => useProjectStore.getState().setIntendedUse(item.id, e.target.value)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => useProjectStore.getState().setSelectionPlacement(item.id, e.target.value)}><option value="page">End of page</option>{project && pageSections(project.recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
       </article>;
     })}</div>
 
     {/* Watched rather than a "load more" button: scrolling is already the gesture for
         "show me more of this", and 448 cards mounted at once would be a stutter. */}
     {visible < results.length && <>
-      <div ref={sentinel} className="grid-sentinel">Loading more elements… <span>{visible} of {results.length}</span></div>
+      {/* Spacer first, sentinel last. The other way round, the sentinel sat above the
+          spacer — so jumping straight to the bottom of the scroller landed past it,
+          nothing loaded, and the user was left in blank space. */}
       <div className="grid-spacer" style={{ height: rowsBelow * rowHeight }} aria-hidden="true" />
+      <div ref={sentinel} className="grid-sentinel">Loading more elements… <span>{visible} of {results.length}</span></div>
     </>}
 
     {!results.length && <div className="empty-state"><h2>No elements here yet.</h2><p>{registry.elements.length === 0 ? "The registry index hasn't been fetched yet. Open Registry detail to pull it in." : "Try another search or add something to your collection."}</p><button className="quiet-button" onClick={() => { setQuery(""); setCategory("All elements"); setSource(null); setOnlySelected(false); }}>Reset filters</button></div>}

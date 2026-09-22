@@ -140,6 +140,8 @@ interface ProjectState {
   selectElement: (element: DesignElement, intendedUse?: string) => void;
   deselectElement: (id: string) => void;
   setIntendedUse: (id: string, intendedUse: string) => void;
+  /** Where on the page a selected component belongs, mirroring the authored elements. */
+  setSelectionPlacement: (id: string, placement: string) => void;
   setEngine: (engine: "motion" | "gsap" | "lenis" | "vanta", enabled: boolean) => void;
   /** Switches which published variant of a React Bits component gets installed. */
   setSelectionVariant: (id: string, variant: ElementVariant) => void;
@@ -491,6 +493,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         category: element.category,
         installCommand: element.installCommand,
         intendedUse,
+        placement: "page",
         referenceOnly: element.referenceOnly,
         variant: element.variant,
         engineDependency: element.engineDependency,
@@ -524,6 +527,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     // and would be overwritten on the very next edit anyway.
     get().edit(`${enabled ? "Enable" : "Disable"} ${engine}`, (draft) => {
       draft.recipe.engines[engine] = enabled;
+    });
+  },
+
+  setSelectionPlacement: (id, placement) => {
+    get().edit("Place element", (draft) => {
+      const selection = draft.selections.find((s) => s.id === id);
+      if (selection) selection.placement = placement;
     });
   },
 

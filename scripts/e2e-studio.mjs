@@ -60,10 +60,17 @@ const total = Number.parseInt(meta, 10);
 ok("the library counts curated and registry elements together", total > 400);
 const firstBatch = await page.locator(".element-card").count();
 ok("only a first batch is mounted", firstBatch > 0 && firstBatch <= 40);
+const titlesAt = () => page.locator(".element-card h3").allTextContents();
+const beforeScroll = await titlesAt();
 await page.locator(".studio-main").evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
-await page.waitForTimeout(900);
-ok("scrolling renders more", (await page.locator(".element-card").count()) > firstBatch);
-console.log(`  ${meta.trim()} · mounted ${firstBatch} -> ${await page.locator(".element-card").count()}`);
+await page.waitForTimeout(1200);
+const afterScroll = await titlesAt();
+const mounted = await page.locator(".element-card").count();
+// The window moves rather than growing: cards behind the viewport are released, so the
+// assertion is that different elements are on screen, not that more of them are.
+ok("scrolling brings different elements into the grid", afterScroll.some((t) => !beforeScroll.includes(t)));
+ok(`the mounted window stays bounded (${mounted})`, mounted <= 36 * 4 + 6);
+console.log(`  ${meta.trim()} · mounted ${firstBatch} -> ${mounted} of ${total}`);
 
 // --- Motion is previewed, engines are derived --------------------------------
 await page.getByRole("button", { name: /Motion & engines/ }).click();

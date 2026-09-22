@@ -8,6 +8,7 @@ import {
 } from "@/elements/preview-budget";
 import type { DesignElement } from "@/registry/schema";
 import { sourceById } from "@/registry/sources";
+import { describeElement } from "@/elements/descriptions";
 
 /**
  * A live preview of one published registry component.
@@ -170,7 +171,7 @@ export function RegistryPreview({
       {!loaded && (
         <div className="registry-placeholder">
           <span className="registry-glyph">↗</span>
-          <p>{element.description || "No description published."}</p>
+          <p>{describeElement(element)}</p>
           <div className="registry-deps">
             {element.npmDependencies.slice(0, 3).map((dependency) => (
               <i key={dependency}>{dependency}</i>

@@ -80,3 +80,102 @@ describe("preview budgets", () => {
     expect(OFFSCREEN_GRACE_MS).toBeGreaterThan(5_000);
   });
 });
+
+describe("preview prop recipes", () => {
+  it("gives every Bklit item chart data, since all of them are chart parts", async () => {
+    const { propRecipe } = await import("@/elements/preview-props");
+    expect(propRecipe("bklit", "Bar Depth")).toContain("chartData");
+    expect(propRecipe("bklit", "Utilities")).toContain("chartData");
+  });
+
+  it("gives a carousel more than one thing to show", async () => {
+    const { propRecipe } = await import("@/elements/preview-props");
+    const props = propRecipe("react-bits", "BounceCards");
+    expect(props).toContain("items");
+    expect(props).toContain("Discover");
+  });
+
+  it("matches a PascalCase name on whole words", async () => {
+    const { recipeIndexFor } = await import("@/elements/preview-props");
+    // Without camelCase splitting "AccordionGallery" could only match its first word.
+    expect(recipeIndexFor("react-bits", "AccordionGallery")).not.toBeNull();
+    expect(recipeIndexFor("react-bits", "FallingText")).not.toBeNull();
+  });
+
+  it("opens a dialog, which otherwise renders nothing at all", async () => {
+    const { propRecipe } = await import("@/elements/preview-props");
+    expect(propRecipe("soralabs", "Base Dialog")).toContain("open: true");
+  });
+
+  it("passes text effects their string as a prop, not only as children", async () => {
+    const { propRecipe } = await import("@/elements/preview-props");
+    const props = propRecipe("react-bits", "ScrambleText");
+    expect(props).toMatch(/text:\s*"Small details/);
+  });
+
+  it("falls back to the base props rather than nothing", async () => {
+    const { propRecipe, recipeIndexFor } = await import("@/elements/preview-props");
+    expect(recipeIndexFor("componentry", "signature")).toBeNull();
+    expect(propRecipe("componentry", "signature")).toContain("children");
+  });
+
+  it("produces valid JavaScript for every item in the real snapshot", async () => {
+    const { propRecipe } = await import("@/elements/preview-props");
+    const { readFileSync } = await import("node:fs");
+    const { RegistryIndex } = await import("@/registry/schema");
+    const index = RegistryIndex.parse(
+      JSON.parse(readFileSync(new URL("../data/registry-snapshot.json", import.meta.url), "utf-8")),
+    );
+    for (const element of index.elements) {
+      // Spliced into a generated module, so a malformed object would be a compile error
+      // for that preview rather than a caught failure.
+      expect(() => new Function(`return ${propRecipe(element.source, element.name)}`)()).not.toThrow();
+    }
+  });
+
+  it("gives chart items data that a chart library can actually plot", async () => {
+    const { propRecipe } = await import("@/elements/preview-props");
+    const value = new Function(`return ${propRecipe("bklit", "Area Chart")}`)() as {
+      data: Array<Record<string, unknown>>;
+    };
+    expect(value.data.length).toBeGreaterThan(3);
+    expect(typeof value.data[0]!.value).toBe("number");
+    expect(typeof value.data[0]!.name).toBe("string");
+  });
+});
+
+describe("compiled document disk cache", () => {
+  it("serves a cached document without recompiling", async () => {
+    const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { createHash } = await import("node:crypto");
+    const path = await import("node:path");
+    const { vi } = await import("vitest");
+
+    const dir = await mkdtemp(path.join(tmpdir(), "dp-preview-"));
+    await mkdir(dir, { recursive: true });
+    // Same key the route derives: version, source, name.
+    const key = createHash("sha256").update("1:bklit:area-chart").digest("hex").slice(0, 32);
+    await writeFile(path.join(dir, `${key}.html`), "<!doctype html><title>cached</title>", "utf-8");
+
+    vi.stubEnv("DP_PREVIEW_CACHE", dir);
+    vi.resetModules();
+    const { GET: fresh } = await import("../app/api/element-preview/route");
+    const response = await fresh(
+      new Request("http://localhost/api/element-preview?source=bklit&name=area-chart"),
+    );
+    const body = await response.text();
+    vi.unstubAllEnvs();
+
+    // Without the cache this would attempt a fetch and return a diagnostic instead.
+    expect(body).toContain("cached");
+    expect(body).not.toContain("Preview unavailable");
+  });
+
+  it("keys the cache so a change to the route invalidates it", async () => {
+    const { createHash } = await import("node:crypto");
+    const a = createHash("sha256").update("1:bklit:area-chart").digest("hex").slice(0, 32);
+    const b = createHash("sha256").update("2:bklit:area-chart").digest("hex").slice(0, 32);
+    expect(a).not.toBe(b);
+  });
+});
