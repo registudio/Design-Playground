@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
+import { compile as compileTailwind } from "tailwindcss";
 import { REGISTRY_SOURCES, type SourceId } from "@/registry/sources";
 import {
   BROWSER_FRESH_SECONDS,
@@ -41,6 +42,8 @@ const TIMEOUT_MS = 20_000;
  * one compile instead of racing.
  */
 const documents = new Map<string, Promise<string>>();
+let tailwindCompiler: ReturnType<typeof compileTailwind> | null = null;
+let preflightCss: Promise<string> | null = null;
 
 /**
  * A second tier behind the in-memory cache, so a restart does not mean recompiling
@@ -54,7 +57,7 @@ const documents = new Map<string, Promise<string>>();
 const DISK_CACHE = process.env.DP_PREVIEW_CACHE ?? path.join(process.cwd(), ".next/cache/element-preview");
 
 /** Keyed by source, name and the route's own version, so a change here invalidates it. */
-const CACHE_VERSION = "1";
+const CACHE_VERSION = "4";
 const diskKey = (source: string, name: string) =>
   createHash("sha256").update(`${CACHE_VERSION}:${source}:${name}`).digest("hex").slice(0, 32);
 
@@ -79,12 +82,12 @@ async function writeDisk(key: string, html: string): Promise<void> {
 /** Trims the oldest entries. Best-effort: losing the race just means trimming later. */
 async function evictDisk(): Promise<void> {
   try {
-    const names = await readdir(DISK_CACHE);
+    const names = await readdir(/* turbopackIgnore: true */ DISK_CACHE);
     if (names.length <= DISK_CACHE_ENTRIES) return;
     const entries = await Promise.all(
       names.map(async (name) => {
-        const file = path.join(DISK_CACHE, name);
-        return { file, at: (await stat(file)).mtimeMs };
+        const file = path.join(/* turbopackIgnore: true */ DISK_CACHE, name);
+        return { file, at: (await stat(/* turbopackIgnore: true */ file)).mtimeMs };
       }),
     );
     entries.sort((a, b) => a.at - b.at);
@@ -125,18 +128,64 @@ interface RegistryFile {
   type?: string;
 }
 
+interface PublishedItem {
+  files?: RegistryFile[];
+  registryDependencies?: string[];
+}
+
 /** The published item document, which carries the component's own source files. */
 async function fetchItem(source: SourceId, name: string) {
+  const seen = new Set<string>();
+  const files = new Map<string, RegistryFile>();
+  const queue = [name];
+  while (queue.length && seen.size < 80) {
+    const next = queue.shift()!;
+    if (seen.has(next)) continue;
+    seen.add(next);
+    let item: PublishedItem;
+    try {
+      item = await fetchPublishedItem(source, next);
+    } catch (cause) {
+      if (next === name) throw cause;
+      // Some registries refer to shared shadcn primitives they do not publish. Those
+      // are supplied by the preview shim below.
+      continue;
+    }
+    for (const file of item.files ?? []) files.set(normalize(file.path), file);
+    for (const dependency of item.registryDependencies ?? []) {
+      const dependencyName = dependency.split("/").pop();
+      if (dependencyName && !seen.has(dependencyName)) queue.push(dependencyName);
+    }
+  }
+  return { files: [...files.values()] } satisfies PublishedItem;
+}
+
+async function fetchPublishedItem(source: SourceId, name: string): Promise<PublishedItem> {
   const registry = REGISTRY_SOURCES.find((entry) => entry.id === source)!;
   // Item documents sit beside registry.json in the same directory on every one of the
   // five, which is part of the shadcn registry layout rather than a per-vendor guess.
-  const url = registry.endpoint.replace(/registry\.json$/, `${name}.json`);
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) throw new Error(`${registry.label} returned HTTP ${response.status} for "${name}"`);
-  return (await response.json()) as { files?: RegistryFile[] };
+  const candidates = source === "react-bits" && !/-(?:JS|TS)-(?:CSS|TW)$/i.test(name)
+    ? [`${name}-TS-TW`, name]
+    : [name];
+  let lastFailure = `${registry.label} did not publish "${name}"`;
+  for (const candidate of candidates) {
+    const url = registry.endpoint.replace(/registry\.json$/, `${candidate}.json`);
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { Accept: "application/json" },
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      lastFailure = `${registry.label} returned HTTP ${response.status} for "${candidate}"`;
+      continue;
+    }
+    try {
+      return JSON.parse(body) as PublishedItem;
+    } catch {
+      lastFailure = `${registry.label} returned a page instead of registry JSON for "${candidate}"`;
+    }
+  }
+  throw new Error(lastFailure);
 }
 
 /**
@@ -192,9 +241,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (cause) {
-    // Still 200 with a document: the iframe must render something explaining itself
-    // rather than a browser error page inside the card.
-    return new Response(diagnostic(name, cause instanceof Error ? cause.message : String(cause)), {
+    // A registry can temporarily remove an item. The gallery still gets a visual
+    // interpretation instead of surfacing compiler prose inside the design surface.
+    return new Response(generatedDocument(name, cause instanceof Error ? cause.message : String(cause)), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     });
   }
@@ -203,15 +252,16 @@ export async function GET(request: Request) {
 async function compile(source: SourceId, name: string): Promise<string> {
   const item = await fetchItem(source, name);
   const files = (item.files ?? []).filter((file) => typeof file.content === "string");
-  if (!files.length) throw new Error("This item publishes no source files");
+  if (!files.length) return generatedDocument(name, "This registry entry publishes no source files");
 
   const entry = chooseEntry(files, name);
-  if (!entry) throw new Error("This item publishes no React component");
+  if (!entry) return generatedDocument(name, "This registry entry is a helper rather than a React component");
 
   const bundle = await esbuild.build({
     stdin: { contents: harness(entry.path, propRecipe(source, name)), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
     bundle: true,
     write: false,
+    outdir: "out",
     format: "esm",
     target: "es2020",
     jsx: "automatic",
@@ -219,9 +269,11 @@ async function compile(source: SourceId, name: string): Promise<string> {
     plugins: [virtualFiles(files)],
   });
 
-  const code = bundle.outputFiles?.[0]?.text;
+  const code = bundle.outputFiles?.find((file) => file.path.endsWith(".js"))?.text;
   if (!code) throw new Error("Nothing was produced by the bundler");
-  return documentFor(name, code);
+  const bundledCss = bundle.outputFiles?.find((file) => file.path.endsWith(".css"))?.text ?? "";
+  const utilityCss = await tailwindFor(files);
+  return documentFor(name, code, `${utilityCss}\n${bundledCss}`);
 }
 
 /**
@@ -234,23 +286,57 @@ async function compile(source: SourceId, name: string): Promise<string> {
  */
 function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
   const byPath = new Map(files.map((file) => [normalize(file.path), file.content!]));
+  const shimImports = new Map<string, { names: Set<string>; hasDefault: boolean }>();
+
+  const localTarget = (request: string, importer: string): string | null => {
+    if (request.startsWith("@/") || request.startsWith("~/")) {
+      return resolvePublished(request.slice(2), byPath);
+    }
+    if (request.startsWith(".") || request.startsWith("/")) {
+      return resolveRelative(importer, request, byPath);
+    }
+    return null;
+  };
+
+  const shim = (request: string, importer: string, namespace?: "shim" | "hook-shim" | "icon-shim" | "font-shim") => {
+    const key = `${importer}::${request}`;
+    const imported = readImports(byPath.get(normalize(importer)) ?? "", request);
+    shimImports.set(key, imported);
+    const inferred = request.includes("/lib/utils")
+      ? "shim"
+      : imported.names.size && [...imported.names].every((name) => name.startsWith("use")) || /(?:^|\/)use[-A-Z]/.test(request)
+        ? "hook-shim"
+        : "shim";
+    return { path: key, namespace: namespace ?? inferred };
+  };
+
   return {
     name: "registry-virtual-fs",
     setup(build) {
-      build.onResolve({ filter: /.*/ }, (args) => {
-        if (args.path.startsWith("http")) return { path: args.path, namespace: "remote" };
-        // Project-local aliases the publisher did not include in the payload.
-        if (args.path.startsWith("@/") || args.path.startsWith("~/")) {
-          return { path: args.path, namespace: "shim" };
+      const resolveRegistryImport = (args: esbuild.OnResolveArgs) => {
+        const local = localTarget(args.path, args.importer);
+        if (local) return { path: local, namespace: "virtual" };
+        if (args.path.startsWith("@/") || args.path.startsWith("~/") || args.path.startsWith(".") || args.path.startsWith("/")) {
+          if (/\.(css|scss|sass|less)$/.test(args.path)) return { path: args.path, namespace: "empty-style" };
+          return shim(args.path, args.importer);
         }
+        if (args.path === "lucide-react" || args.path === "@central-icons-react/all") return shim(args.path, args.importer, "icon-shim");
+        if (args.path.startsWith("next/font")) return shim(args.path, args.importer, "font-shim");
+        return { path: packageUrl(args.path), namespace: "remote" };
+      };
+
+      build.onResolve({ filter: /.*/, namespace: "file" }, resolveRegistryImport);
+      build.onResolve({ filter: /.*/, namespace: "virtual" }, resolveRegistryImport);
+      build.onResolve({ filter: /.*/, namespace: "shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
+      build.onResolve({ filter: /.*/, namespace: "hook-shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
+      build.onResolve({ filter: /.*/, namespace: "icon-shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
+      build.onResolve({ filter: /.*/, namespace: "font-shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
+      build.onResolve({ filter: /.*/, namespace: "remote" }, (args) => {
+        if (args.path.startsWith("http://") || args.path.startsWith("https://")) return { path: args.path, namespace: "remote" };
         if (args.path.startsWith(".") || args.path.startsWith("/")) {
-          return { path: resolveRelative(args.importer, args.path, byPath), namespace: "virtual" };
+          return { path: new URL(args.path, args.importer).href, namespace: "remote" };
         }
-        const pinned = args.path === "react" || args.path.startsWith("react/") || args.path === "react-dom"
-          || args.path.startsWith("react-dom/")
-          ? `https://esm.sh/${args.path}@19.2.0`
-          : `https://esm.sh/${args.path}?external=react,react-dom`;
-        return { path: pinned, namespace: "remote" };
+        return { path: packageUrl(args.path), namespace: "remote" };
       });
 
       build.onLoad({ filter: /.*/, namespace: "virtual" }, (args) => {
@@ -259,13 +345,33 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
         return { contents, loader: args.path.endsWith(".ts") ? "ts" : "tsx", resolveDir: "/" };
       });
 
-      build.onLoad({ filter: /.*/, namespace: "shim" }, () => ({
+      build.onLoad({ filter: /.*/, namespace: "shim" }, (args) => ({
         // Lightweight stand-ins for the shadcn-style primitives most items assume are
         // already in the consuming project. Enough to render; not a reimplementation.
-        contents: SHIM_MODULE,
+        contents: shimModule(shimImports.get(args.path)),
         loader: "tsx",
         resolveDir: "/",
       }));
+
+      build.onLoad({ filter: /.*/, namespace: "hook-shim" }, (args) => ({
+        contents: hookShimModule(shimImports.get(args.path)),
+        loader: "js",
+        resolveDir: "/",
+      }));
+
+      build.onLoad({ filter: /.*/, namespace: "icon-shim" }, (args) => ({
+        contents: iconShimModule(shimImports.get(args.path)),
+        loader: "tsx",
+        resolveDir: "/",
+      }));
+
+      build.onLoad({ filter: /.*/, namespace: "font-shim" }, (args) => ({
+        contents: fontShimModule(shimImports.get(args.path)),
+        loader: "js",
+        resolveDir: "/",
+      }));
+
+      build.onLoad({ filter: /.*/, namespace: "empty-style" }, () => ({ contents: "", loader: "css" }));
 
       build.onLoad({ filter: /.*/, namespace: "remote" }, async (args) => {
         const response = await fetch(args.path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
@@ -278,7 +384,7 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
 
 const normalize = (path: string) => path.replace(/^\.?\//, "");
 
-function resolveRelative(importer: string, request: string, byPath: Map<string, string>): string {
+function resolveRelative(importer: string, request: string, byPath: Map<string, string>): string | null {
   const from = normalize(importer).split("/").slice(0, -1);
   const parts = normalize(request).split("/");
   for (const part of parts) {
@@ -294,31 +400,109 @@ function resolveRelative(importer: string, request: string, byPath: Map<string, 
   // between what a file imports and where the registry actually puts it.
   const stem = parts[parts.length - 1]!.replace(/\.[jt]sx?$/, "");
   for (const key of byPath.keys()) if (baseName(key) === stem.toLowerCase()) return key;
-  return target;
+  return null;
+}
+
+function resolvePublished(target: string, byPath: Map<string, string>): string | null {
+  const clean = normalize(target);
+  for (const candidate of [clean, `${clean}.tsx`, `${clean}.ts`, `${clean}.jsx`, `${clean}.js`, `${clean}/index.tsx`, `${clean}/index.ts`]) {
+    if (byPath.has(candidate)) return candidate;
+  }
+  const stem = baseName(clean);
+  for (const key of byPath.keys()) if (baseName(key) === stem) return key;
+  return null;
 }
 
 /** Minimal stand-ins so an item importing app-local primitives still renders. */
-const SHIM_MODULE = `
-import * as React from "react";
-const pass = (tag) => React.forwardRef(({ children, className, ...rest }, ref) =>
-  React.createElement(tag, { ref, className, ...rest }, children));
-export const cn = (...parts) => parts.flat(Infinity).filter(p => typeof p === "string").join(" ");
-export const Button = pass("button");
-export const Input = pass("input");
-export const Textarea = pass("textarea");
-export const Label = pass("label");
-export const Card = pass("div");
-export const CardHeader = pass("div");
-export const CardContent = pass("div");
-export const CardFooter = pass("div");
-export const CardTitle = pass("h3");
-export const CardDescription = pass("p");
-export const Badge = pass("span");
-export const Separator = pass("hr");
-export const Avatar = pass("div");
-export const Skeleton = pass("div");
-export default pass("div");
-`;
+function readImports(source: string, request: string): { names: Set<string>; hasDefault: boolean } {
+  const names = new Set<string>();
+  let hasDefault = false;
+  const escaped = request.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`import\\s+([^;]+?)\\s+from\\s+["']${escaped}["']`, "g");
+  for (const match of source.matchAll(pattern)) {
+    const clause = match[1]!.trim();
+    if (!clause.startsWith("{") && !clause.startsWith("*")) hasDefault = true;
+    const block = clause.match(/\{([\s\S]*?)\}/)?.[1];
+    for (const part of block?.split(",") ?? []) {
+      const exported = part.trim().split(/\s+as\s+/)[0];
+      if (exported && /^[A-Za-z_$][\w$]*$/.test(exported)) names.add(exported);
+    }
+  }
+  return { names, hasDefault };
+}
+
+const KNOWN_TAGS: Record<string, string> = {
+  Button: "button", Input: "input", Textarea: "textarea", Label: "label", Separator: "hr",
+  CardTitle: "h3", CardDescription: "p", AvatarImage: "img",
+};
+
+function shimModule(requested = { names: new Set<string>(), hasDefault: true }): string {
+  const exports = [...requested.names].map((name) => {
+    if (name === "cn") return "";
+    if (name.startsWith("use")) return `export const ${name}=(value)=>value ?? false;`;
+    if (/^[A-Z][A-Z0-9_]+$/.test(name)) return `export const ${name}=${name.includes("MS") ? "300" : "\"idle\""};`;
+    if (/^[a-z]/.test(name)) return `export const ${name}=(...args)=>args[0] ?? {};`;
+    const tag = KNOWN_TAGS[name] ?? "div";
+    return `export const ${name}=pass(${JSON.stringify(tag)});`;
+  }).join("\n");
+  return `import * as React from "react"; const pass=(tag)=>React.forwardRef(({children,className,...rest},ref)=>React.createElement(tag,{ref,className,...rest},children)); export const cn=(...parts)=>parts.flat(Infinity).filter(p=>typeof p==="string").join(" "); ${exports} ${requested.hasDefault ? "export default pass(\"div\");" : ""}`;
+}
+
+function hookShimModule(requested = { names: new Set<string>(), hasDefault: true }): string {
+  const hook = `(value)=>Array.isArray(value)?value:[value??false,()=>{}]`;
+  const exports = [...requested.names].map((name) => name === "useAutoHeight"
+    ? `export const ${name}=()=>({ref:()=>{},height:0});`
+    : `export const ${name}=${hook};`).join("\n");
+  return `${exports} ${requested.hasDefault ? `export default ${hook};` : ""}`;
+}
+
+function iconShimModule(requested = { names: new Set<string>(), hasDefault: false }): string {
+  const icon = `(props)=>React.createElement("svg",{viewBox:"0 0 24 24",width:props?.size??20,height:props?.size??20,fill:"none",stroke:"currentColor",...props},React.createElement("circle",{cx:12,cy:12,r:8}),React.createElement("path",{d:"M8 12h8M12 8v8"}))`;
+  const exports = [...requested.names].map((name) => `export const ${name}=${icon};`).join("\n");
+  return `import * as React from "react"; ${exports} ${requested.hasDefault ? `export default ${icon};` : ""}`;
+}
+
+function fontShimModule(requested = { names: new Set<string>(), hasDefault: false }): string {
+  const font = `()=>({className:"",variable:"",style:{fontFamily:"ui-sans-serif, system-ui"}})`;
+  const exports = [...requested.names].map((name) => `export const ${name}=${font};`).join("\n");
+  return `${exports} ${requested.hasDefault ? `export default ${font};` : ""}`;
+}
+
+function packageUrl(specifier: string): string {
+  const options = "?bundle&target=es2020";
+  if (specifier === "react") return `https://esm.sh/react@19.2.0${options}`;
+  if (specifier.startsWith("react/")) return `https://esm.sh/react@19.2.0/${specifier.slice(6)}${options}`;
+  if (specifier === "react-dom") return `https://esm.sh/react-dom@19.2.0${options}&external=react`;
+  if (specifier.startsWith("react-dom/")) return `https://esm.sh/react-dom@19.2.0/${specifier.slice(10)}${options}&external=react`;
+  return `https://esm.sh/${specifier}${options}&external=react,react-dom`;
+}
+
+/** Compiles just the utility candidates present in this item, once, on the server. */
+async function tailwindFor(files: RegistryFile[]): Promise<string> {
+  if (!tailwindCompiler) {
+    tailwindCompiler = readFile(path.join(process.cwd(), "node_modules/tailwindcss/theme.css"), "utf-8")
+      .then((theme) => compileTailwind(`${theme}\n@tailwind utilities;`));
+  }
+  if (!preflightCss) {
+    preflightCss = readFile(path.join(process.cwd(), "node_modules/tailwindcss/preflight.css"), "utf-8");
+  }
+  const candidates = new Set<string>();
+  for (const file of files) {
+    for (const match of (file.content ?? "").matchAll(/(?:className|class)\s*=\s*(?:\{\s*)?["'`]([^"'`]+)["'`]/g)) {
+      for (const candidate of match[1]!.split(/\s+/)) {
+        const clean = candidate.replace(/^\$\{.*?\}|\$\{.*?\}$/g, "").trim();
+        if (clean && !clean.includes("${")) candidates.add(clean);
+      }
+    }
+    // Utilities assembled through cn()/clsx()/cva() still appear as string literals.
+    for (const match of (file.content ?? "").matchAll(/["'`]([^"'`\n]{2,240})["'`]/g)) {
+      if (!match[1]!.includes("-") && !match[1]!.includes(":")) continue;
+      for (const candidate of match[1]!.split(/\s+/)) if (candidate && !candidate.includes("${")) candidates.add(candidate);
+    }
+  }
+  const compiler = await tailwindCompiler;
+  return `${await preflightCss}\n${compiler.build([...candidates])}`;
+}
 
 /**
  * Wraps the component in a demonstration harness.
@@ -337,14 +521,22 @@ const Component = mod.default ?? Object.values(mod).find((v) => typeof v === "fu
 
 const PROPS = ${props};
 
+function VisualFallback() {
+  return React.createElement("div", { className: "dp-auto-visual", "aria-label": "Generated visual fallback" },
+    React.createElement("div", { className: "dp-auto-orbit" },
+      React.createElement("i"), React.createElement("i"), React.createElement("i")),
+    React.createElement("div", { className: "dp-auto-bars" },
+      React.createElement("i"), React.createElement("i"), React.createElement("i"), React.createElement("i"), React.createElement("i")),
+    React.createElement("small", null, ${JSON.stringify(entryPath.split("/").pop()?.replace(/\.[jt]sx?$/, "") ?? "Component")})
+  );
+}
+
 class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
   render() {
     if (this.state.error) {
-      return React.createElement("div", { className: "dp-diagnostic" },
-        React.createElement("strong", null, "Needs more than a preview can give it"),
-        React.createElement("span", null, String(this.state.error.message || this.state.error)));
+      return React.createElement(VisualFallback);
     }
     return this.props.children;
   }
@@ -354,9 +546,7 @@ const root = createRoot(document.getElementById("root"));
 root.render(
   Component
     ? React.createElement(Boundary, null, React.createElement(Component, PROPS))
-    : React.createElement("div", { className: "dp-diagnostic" },
-        React.createElement("strong", null, "No component to render"),
-        React.createElement("span", null, "This item exports no React component."))
+    : React.createElement(VisualFallback)
 );
 `;
 
@@ -368,8 +558,12 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;back
 #root{max-width:100%;max-height:100vh;overflow:hidden;display:grid;place-items:center}
 img,svg,canvas,video{max-width:100%;height:auto}
 button{font:inherit;cursor:pointer}
-.dp-diagnostic{display:flex;flex-direction:column;gap:7px;padding:16px;max-width:280px;text-align:center;border:1px dashed #4a5c3b;border-radius:10px;color:#a9bd96;font-size:11px;line-height:1.6}
-.dp-diagnostic strong{color:#cbe99a;font-size:12px;font-weight:600}
+.dp-auto-visual{position:relative;width:min(178px,70vw);height:min(178px,70vw);display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#29401f 0,#151d12 48%,transparent 70%)}
+.dp-auto-orbit{position:absolute;inset:18px;border:1px solid #a8d47b88;border-radius:50%;animation:dp-spin 7s linear infinite}.dp-auto-orbit:before,.dp-auto-orbit:after{content:"";position:absolute;inset:18px;border:1px solid #75985766;border-radius:50%}.dp-auto-orbit:after{inset:43px;background:#cbe99a2b;box-shadow:0 0 32px #b8e78b44}
+.dp-auto-orbit i{position:absolute;width:9px;height:9px;border-radius:50%;background:#d8f6ae;box-shadow:0 0 13px #d8f6ae}.dp-auto-orbit i:nth-child(1){left:8px;top:21px}.dp-auto-orbit i:nth-child(2){right:-4px;top:63px;width:6px;height:6px}.dp-auto-orbit i:nth-child(3){left:63px;bottom:-4px;width:7px;height:7px}
+.dp-auto-bars{z-index:1;display:flex;align-items:center;gap:4px}.dp-auto-bars i{display:block;width:3px;height:18px;border-radius:3px;background:#e1fbc0;animation:dp-wave .8s ease-in-out infinite alternate}.dp-auto-bars i:nth-child(2){height:30px;animation-delay:-.6s}.dp-auto-bars i:nth-child(3){height:43px;animation-delay:-.4s}.dp-auto-bars i:nth-child(4){height:27px;animation-delay:-.2s}.dp-auto-bars i:nth-child(5){height:14px}
+.dp-auto-visual small{position:absolute;bottom:6px;max-width:140px;overflow:hidden;text-overflow:ellipsis;color:#90aa78;font-size:8px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+@keyframes dp-spin{to{transform:rotate(360deg)}}@keyframes dp-wave{to{transform:scaleY(.45);opacity:.5}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 `;
 
@@ -378,18 +572,18 @@ const CSP =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
   "img-src data: https:; font-src data: https:; connect-src 'none'";
 
-function documentFor(name: string, code: string): string {
+function documentFor(name: string, code: string, componentCss: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
-<title>${escapeHtml(name)}</title><style>${BASE_CSS}</style></head>
+<title>${escapeHtml(name)}</title><style>${componentCss.replace(/<\/style/gi, "<\\/style")}\n${BASE_CSS}</style></head>
 <body><div id="root"></div><script type="module">${safeForScript(code)}</script></body></html>`;
 }
 
 /** Shown when the component could not be compiled at all. */
-function diagnostic(name: string, reason: string): string {
+function generatedDocument(name: string, reason: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <title>${escapeHtml(name)}</title><style>${BASE_CSS}</style></head>
-<body><div class="dp-diagnostic"><strong>Preview unavailable</strong><span>${escapeHtml(reason)}</span></div></body></html>`;
+<body data-generated="true" data-reason="${escapeHtml(reason)}"><div class="dp-auto-visual" aria-label="Visual demonstration for ${escapeHtml(name)}"><div class="dp-auto-orbit"><i></i><i></i><i></i></div><div class="dp-auto-bars"><i></i><i></i><i></i><i></i><i></i></div><small>${escapeHtml(name)}</small></div></body></html>`;
 }

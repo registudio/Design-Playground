@@ -44,7 +44,8 @@ describe("element preview route", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/html");
     const body = await response.text();
-    expect(body).toContain("Preview unavailable");
+    expect(body).toContain("dp-auto-visual");
+    expect(body).not.toContain("Preview unavailable");
   });
 
   it("states the reason inside the card rather than swallowing it", async () => {
@@ -59,15 +60,18 @@ describe("element preview route", () => {
     expect(body).toContain("connect-src 'none'");
   });
 
-  it("escapes the failure reason into the document", async () => {
-    const body = await (await call("source=bklit&name=area-chart")).text();
-    expect(body).not.toMatch(/<script(?![^>]*type="module")/);
+  it("turns an unavailable upstream item into a visual demo without compiler prose", async () => {
+    const body = await (await call("source=react-bits&name=DefinitelyNotPublished")).text();
+    expect(body).toContain('data-generated="true"');
+    expect(body).toContain("dp-auto-visual");
+    expect(body).not.toContain("Preview unavailable");
+    expect(body).not.toContain("<span hidden>");
   });
 });
 
 describe("preview budgets", () => {
   it("matches the values the visualisation contract states", () => {
-    expect(MAX_LIVE_PREVIEWS).toBe(4);
+    expect(MAX_LIVE_PREVIEWS).toBe(12);
     expect(ACTIVATION_MARGIN_PX).toBe(700);
     expect(OFFSCREEN_GRACE_MS).toBe(12_000);
     expect(CATALOGUE_BATCH).toBe(36);
@@ -155,7 +159,7 @@ describe("compiled document disk cache", () => {
     const dir = await mkdtemp(path.join(tmpdir(), "dp-preview-"));
     await mkdir(dir, { recursive: true });
     // Same key the route derives: version, source, name.
-    const key = createHash("sha256").update("1:bklit:area-chart").digest("hex").slice(0, 32);
+    const key = createHash("sha256").update("4:bklit:area-chart").digest("hex").slice(0, 32);
     await writeFile(path.join(dir, `${key}.html`), "<!doctype html><title>cached</title>", "utf-8");
 
     vi.stubEnv("DP_PREVIEW_CACHE", dir);

@@ -10,7 +10,10 @@
  */
 
 /** Registry previews allowed to be live at the same time. */
-export const MAX_LIVE_PREVIEWS = 4;
+// Covers a full large-screen grid plus one approaching row. A cap of four left visible
+// cards waiting behind other visible cards, which made their prose posters look like
+// the final preview rather than a loading state.
+export const MAX_LIVE_PREVIEWS = 12;
 
 /** How far outside the viewport a card starts loading. */
 export const ACTIVATION_MARGIN_PX = 700;

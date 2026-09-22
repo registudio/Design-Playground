@@ -277,11 +277,19 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 /* The live registry preview replaces the static stand-in; the placeholder stays behind
    it until the frame reports it has loaded, so a card is never empty mid-compile. */
 .registry-canvas iframe { position:absolute;inset:0;width:100%;height:100%;border:0;background:#111412; }
-.registry-placeholder { position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;padding:18px;background:linear-gradient(150deg,#1a2416,#131a10); }
-.registry-placeholder p { font-size:11px;line-height:1.7;color:#a9bb96;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden; }
-.registry-placeholder small { font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#72855f;margin-top:auto; }
-.registry-placeholder a { font-size:9px;color:#cbe99a; }
-.registry-placeholder a:hover { text-decoration:underline; }
+.registry-placeholder { position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#24351b 0,#151c12 42%,#10130f 75%); }
+.placeholder-orbit { position:relative;width:112px;height:112px;border:1px solid #8fb96b66;border-radius:50%;animation:placeholder-spin 8s linear infinite; }
+.placeholder-orbit::before,.placeholder-orbit::after { content:"";position:absolute;border:1px solid #6f915555;border-radius:50%;inset:14px; }
+.placeholder-orbit::after { inset:34px;background:#cbe99a22;box-shadow:0 0 32px #b5e48633; }
+.placeholder-orbit i { position:absolute;width:10px;height:10px;border-radius:50%;background:#cbe99a;box-shadow:0 0 16px #cbe99aaa; }
+.placeholder-orbit i:nth-child(1){left:8px;top:18px}.placeholder-orbit i:nth-child(2){right:2px;top:52px;width:6px;height:6px}.placeholder-orbit i:nth-child(3){left:46px;bottom:-4px;width:7px;height:7px}
+.placeholder-bars { position:absolute;left:50%;top:50%;display:flex;align-items:center;gap:4px;transform:translate(-50%,-50%); }
+.placeholder-bars i { width:3px;height:18px;border-radius:3px;background:#d8f6ae;animation:placeholder-wave .9s ease-in-out infinite alternate; }
+.placeholder-bars i:nth-child(2){animation-delay:-.7s;height:30px}.placeholder-bars i:nth-child(3){animation-delay:-.5s;height:42px}.placeholder-bars i:nth-child(4){animation-delay:-.3s;height:28px}.placeholder-bars i:nth-child(5){animation-delay:-.1s;height:14px}
+.registry-placeholder[data-category="charts"] .placeholder-orbit{border-radius:12px;transform:rotate(45deg)}
+.registry-placeholder[data-category="signature-polish"]{background:radial-gradient(circle at 30% 30%,#34204b,#131711 62%)}
+@keyframes placeholder-spin{to{transform:rotate(360deg)}}
+@keyframes placeholder-wave{to{transform:scaleY(.45);opacity:.45}}
 
 @media(min-width:1700px){.element-canvas{height:290px}.studio-content{padding:45px 50px 0}.studio-sidebar{width:240px}.selection-sidebar{width:280px}}
 @media(max-width:1250px){.selection-sidebar{display:none}.element-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.element-canvas{height:210px}.collection-stamp{display:none}.template-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.header-context{display:none}.composition-layout{grid-template-columns:minmax(0,1fr) 240px}.studio-content{padding:30px 25px 0}}

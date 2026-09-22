@@ -7,8 +7,6 @@ import {
   OFFSCREEN_GRACE_MS,
 } from "@/elements/preview-budget";
 import type { DesignElement } from "@/registry/schema";
-import { sourceById } from "@/registry/sources";
-import { describeElement } from "@/elements/descriptions";
 
 /**
  * A live preview of one published registry component.
@@ -152,8 +150,12 @@ export function RegistryPreview({
     };
   }, [element.id, eager, paused]);
 
-  const source = sourceById(element.source);
-  const src = `/api/element-preview?source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(element.name)}`;
+  // React Bits collapses four published variants into one catalogue record. The
+  // preview route needs the concrete registry item, just like the install command.
+  const concreteName = element.source === "react-bits" && element.variant
+    ? `${element.name}-${element.variant.language}-${element.variant.styling}`
+    : element.name;
+  const src = `/api/element-preview?v=4&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}`;
 
   return (
     <div className="registry-canvas" ref={host} data-active={active ? "yes" : "no"}>
@@ -169,26 +171,9 @@ export function RegistryPreview({
         />
       )}
       {!loaded && (
-        <div className="registry-placeholder">
-          <span className="registry-glyph">↗</span>
-          <p>{describeElement(element)}</p>
-          <div className="registry-deps">
-            {element.npmDependencies.slice(0, 3).map((dependency) => (
-              <i key={dependency}>{dependency}</i>
-            ))}
-            {element.npmDependencies.length > 3 && <i>+{element.npmDependencies.length - 3}</i>}
-          </div>
-          <small>{paused ? "Previews paused" : active ? "Compiling preview…" : "Preview loads as you scroll"}</small>
-          {source && (
-            <a
-              href={source.homepage}
-              target="_blank"
-              rel="noreferrer noopener"
-              onClick={(event) => event.stopPropagation()}
-            >
-              See it on {source.label} ↗
-            </a>
-          )}
+        <div className="registry-placeholder" data-category={element.category} aria-label={paused ? "Preview paused" : "Preparing visual preview"}>
+          <div className="placeholder-orbit"><i/><i/><i/></div>
+          <div className="placeholder-bars"><i/><i/><i/><i/><i/></div>
         </div>
       )}
     </div>

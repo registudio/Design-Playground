@@ -141,7 +141,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     return items.filter(item =>
       (category === "All elements" || category === item.category) &&
       (!source || (source === ORIGINALS ? !item.registry : item.registry?.source === source)) &&
-      (!text || `${item.title} ${item.description} ${item.category}`.toLowerCase().includes(text)) &&
+      (!text || `${item.title} ${item.description} ${item.category} ${item.registry?.name ?? ""} ${item.registry?.installCommand ?? ""} ${item.registry?.npmDependencies.join(" ") ?? ""}`.toLowerCase().includes(text)) &&
       (!onlySelected || isSelected(item)));
   }, [items, category, source, settledQuery, onlySelected, selected, picked]);
 
