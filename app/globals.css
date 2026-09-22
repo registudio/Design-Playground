@@ -278,6 +278,9 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 
 /* The live registry preview replaces the static stand-in; the placeholder stays behind
    it until the frame reports it has loaded, so a card is never empty mid-compile. */
+/* The expand affordance belongs to every preview, authored or compiled. */
+.registry-canvas .expand-demo { position:absolute;right:9px;top:9px;width:25px;height:25px;display:grid;place-items:center;background:#20291bdc;border:1px solid #53644455;border-radius:5px;color:#b9cf9f;opacity:0;transition:opacity .2s;z-index:3; }
+.element-card:hover .registry-canvas .expand-demo,.registry-canvas .expand-demo:focus-visible { opacity:1; }
 .registry-canvas iframe { position:absolute;inset:0;width:100%;height:100%;border:0;background:#111412; }
 .registry-placeholder { position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#24351b 0,#151c12 42%,#10130f 75%); }
 .placeholder-orbit { position:relative;width:112px;height:112px;border:1px solid #8fb96b66;border-radius:50%;animation:placeholder-spin 8s linear infinite; }

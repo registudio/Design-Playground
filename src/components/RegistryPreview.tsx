@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ACTIVATION_MARGIN_PX,
+  IN_FLIGHT_PROTECTION_MS,
   MAX_LIVE_PREVIEWS,
   OFFSCREEN_GRACE_MS,
 } from "@/elements/preview-budget";
@@ -85,10 +86,13 @@ export function RegistryPreview({
    * asked for.
    */
   paused = false,
+  onExpand,
 }: {
   element: Pick<DesignElement, "id" | "source" | "name" | "title" | "category" | "variant">;
   eager?: boolean;
   paused?: boolean;
+  /** Opens this preview full size. Registry cards had no way to do that at all. */
+  onExpand?: () => void;
 }) {
   const [active, setActive] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -100,12 +104,16 @@ export function RegistryPreview({
   const observationKey = previewKey(element);
   const host = useRef<HTMLDivElement>(null);
   const teardown = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** When this preview began work, for the in-flight protection below. */
+  const startedAt = useRef(0);
+  /** True once the document has reported something final — ready, blank, fallback, failed. */
+  const settled = useRef(false);
 
   useEffect(() => {
     const node = host.current;
     if (!node) return;
     const id = `${element.id}:${instance.current}`;
-    const start = () => { setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); };
+    const start = () => { startedAt.current = Date.now(); settled.current = false; setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); };
     const priority = () => { if (interested.current) return -2; const rect = node.getBoundingClientRect(); const root = scrollParent(node)?.getBoundingClientRect(); return Math.max(0, rect.top - (root?.bottom ?? innerHeight), (root?.top ?? 0) - rect.bottom); };
 
     // Paused: give up the slot outright rather than merely declining new ones, so
@@ -142,13 +150,20 @@ export function RegistryPreview({
         // remount every preview it passes, which costs far more than holding them.
         waiting.delete(id);
         if (teardown.current) return;
+        // Work in flight is protected: tearing a compile down at the grace period and
+        // restarting it on the way back is how a card ends up loading forever.
+        const inFlight = !settled.current && startedAt.current > 0;
+        const elapsed = Date.now() - startedAt.current;
+        const delay = inFlight
+          ? Math.max(OFFSCREEN_GRACE_MS, IN_FLIGHT_PROTECTION_MS - elapsed)
+          : OFFSCREEN_GRACE_MS;
         teardown.current = setTimeout(() => {
           teardown.current = null;
           releaseSlot(id);
           setActive(false);
           setLoaded(false);
           setStatus("queued");
-        }, OFFSCREEN_GRACE_MS);
+        }, delay);
       },
       { root: scrollParent(node), rootMargin: `${ACTIVATION_MARGIN_PX}px` },
     );
@@ -164,13 +179,42 @@ export function RegistryPreview({
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow || event.data?.type !== "dp-preview-status") return;
+      // The previous document lives on for a few seconds after the src changes and
+      // keeps reporting; without this its stale answer lands on top of the retry.
+      if (String(event.data.attempt ?? "0") !== String(attempt)) return;
       const next = event.data.status as PreviewStatus;
-      if (!["ready", "fallback", "failed", "rendering"].includes(next)) return;
-      setStatus(next); setLoaded(next !== "rendering"); recordPreview(observationKey, next);
+      if (!["ready", "fallback", "blank", "failed", "rendering"].includes(next)) return;
+      if (next !== "rendering") settled.current = true;
+      setStatus(next);
+      // The frame is only revealed once something is actually on it. A blank surface
+      // keeps the placeholder, because showing an empty rectangle and calling it done
+      // is worse than admitting there is nothing to see.
+      setLoaded(next === "ready" || next === "fallback");
+      recordPreview(observationKey, next);
     };
     window.addEventListener("message", receive);
-    const timeout = active ? setTimeout(() => { setStatus(current => { if (current !== "rendering") return current; recordPreview(observationKey, "failed"); return "failed"; }); }, 15000) : undefined;
-    return () => { window.removeEventListener("message", receive); clearTimeout(timeout); };
+
+    // Asked rather than awaited. The document reports on its own too, but a single
+    // announcement can land before this listener exists, and a component that renders
+    // once and never mutates never sends another.
+    const ping = active
+      ? setInterval(() => frame.current?.contentWindow?.postMessage({ type: "dp-preview-ping" }, "*"), 600)
+      : undefined;
+    const timeout = active
+      ? setTimeout(() => {
+          setStatus((current) => {
+            if (current !== "rendering" && current !== "queued") return current;
+            recordPreview(observationKey, "failed");
+            settled.current = true;
+            return "failed";
+          });
+        }, 20000)
+      : undefined;
+    return () => {
+      window.removeEventListener("message", receive);
+      clearInterval(ping);
+      clearTimeout(timeout);
+    };
   }, [observationKey, active, attempt]);
 
   // React Bits collapses four published variants into one catalogue record. The
@@ -203,10 +247,45 @@ export function RegistryPreview({
           <div className="placeholder-bars"><i/><i/><i/><i/><i/></div>
         </div>
       )}
-      <div className="preview-status" role="status">{paused ? "Paused" : status === "fallback" ? "Fallback demo" : status}{(status === "failed" || status === "fallback") && <button onClick={() => { setLoaded(false); setStatus("rendering"); setAttempt(n => n + 1); }}>Retry</button>}</div>
+      <div className="preview-status" role="status">
+        {paused ? "Paused" : STATUS_LABEL[status]}
+        {!paused && (status === "failed" || status === "fallback" || status === "blank") && (
+          <button
+            onClick={() => {
+              settled.current = false;
+              startedAt.current = Date.now();
+              setLoaded(false);
+              setStatus("rendering");
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Retry
+          </button>
+        )}
+      </div>
+      {onExpand && (
+        <button
+          type="button"
+          className="expand-demo"
+          aria-label={`Expand ${element.title}`}
+          onClick={() => onExpand()}
+        >
+          ↗
+        </button>
+      )}
     </div>
   );
 }
+
+/** Plain words rather than the internal state name, which read as jargon on a card. */
+const STATUS_LABEL: Record<PreviewStatus, string> = {
+  queued: "Queued",
+  rendering: "Rendering…",
+  ready: "Ready",
+  fallback: "Fallback demo",
+  blank: "Nothing to show",
+  failed: "Failed",
+};
 
 /** Exposed for the browser check, which asserts the concurrency budget is respected. */
 export function livePreviewCount(): number {

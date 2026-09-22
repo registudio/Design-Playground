@@ -5,6 +5,7 @@ import {
   advanceCatalogueWindow,
   CATALOGUE_BATCH,
   DOCUMENT_CACHE_ENTRIES,
+  IN_FLIGHT_PROTECTION_MS,
   MAX_LIVE_PREVIEWS,
   NARROW_SEARCH_LIMIT,
   OFFSCREEN_GRACE_MS,
@@ -75,14 +76,30 @@ describe("preview budgets", () => {
   it("matches the values the visualisation contract states", () => {
     expect(MAX_LIVE_PREVIEWS).toBe(12);
     expect(ACTIVATION_MARGIN_PX).toBe(320);
-    expect(OFFSCREEN_GRACE_MS).toBe(750);
     expect(CATALOGUE_BATCH).toBe(36);
     expect(DOCUMENT_CACHE_ENTRIES).toBe(96);
     expect(NARROW_SEARCH_LIMIT).toBe(8);
   });
 
-  it("releases offscreen slots quickly enough for the visible grid", () => {
-    expect(OFFSCREEN_GRACE_MS).toBeLessThan(1_000);
+  it("holds an offscreen preview long enough to survive a scroll bounce", () => {
+    // Was 750ms, which freed slots promptly but killed compiles: a card nudged just
+    // outside the activation margin lost its slot mid-build, and scrolling back
+    // restarted it from nothing. A preview in a busy part of the grid could churn
+    // indefinitely and never finish — the "stuck loading" cards.
+    expect(OFFSCREEN_GRACE_MS).toBeGreaterThanOrEqual(5_000);
+  });
+
+  it("protects work already in flight for longer than a compile takes", () => {
+    // The grace period alone is not enough: a compile that outlives it would still be
+    // torn down. Work that has not reached a terminal state is held until it resolves
+    // or this cap expires, whichever comes first.
+    expect(IN_FLIGHT_PROTECTION_MS).toBeGreaterThan(OFFSCREEN_GRACE_MS);
+    expect(IN_FLIGHT_PROTECTION_MS).toBeGreaterThanOrEqual(20_000);
+  });
+
+  it("still bounds how long a slot can be held", () => {
+    // Otherwise a handful of never-resolving previews would own the whole budget.
+    expect(IN_FLIGHT_PROTECTION_MS).toBeLessThanOrEqual(60_000);
   });
 
   it("keeps a bounded, continuous catalogue window in both directions", () => {

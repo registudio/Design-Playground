@@ -21,7 +21,9 @@
     "audit:previews": "node scripts/audit-element-previews.mjs",
     "warm:previews": "node scripts/warm-element-previews.mjs",
     "fixture:registry": "node scripts/fixture-registry.mjs",
-    "verify": "npm run typecheck && npm run test && npm run build"
+    "verify": "npm run typecheck && npm run test && npm run build",
+    "e2e:preview-states": "node scripts/e2e-preview-states.mjs",
+    "fixture:previews": "node scripts/fixture-preview-index.mjs"
   },
   "dependencies": {
     "@tailwindcss/browser": "^4.3.3",

@@ -32,7 +32,16 @@ export const runtime = "nodejs";
 /** Conservative: registry item names are plain identifiers, never paths. */
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
-const TIMEOUT_MS = 20_000;
+/**
+ * Registry item documents are small JSON files. Twenty seconds meant a source that had
+ * stopped answering held a card on its placeholder long enough to read as broken rather
+ * than slow, so this is short enough that an unresponsive host resolves to a visible
+ * outcome while still tolerating an ordinary cold response.
+ */
+const TIMEOUT_MS = 9_000;
+
+/** How long a surface may stay empty before it is reported as blank rather than pending. */
+const BLANK_GRACE_MS = 4000;
 const PUBLISHED_ITEM_CACHE_ENTRIES = 640;
 const REMOTE_MODULE_CACHE_ENTRIES = 256;
 
@@ -169,6 +178,20 @@ interface PublishedItem {
 }
 
 /** The published item document, which carries the component's own source files. */
+/**
+ * Drops every cached trace of one item so a retry genuinely starts over.
+ *
+ * Deliberately does not clear the shared remote-module cache: those are npm packages,
+ * identical across items, and evicting them would make one retry re-download React for
+ * every other preview on the page.
+ */
+function forget(source: SourceId, name: string): void {
+  documents.delete(`${source}:${name}`);
+  for (const key of [...publishedItems.keys()]) {
+    if (key.startsWith(`${source}:`)) publishedItems.delete(key);
+  }
+}
+
 async function fetchItem(source: SourceId, name: string) {
   const seen = new Set<string>();
   const files = new Map<string, RegistryFile>();
@@ -204,6 +227,24 @@ async function fetchPublishedItem(source: SourceId, name: string): Promise<Publi
   );
 }
 
+/**
+ * Where one published item's JSON lives.
+ *
+ * Item documents sit beside registry.json in the same directory on every one of the
+ * five, which is the shadcn registry layout rather than a per-vendor guess.
+ *
+ * DP_REGISTRY_BASE redirects every source at one origin. That exists so the compile
+ * path can be exercised against a local fixture registry — the failures this runtime
+ * actually produces are only reproducible by compiling something, and depending on five
+ * third-party hosts to reproduce a bug makes the bug untestable.
+ */
+function itemEndpoint(endpoint: string, item: string): string {
+  const base = process.env.DP_REGISTRY_BASE;
+  if (!base) return endpoint.replace(/registry\.json$/, `${item}.json`);
+  const source = new URL(endpoint).hostname.split(".")[0];
+  return `${base.replace(/\/$/, "")}/${source}/${item}.json`;
+}
+
 async function fetchPublishedItemUncached(source: SourceId, name: string): Promise<PublishedItem> {
   const registry = REGISTRY_SOURCES.find((entry) => entry.id === source)!;
   // Item documents sit beside registry.json in the same directory on every one of the
@@ -213,7 +254,7 @@ async function fetchPublishedItemUncached(source: SourceId, name: string): Promi
     : [name];
   let lastFailure = `${registry.label} did not publish "${name}"`;
   for (const candidate of candidates) {
-    const url = registry.endpoint.replace(/registry\.json$/, `${candidate}.json`);
+    const url = itemEndpoint(registry.endpoint, candidate);
     const response = await fetch(url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Accept: "application/json" },
@@ -272,7 +313,11 @@ export async function GET(request: Request) {
   try {
     const key = diskKey(source, name);
     const retry = Number(params.get("retry") ?? 0) > 0;
-    if (retry) documents.delete(`${source}:${name}`);
+    // Every layer, not just the compiled document. Dropping only the document cache
+    // left the retry joining the *same* in-flight item fetch, so a registry that had
+    // stopped responding could never be escaped: each retry waited on the original
+    // hung request and reported the same failure at the same moment.
+    if (retry) forget(source as SourceId, name);
     const html = await remember(`${source}:${name}`, async () => {
       const cached = retry ? null : await readDisk(key);
       if (cached) return cached;
@@ -322,15 +367,105 @@ async function compile(source: SourceId, name: string): Promise<string> {
   return documentFor(name, code, `${utilityCss}\n${bundledCss}`);
 }
 
-/** Report the mounted surface, including runtime fallbacks, to its owning card. */
+/**
+ * Reports what the mounted surface actually looks like, to its owning card.
+ *
+ * Two things were wrong with counting `root.childElementCount`. A component can mount,
+ * produce DOM and paint nothing — an absolutely positioned layer against a parent with
+ * no height is the common shape — so a card said "Ready" over a blank rectangle. And
+ * the report was effectively one-shot: a double rAF plus a MutationObserver, which for
+ * a component that renders once and never mutates means a single message. Miss it and
+ * the card waits forever.
+ *
+ * So status is decided by measured area rather than by node count, and the document
+ * answers whenever it is asked, rather than announcing once and hoping.
+ */
 function withStatus(html: string): string {
-  return html.replace("</body>", `<script>
-const report=()=>{const fallback=document.querySelector('.dp-auto-visual');const root=document.getElementById('root');const status=fallback?'fallback':root&&root.childElementCount?'ready':'rendering';parent.postMessage({type:'dp-preview-status',status},'*');};
-new MutationObserver(report).observe(document.body,{childList:true,subtree:true});
-addEventListener('error',()=>parent.postMessage({type:'dp-preview-status',status:'failed'},'*'));
-addEventListener('unhandledrejection',()=>parent.postMessage({type:'dp-preview-status',status:'failed'},'*'));
-requestAnimationFrame(()=>requestAnimationFrame(report));
-</script></body>`);
+  const script = `<script>
+(() => {
+  // Echoed back so the card can tell this document's reports from its predecessor's.
+  // Changing the src starts a new document, but the old one keeps polling for a few
+  // seconds — and its late "fallback" was landing on top of the retry's "rendering",
+  // making Retry look like it had done nothing.
+  const attempt = new URLSearchParams(location.search).get("retry") || "0";
+  const send = (status) => { try { parent.postMessage({ type: "dp-preview-status", status, attempt }, "*"); } catch {} };
+
+  // Occupying a box is not the same as making a mark. A component whose outer element
+  // is \`position:absolute; inset:0\` resolves against the viewport and therefore
+  // measures full size while painting nothing at all — which is exactly the shape that
+  // produced cards reading "Ready" over an empty rectangle. So each element has to show
+  // some actual ink: a fill, an edge, a shadow, text, or its own replaced content.
+  const inks = (node) => {
+    const box = node.getBoundingClientRect();
+    if (box.width < 4 || box.height < 4) return false;
+    const style = getComputedStyle(node);
+    if (style.visibility === "hidden" || style.display === "none") return false;
+    if (Number.parseFloat(style.opacity) < 0.02) return false;
+    if (/^(IMG|CANVAS|SVG|VIDEO|PICTURE)$/.test(node.tagName)) return true;
+    // Parsed rather than pattern-matched. This lives inside a template literal, so a
+    // regex written here loses its backslashes on the way into the document — which is
+    // how the transparency test silently inverted and made every empty box count as ink.
+    const background = style.backgroundColor || "";
+    const alpha = background.startsWith("rgba(")
+      ? Number.parseFloat(background.slice(5).split(",")[3] || "1")
+      : background && background !== "transparent" ? 1 : 0;
+    if (alpha > 0.02) return true;
+    if (style.backgroundImage && style.backgroundImage !== "none") return true;
+    const border = ["borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]
+      .reduce((total, side) => total + Number.parseFloat(style[side] || "0"), 0);
+    if (border > 0) return true;
+    if (style.boxShadow && style.boxShadow !== "none") return true;
+    if (style.outlineStyle && style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth || "0") > 0) return true;
+    // Direct text, not a descendant's — descendants are visited in their own right.
+    for (const child of node.childNodes) {
+      if (child.nodeType === 3 && child.textContent && child.textContent.trim()) return true;
+    }
+    return false;
+  };
+
+  const painted = () => {
+    const root = document.getElementById("root");
+    if (!root) return false;
+    for (const node of [root, ...root.querySelectorAll("*")]) {
+      if (inks(node)) return true;
+    }
+    return false;
+  };
+
+  const started = Date.now();
+  let settled = false;
+
+  const evaluate = () => {
+    if (document.querySelector(".dp-auto-visual")) return "fallback";
+    if (painted()) return "ready";
+    // Components legitimately render late — a transition, a timer, an effect that
+    // measures first. Only after that grace is an empty surface really empty.
+    return Date.now() - started > ${BLANK_GRACE_MS} ? "blank" : "rendering";
+  };
+
+  const report = () => {
+    const status = evaluate();
+    if (status === "ready" || status === "fallback" || status === "blank") settled = true;
+    send(status);
+  };
+
+  new MutationObserver(report).observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+  addEventListener("error", () => send("failed"));
+  addEventListener("unhandledrejection", () => send("failed"));
+  // The card may ask at any time, which removes the race entirely: a status that
+  // arrives before anyone is listening is no longer lost.
+  addEventListener("message", (event) => { if (event.data && event.data.type === "dp-preview-ping") report(); });
+
+  requestAnimationFrame(() => requestAnimationFrame(report));
+  // Polled briefly as well, so a surface that appears without mutating the DOM — a
+  // canvas drawing itself, an image decoding — is still noticed.
+  const poll = setInterval(() => { report(); if (settled || Date.now() - started > ${BLANK_GRACE_MS + 2000}) clearInterval(poll); }, 400);
+  addEventListener("load", report);
+})();
+</script>`;
+  // Appended rather than substituted into </body>: a document without that exact
+  // closing tag would silently lose its reporter.
+  return html.includes("</body>") ? html.replace("</body>", `${script}</body>`) : html + script;
 }
 
 /**

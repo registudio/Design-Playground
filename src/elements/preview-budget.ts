@@ -22,7 +22,18 @@ export const ACTIVATION_MARGIN_PX = 320;
  * How long an offscreen preview is kept before teardown. Long enough that a small
  * reverse scroll does not unmount and remount everything it passes.
  */
-export const OFFSCREEN_GRACE_MS = 750;
+export const OFFSCREEN_GRACE_MS = 8000;
+
+/**
+ * A preview that has not reached a terminal state is never torn down before this.
+ *
+ * Compiling a registry component takes seconds. With a short grace period alone, a card
+ * nudged just outside the activation margin lost its slot mid-compile, and scrolling
+ * back restarted it from nothing — so a preview in a busy part of the grid could churn
+ * indefinitely without ever finishing. Work already in flight is protected until it
+ * resolves or this cap expires.
+ */
+export const IN_FLIGHT_PROTECTION_MS = 25_000;
 
 /**
  * A search this narrow is taken as "show me these", so its results activate without

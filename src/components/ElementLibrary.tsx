@@ -99,6 +99,14 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const [onlySelected, setOnlySelected] = useState(false);
   const [registryOpen, setRegistryOpen] = useState(false);
   const [inspecting, setInspecting] = useState<string | null>(null);
+  /**
+   * The registry element being shown full size.
+   *
+   * Only the authored originals could be expanded, so on a grid where most cards are
+   * registry components the affordance appeared to work at random — present on some
+   * cards, missing on others, with nothing to explain the difference.
+   */
+  const [expanded, setExpanded] = useState<DesignElement | null>(null);
   const [paused, setPaused] = useState(false);
   const [compact, setCompact] = useState(false);
   const [collection, setCollection] = useState("All collections");
@@ -244,6 +252,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const rowsBelow = Math.ceil(Math.max(0, results.length - cardWindow.end) / columns);
   const active = ELEMENTS.find(e => e.id === inspecting);
   useEffect(() => { if (!active) return; const key = (e: KeyboardEvent) => { if (e.key === "Escape") setInspecting(null); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); }, [active]);
+  useEffect(() => { if (!expanded) return; const key = (e: KeyboardEvent) => { if (e.key === "Escape") setExpanded(null); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); }, [expanded]);
 
   const toggle = (item: LibraryItem) => {
     if (exploring || !project) { onCreate?.(); return; }
@@ -284,7 +293,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
             ? (paused
                 ? <button className="paused-demo" onClick={() => setPaused(false)}>▶<span>{item.title}</span></button>
                 : <iframe title={`${item.title} live preview`} sandbox="allow-scripts" srcDoc={elementDocument(item.id)} loading={index < 6 ? "eager" : "lazy"}/>)
-            : <RegistryPreview element={item.registry!} paused={paused} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT}/>}
+            : <RegistryPreview element={item.registry!} paused={paused} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => setExpanded(item.registry!)}/>}
           {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => setInspecting(item.id)}>↗</button>}
         </div>
         <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category}</span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>
@@ -310,6 +319,23 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     {!results.length && <div className="empty-state"><h2>No elements here yet.</h2><p>{registry.elements.length === 0 ? "The registry index hasn't been fetched yet. Open Registry detail to pull it in." : "Try another search or add something to your collection."}</p><button className="quiet-button" onClick={() => { setQuery(""); setCategory("All elements"); setSource(null); setOnlySelected(false); }}>Reset filters</button></div>}
     <div className="library-footer"><span>Made to be explored. Built to be yours.</span><span>✳ DESIGN PLAYGROUND</span></div>
     {registryOpen && <ElementsBrowser readOnly={exploring} onClose={() => setRegistryOpen(false)}/>}
+    {expanded && <div className="studio-overlay" onClick={() => setExpanded(null)}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={expanded.title} onClick={e => e.stopPropagation()}>
+      <header>
+        <div>
+          <h2>{expanded.title}</h2>
+          <p>{describeElement(expanded)}</p>
+          <p className="demo-origin">Source: {sourceById(expanded.source)?.label ?? expanded.source} · {expanded.referenceOnly ? "reference only" : expanded.engineDependency.length ? expanded.engineDependency.join(" + ") : "no engine"}</p>
+        </div>
+        <button autoFocus className="quiet-button" onClick={() => setExpanded(null)}>Close ×</button>
+      </header>
+      {/* The same compiled document the card shows, at a size where the component can
+          actually lay itself out — several only make sense above a card's height. */}
+      <iframe title={`${expanded.title} expanded preview`} sandbox="allow-scripts" src={`/api/element-preview?source=${encodeURIComponent(expanded.source)}&name=${encodeURIComponent(expanded.source === "react-bits" && expanded.variant ? `${expanded.name}-${expanded.variant.language}-${expanded.variant.styling}` : expanded.name)}`}/>
+      <footer>
+        <a className="quiet-button" href={sourceById(expanded.source)?.homepage ?? "#"} target="_blank" rel="noreferrer noopener">Open {sourceById(expanded.source)?.label} ↗</a>
+        <button className="primary-button" onClick={() => { toggle({ id: expanded.id, title: expanded.title, description: expanded.description, category: browseCategory(expanded), preview: false, registry: expanded }); setExpanded(null); }}>{picked.some(s => s.id === expanded.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button>
+      </footer>
+    </div></div>}
     {active && <div className="studio-overlay" onClick={() => setInspecting(null)}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={active.title} onClick={e => e.stopPropagation()}><header><div><h2>{active.title}</h2><p>{active.description}</p><p className="demo-origin">Source: {elementOrigin(active.id).name} · {elementOrigin(active.id).runtime}</p></div><button autoFocus className="quiet-button" onClick={() => setInspecting(null)}>Close ×</button></header><iframe key={replay} title={`${active.title} expanded preview`} sandbox="allow-scripts" srcDoc={elementDocument(active.id)}/><footer><button className="quiet-button" onClick={() => setReplay(replay + 1)}>↻ Replay</button><button className="primary-button" onClick={() => toggle({ id: active.id, title: active.title, description: active.description, category: active.category, preview: true })}>{selected.some(s => s.id === active.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button></footer></div></div>}
   </>;
 }
