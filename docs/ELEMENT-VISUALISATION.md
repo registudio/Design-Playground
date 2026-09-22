@@ -63,11 +63,11 @@ The generated harness supplies representative text, images, collections, chart d
 
 ### 1. Proximity and search activation
 
-An external iframe is created when its card comes within 320 px of the catalogue viewport. A search that narrows the result to eight or fewer entries activates those entries immediately. Offscreen previews retain their slot for only 750 ms, allowing the newly visible row to start within the three-second interaction budget.
+An external iframe is created when its card comes within 320 px of the catalogue viewport. A search that narrows the result to eight or fewer entries activates those entries immediately. Offscreen previews keep their slot for a grace period only while nothing on screen needs it: a card on screen that is waiting takes the slot of the farthest offscreen card, finished previews first (see *Preview state and queue priority*).
 
 ### 2. Visible-grid concurrency budget
 
-Up to 12 external previews may be live together. This covers a large three-column viewport and one approaching row, so visible cards do not remain stuck in a waiting poster. Additional near-viewport cards enter a FIFO queue. Iframes use eager loading once admitted because proximity has already performed the lazy-loading decision.
+Up to 12 external previews may be live together. This covers a large three-column viewport and one approaching row. Additional near-viewport cards wait in a queue ordered by distance, nearest first. Iframes use eager loading once admitted because proximity has already performed the lazy-loading decision.
 
 ### 3. Shared downloads, memory, disk and browser caching
 
@@ -97,7 +97,16 @@ With the dev server or a deployment running, run `npm run warm:previews` (set `D
 
 ### Preview state and queue priority
 
-Cards show queued, rendering, ready, fallback or failed. The sandbox reports component mounting and fallback DOM using a message checked against the owning iframe window. Ready does not certify pixels or interaction correctness. Retry recompiles the preview. Queue priority is evaluated from current viewport distance, with narrow searches and pointer interest promoted. Leaving proximity immediately removes queued work; already active frames retain the short teardown grace. Compact selected previews use distinct queue identities so duplicate cards cannot steal one another's slots.
+Cards show queued, rendering, ready or fallback. The sandbox reports what it has painted using a message checked against the owning iframe window. Ready does not certify pixels or interaction correctness. Retry recompiles the preview. Compact selected previews use distinct queue identities so duplicate cards cannot steal one another's slots.
+
+Queue priority is current viewport distance, with narrow searches and pointer interest promoted. The rules live in `src/elements/preview-queue.ts` and are unit-tested:
+
+- A card on screen that is waiting takes a slot from an offscreen card — a finished preview before one still compiling, then the farthest away. A card on screen is never evicted. This is what stops the previous screenful from holding every slot while the cards in view sit at Queued; a measured pass through the library (`scripts/audit-grid-scroll.mjs`) went from 206 of 318 on-screen cards never showing anything to none left queued.
+- The queue drains until no on-screen card is waiting, rather than evicting once per request, because a card queued from the look-ahead margin can slide into view without asking again. It also re-balances when scrolling settles.
+- Evicting is cheap: the route keeps compiling after a frame is removed and caches the document, so returning to a card is a cache hit.
+- Without on-screen demand, offscreen frames still keep the grace and in-flight protection from `preview-budget.ts`.
+
+A card never ends empty. A surface that has painted nothing after 2 seconds, or that throws before painting, gets the generated visual laid over it and reports a fallback. The layer is provisional: a component that paints later removes it and reports ready. An error thrown after something has painted is not a failure — components throw from effects and handlers after rendering correctly. A registry that never answers resolves to the generated fallback after the 9-second fetch timeout.
 
 ZIP handoffs include `EXPORT-QUALITY.md`. Preview observations are session-local; unviewed elements are explicitly unobserved. Runtime cost is qualitative and dependency installation in the target repository is not verified.
 

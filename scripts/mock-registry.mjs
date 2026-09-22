@@ -44,6 +44,20 @@ export default function Slow() {
 }
 `;
 
+/**
+ * Paints only after the blank grace has run out, so the generated visual is laid over it
+ * first. It must still take over and report ready when it arrives — the fallback is
+ * provisional, not a verdict.
+ */
+const later = `
+import * as React from "react";
+export default function Later() {
+  const [shown, setShown] = React.useState(false);
+  React.useEffect(() => { const t = setTimeout(() => setShown(true), 3200); return () => clearTimeout(t); }, []);
+  return shown ? <div style={{ padding: 24, background: "#2b3d1d", color: "#d9f0b8" }}>Arrived after the grace</div> : null;
+}
+`;
+
 /** Throws on mount. The error boundary should catch it and the card should say so. */
 const broken = `
 export default function Broken() { throw new Error("needs an application provider"); }
@@ -56,10 +70,41 @@ const ITEMS = {
   visible: { name: "visible", files: [file("components/visible.tsx", visible)] },
   "zero-area": { name: "zero-area", files: [file("components/zero-area.tsx", zeroArea)] },
   slow: { name: "slow", files: [file("components/slow.tsx", slow)] },
+  later: { name: "later", files: [file("components/later.tsx", later)] },
   broken: { name: "broken", files: [file("components/broken.tsx", broken)] },
   helper: { name: "helper", files: [file("hooks/use-thing.ts", helper)] },
   empty: { name: "empty", files: [] },
 };
+
+/**
+ * --any: answer for every item name, not just the fixtures above.
+ *
+ * The gallery's failures are about scale as much as about any one component — a page of
+ * cards competing for a handful of slots while the user scrolls. Reproducing that needs
+ * every real item in the snapshot to resolve to *something*, with realistic latency and
+ * the same mix of misbehaviour the real registries produce. Each name maps to a stable
+ * behaviour by hash, so a run is repeatable.
+ *
+ *   node scripts/mock-registry.mjs 4599 --any
+ */
+const ANY = process.argv.includes("--any");
+
+const hash = (text) => { let h = 2166136261; for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; return h; };
+
+function synthetic(item) {
+  const h = hash(item), roll = h % 100, delay = 150 + (h >>> 8) % 1650;
+  const hue = h % 360;
+  const kind =
+    roll < 80 ? "visible" : roll < 86 ? "zero-area" : roll < 91 ? "broken" : roll < 95 ? "slow" : roll < 98 ? "helper" : "never";
+  const component =
+    kind === "visible" ? `export default function Item() { return <div style={{ padding: 22, borderRadius: 14, background: "hsl(${hue} 45% 28%)", color: "#fff", fontSize: 18 }}>${item.replace(/[^\w -]/g, "")}</div>; }`
+    : kind === "zero-area" ? zeroArea
+    : kind === "broken" ? broken
+    : kind === "slow" ? slow
+    : helper;
+  const path = kind === "helper" ? `hooks/${item}.ts` : `components/${item}.tsx`;
+  return { kind, delay, body: { name: item, files: [file(path, component)] } };
+}
 
 const server = createServer((request, response) => {
   const url = new URL(request.url, "http://localhost");
@@ -67,6 +112,16 @@ const server = createServer((request, response) => {
 
   // "never" hangs, so a preview that never resolves can be reproduced deliberately.
   if (item === "never") return;
+
+  if (ANY && !ITEMS[item]) {
+    const made = synthetic(item);
+    if (made.kind === "never") return;
+    setTimeout(() => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify(made.body));
+    }, made.delay);
+    return;
+  }
 
   const found = ITEMS[item];
   if (!found) {

@@ -9,6 +9,7 @@ import {
 } from "@/elements/preview-budget";
 import type { DesignElement } from "@/registry/schema";
 import { previewKey, recordPreview, type PreviewStatus } from "@/elements/preview-status";
+import { createSlotQueue } from "@/elements/preview-queue";
 
 /**
  * A live preview of one published registry component.
@@ -22,39 +23,21 @@ import { previewKey, recordPreview, type PreviewStatus } from "@/elements/previe
 
 /**
  * Module-level rather than per-component: the budget is a property of the page, not of
- * any one card, and a queue each card kept its own copy of would not be a queue.
- *
- * Keyed by element id throughout. An earlier version queued bare callbacks, which meant
- * a card that unmounted while waiting — a fast scroll, or React's development
- * double-mount — left a callback behind that later claimed a slot for a component no
- * longer on the page. Those slots were never returned, so after enough churn nothing
- * could start at all.
+ * any one card, and a queue each card kept its own copy of would not be a queue. The
+ * rules for who gets a slot, and who gives one up, live in preview-queue.ts.
  */
-const live = new Set<string>();
-const waiting = new Map<string, { start: () => void; priority: () => number }>();
+const slots = createSlotQueue(MAX_LIVE_PREVIEWS);
 
-function requestSlot(id: string, start: () => void, priority = () => 0): void {
-  if (live.has(id)) return;
-  if (live.size < MAX_LIVE_PREVIEWS) {
-    live.add(id);
-    start();
-    return;
-  }
-  // Keyed, so re-entering the viewport twice cannot queue the same card twice.
-  waiting.set(id, { start, priority });
-}
-
-function releaseSlot(id: string): void {
-  waiting.delete(id);
-  if (!live.delete(id)) return;
-  // FIFO: the card waiting longest is the one nearest to being scrolled past, so
-  // serving it first is also what keeps the grid feeling continuous.
-  const next = [...waiting.entries()].sort((a,b) => a[1].priority() - b[1].priority())[0];
-  if (!next) return;
-  const [nextId, entry] = next;
-  waiting.delete(nextId);
-  live.add(nextId);
-  entry.start();
+/**
+ * Scrollers already re-balancing on scrollend. Settling is the moment the set of cards
+ * on screen is final, so it is when the queue should be checked again — not only when
+ * a card happens to cross an observer threshold on the way.
+ */
+const pumpedRoots = new WeakSet<EventTarget>();
+function pumpOnSettle(root: EventTarget): void {
+  if (pumpedRoots.has(root)) return;
+  pumpedRoots.add(root);
+  root.addEventListener("scrollend", slots.pump, { passive: true });
 }
 
 /**
@@ -101,6 +84,8 @@ export function RegistryPreview({
   const frame = useRef<HTMLIFrameElement>(null);
   const instance = useRef(Math.random().toString(36).slice(2));
   const interested = useRef(false);
+  /** Inside the activation margin: still wanted, even while it has no slot. */
+  const near = useRef(false);
   const observationKey = previewKey(element);
   const host = useRef<HTMLDivElement>(null);
   const teardown = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,12 +99,32 @@ export function RegistryPreview({
     if (!node) return;
     const id = `${element.id}:${instance.current}`;
     const start = () => { startedAt.current = Date.now(); settled.current = false; setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); };
-    const priority = () => { if (interested.current) return -2; const rect = node.getBoundingClientRect(); const root = scrollParent(node)?.getBoundingClientRect(); return Math.max(0, rect.top - (root?.bottom ?? innerHeight), (root?.top ?? 0) - rect.bottom); };
+    const root = scrollParent(node);
+    pumpOnSettle(root ?? window);
+    const priority = () => {
+      if (interested.current) return -2;
+      if (eager) return -1;
+      const rect = node.getBoundingClientRect();
+      const box = root?.getBoundingClientRect();
+      // Measured to the card's centre line so a card half on screen counts as on screen.
+      const middle = (rect.top + rect.bottom) / 2;
+      return Math.max(0, middle - (box?.bottom ?? innerHeight), (box?.top ?? 0) - middle);
+    };
+    const evict = () => {
+      if (teardown.current) clearTimeout(teardown.current);
+      teardown.current = null;
+      setActive(false);
+      setLoaded(false);
+      setStatus("queued");
+      // Still wanted if it comes back, so it waits again at its (now low) priority.
+      return near.current;
+    };
+    slots.register(id, { priority, settled: () => settled.current, evict, start });
 
     // Paused: give up the slot outright rather than merely declining new ones, so
     // pausing frees whatever is already running.
     if (paused) {
-      releaseSlot(id);
+      slots.unregister(id);
       setActive(false);
       setLoaded(false);
       return;
@@ -131,24 +136,24 @@ export function RegistryPreview({
     };
 
     if (eager) {
-      requestSlot(id, start, () => -1);
+      slots.request(id);
       return () => {
         cancelTeardown();
-        releaseSlot(id);
+        slots.unregister(id);
       };
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const near = entries[0]?.isIntersecting ?? false;
-        if (near) {
+        near.current = entries[0]?.isIntersecting ?? false;
+        if (near.current) {
           cancelTeardown();
-          requestSlot(id, start, priority);
+          slots.request(id);
           return;
         }
         // Not torn down immediately: a small reverse scroll would otherwise unmount and
         // remount every preview it passes, which costs far more than holding them.
-        waiting.delete(id);
+        if (slots.isWaiting(id)) slots.release(id);
         if (teardown.current) return;
         // Work in flight is protected: tearing a compile down at the grace period and
         // restarting it on the way back is how a card ends up loading forever.
@@ -159,20 +164,33 @@ export function RegistryPreview({
           : OFFSCREEN_GRACE_MS;
         teardown.current = setTimeout(() => {
           teardown.current = null;
-          releaseSlot(id);
+          slots.release(id);
           setActive(false);
           setLoaded(false);
           setStatus("queued");
         }, delay);
       },
-      { root: scrollParent(node), rootMargin: `${ACTIVATION_MARGIN_PX}px` },
+      { root, rootMargin: `${ACTIVATION_MARGIN_PX}px` },
+    );
+
+    // A card already queued asks again once it is actually on screen, since reaching the
+    // activation margin is not the same as being looked at — and only a card on screen
+    // may take a slot from another.
+    const onScreen = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || slots.isLive(id)) return;
+        slots.request(id);
+      },
+      { root, threshold: 0.5 },
     );
 
     observer.observe(node);
+    onScreen.observe(node);
     return () => {
       observer.disconnect();
+      onScreen.disconnect();
       cancelTeardown();
-      releaseSlot(id);
+      slots.unregister(id);
     };
   }, [element.id, eager, paused, observationKey]);
 
@@ -222,7 +240,7 @@ export function RegistryPreview({
   const concreteName = element.source === "react-bits" && element.variant
     ? `${element.name}-${element.variant.language}-${element.variant.styling}`
     : element.name;
-  const src = `/api/element-preview?v=5&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
+  const src = `/api/element-preview?v=6&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
 
   return (
     <div className="registry-canvas" ref={host} data-active={active ? "yes" : "no"} onPointerEnter={() => { interested.current = true; }} onPointerLeave={() => { interested.current = false; }}>
@@ -289,5 +307,5 @@ const STATUS_LABEL: Record<PreviewStatus, string> = {
 
 /** Exposed for the browser check, which asserts the concurrency budget is respected. */
 export function livePreviewCount(): number {
-  return live.size;
+  return slots.liveCount();
 }

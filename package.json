@@ -22,6 +22,7 @@
     "e2e:studio": "node scripts/e2e-studio.mjs",
     "audit:previews": "node scripts/audit-element-previews.mjs",
     "audit:render": "node scripts/audit-element-renders.mjs",
+    "audit:grid": "node scripts/audit-grid-scroll.mjs",
     "warm:previews": "node scripts/warm-element-previews.mjs",
     "fixture:registry": "node scripts/fixture-registry.mjs",
     "verify": "npm run typecheck && npm run test && npm run build",

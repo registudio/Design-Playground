@@ -18,7 +18,7 @@ if (target.includes("data/registry-snapshot.json")) {
 }
 
 const now = new Date().toISOString();
-const names = ["visible", "zero-area", "slow", "broken", "helper", "empty", "missing", "never"];
+const names = ["visible", "zero-area", "slow", "later", "broken", "helper", "empty", "missing", "never"];
 const elements = names.map((name) => ({
   id: `bklit:${name}`, name,
   title: name.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),

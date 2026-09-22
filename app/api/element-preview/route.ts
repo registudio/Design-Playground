@@ -40,8 +40,16 @@ const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
  */
 const TIMEOUT_MS = 9_000;
 
-/** How long a surface may stay empty before it is reported as blank rather than pending. */
-const BLANK_GRACE_MS = 4000;
+/**
+ * How long a surface may stay empty before the generated visual is laid over it.
+ *
+ * Short, because the fallback is no longer final: it sits over the component, and a
+ * component that paints late — a staggered reveal, a delayed entrance — removes it and
+ * reports ready. A long grace only kept cards that will never paint empty for longer.
+ */
+const BLANK_GRACE_MS = 2000;
+/** How long after load the document keeps polling for a late first paint. */
+const LATE_PAINT_WATCH_MS = 8000;
 const PUBLISHED_ITEM_CACHE_ENTRIES = 640;
 const REMOTE_MODULE_CACHE_ENTRIES = 256;
 
@@ -433,25 +441,51 @@ function withStatus(html: string): string {
   };
 
   const started = Date.now();
-  let settled = false;
+  let errored = false;
+
+  // A card that ends empty is a card that was scrolled to and showed nothing, which is
+  // the one outcome the gallery cannot have. So a surface that is still blank after the
+  // grace, or that threw before painting anything, is replaced with the same generated
+  // visual used when a component cannot be compiled, and reported as a fallback — the
+  // card says so, and Retry is still there.
+  //
+  // Laid over the component rather than replacing it, so one that was merely slow can
+  // still take over: the moment it paints, the layer is removed and the card reports
+  // ready.
+  let layer = null;
+  const fallBack = () => {
+    if (layer || document.querySelector(".dp-auto-visual")) return;
+    layer = document.createElement("div");
+    layer.style.cssText = "position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:2147483647";
+    layer.innerHTML = '<div class="dp-auto-visual" aria-label="Generated visual fallback"><div class="dp-auto-orbit"><i></i><i></i><i></i></div><div class="dp-auto-bars"><i></i><i></i><i></i><i></i><i></i></div><small></small></div>';
+    layer.querySelector("small").textContent = document.title;
+    document.body.appendChild(layer);
+  };
 
   const evaluate = () => {
+    if (painted()) {
+      if (layer) { layer.remove(); layer = null; }
+      return document.querySelector(".dp-auto-visual") ? "fallback" : "ready";
+    }
     if (document.querySelector(".dp-auto-visual")) return "fallback";
-    if (painted()) return "ready";
     // Components legitimately render late — a transition, a timer, an effect that
     // measures first. Only after that grace is an empty surface really empty.
-    return Date.now() - started > ${BLANK_GRACE_MS} ? "blank" : "rendering";
+    if (errored || Date.now() - started > ${BLANK_GRACE_MS}) { fallBack(); return "fallback"; }
+    return "rendering";
   };
 
   const report = () => {
     const status = evaluate();
-    if (status === "ready" || status === "fallback" || status === "blank") settled = true;
     send(status);
+    return status;
   };
 
   new MutationObserver(report).observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-  addEventListener("error", () => send("failed"));
-  addEventListener("unhandledrejection", () => send("failed"));
+  // An error is only a failure if nothing is showing. Components throw from effects and
+  // handlers all the time after painting perfectly well, and reporting those as failed
+  // hid a working preview behind the placeholder.
+  addEventListener("error", () => { errored = true; report(); });
+  addEventListener("unhandledrejection", () => { errored = true; report(); });
   // The card may ask at any time, which removes the race entirely: a status that
   // arrives before anyone is listening is no longer lost.
   addEventListener("message", (event) => { if (event.data && event.data.type === "dp-preview-ping") report(); });
@@ -459,7 +493,9 @@ function withStatus(html: string): string {
   requestAnimationFrame(() => requestAnimationFrame(report));
   // Polled briefly as well, so a surface that appears without mutating the DOM — a
   // canvas drawing itself, an image decoding — is still noticed.
-  const poll = setInterval(() => { report(); if (settled || Date.now() - started > ${BLANK_GRACE_MS + 2000}) clearInterval(poll); }, 400);
+  // Kept going past a fallback: a CSS-only entrance changes nothing in the DOM, so the
+  // mutation observer alone would never see it arrive.
+  const poll = setInterval(() => { const status = report(); if (status === "ready" || Date.now() - started > ${LATE_PAINT_WATCH_MS}) clearInterval(poll); }, 400);
   addEventListener("load", report);
 })();
 </script>`;

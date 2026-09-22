@@ -32,7 +32,14 @@ await page.getByRole("button",{name:/Elements/}).first().click();
 await page.waitForTimeout(2000);
 // The authored originals lead the grid; narrow to the fixture registry source.
 await page.getByRole("button",{name:/^Bklit/}).click();
-// Long enough for the 4s blank grace and the 20s hang timeout to resolve.
+await page.waitForTimeout(800);
+// Visit every card, as a person scrolling would. Previews start when they are scrolled
+// to, not before, so a card below the fold that nobody has reached is correctly idle.
+for (const card of await page.locator(".element-card").all()) {
+  await card.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+}
+// Long enough for the blank grace and the hang timeout to resolve.
 await page.waitForTimeout(20000);
 
 const cards = await page.evaluate(() => [...document.querySelectorAll(".element-card")].map(card => {
@@ -52,8 +59,12 @@ console.log(JSON.stringify(cards, null, 1));
 
 const byTitle = Object.fromEntries(cards.map(c => [c.title, c]));
 ok("a component that paints reports Ready", byTitle["Visible"]?.status === "Ready");
-ok("a component that paints nothing is not called Ready", byTitle["Zero Area"]?.status === "Nothing to show");
+// Not "Ready" — nothing it drew is visible — but not an empty card either: the document
+// lays the generated visual over it and says so.
+ok("a component that paints nothing is not called Ready", byTitle["Zero Area"]?.status === "Fallback demo");
+ok("every card ends showing a visual, never an empty frame", cards.every(c => c.frameVisible));
 ok("a late-rendering component still reaches Ready", byTitle["Slow"]?.status === "Ready");
+ok("one that paints after the fallback appeared takes over and reports Ready", byTitle["Later"]?.status === "Ready");
 ok("an item with no component shows the fallback", byTitle["Helper"]?.status === "Fallback demo");
 // A source that stops answering resolves to the generated fallback with a retry,
 // rather than holding the placeholder indefinitely.
