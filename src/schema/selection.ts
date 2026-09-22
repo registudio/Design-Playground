@@ -67,6 +67,8 @@ export const SelectedElement = z.object({
   engineDependency: z.array(z.enum(["motion", "gsap"])).default([]),
   /** When it was picked, so the selection list can hold a meaningful order. */
   addedAt: z.number(),
+  npmDependencies: z.array(z.string()).optional(),
+  registryDependencies: z.array(z.string()).optional(),
 });
 export type SelectedElement = z.infer<typeof SelectedElement>;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { buildExport, type ValidationIssue } from "@/export/bundle";
 import {
@@ -24,6 +24,25 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
   const [directory, setDirectory] = useState<FileSystemDirectoryHandle | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = () => [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(e => e.getClientRects().length);
+    (focusable()[0] ?? dialog).focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); }
+      if (event.key !== "Tab") return;
+      const nodes = focusable(); const first = nodes[0]; const last = nodes.at(-1);
+      if (!first) { event.preventDefault(); dialog.focus(); return; }
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    };
+    const contain = (event: FocusEvent) => { if (!dialog.contains(event.target as Node)) (focusable()[0] ?? dialog).focus(); };
+    document.addEventListener("keydown", keydown, true); document.addEventListener("focusin", contain);
+    return () => { document.removeEventListener("keydown", keydown, true); document.removeEventListener("focusin", contain); previous?.focus(); };
+  }, [onClose]);
 
   if (!project) return null;
 
@@ -62,6 +81,8 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onClick={onClose}>
       <div
         role="dialog"
+        ref={dialogRef}
+        tabIndex={-1}
         aria-modal="true"
         aria-label="Export project"
         className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-chrome-border bg-chrome-panel p-6 shadow-xl"

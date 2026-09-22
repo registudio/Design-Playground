@@ -33,6 +33,8 @@ export const runtime = "nodejs";
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
 const TIMEOUT_MS = 20_000;
+const PUBLISHED_ITEM_CACHE_ENTRIES = 640;
+const REMOTE_MODULE_CACHE_ENTRIES = 256;
 
 /**
  * Promises, not results.
@@ -42,8 +44,41 @@ const TIMEOUT_MS = 20_000;
  * one compile instead of racing.
  */
 const documents = new Map<string, Promise<string>>();
+const publishedItems = new Map<string, Promise<PublishedItem>>();
+const remoteModules = new Map<string, Promise<string>>();
 let tailwindCompiler: ReturnType<typeof compileTailwind> | null = null;
 let preflightCss: Promise<string> | null = null;
+
+/**
+ * Shares both completed and in-flight downloads across independent component builds.
+ * A row often contains twelve cards that all need React, Motion and the same registry
+ * primitives; without this cache every card opened its own copy of those requests.
+ */
+function rememberResource<T>(
+  cache: Map<string, Promise<T>>,
+  key: string,
+  limit: number,
+  fetchResource: () => Promise<T>,
+): Promise<T> {
+  const existing = cache.get(key);
+  if (existing) {
+    cache.delete(key);
+    cache.set(key, existing);
+    return existing;
+  }
+
+  const pending = fetchResource().catch((cause: unknown) => {
+    if (cache.get(key) === pending) cache.delete(key);
+    throw cause;
+  });
+  cache.set(key, pending);
+  while (cache.size > limit) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+  return pending;
+}
 
 /**
  * A second tier behind the in-memory cache, so a restart does not mean recompiling
@@ -161,6 +196,15 @@ async function fetchItem(source: SourceId, name: string) {
 }
 
 async function fetchPublishedItem(source: SourceId, name: string): Promise<PublishedItem> {
+  return rememberResource(
+    publishedItems,
+    `${source}:${name}`,
+    PUBLISHED_ITEM_CACHE_ENTRIES,
+    () => fetchPublishedItemUncached(source, name),
+  );
+}
+
+async function fetchPublishedItemUncached(source: SourceId, name: string): Promise<PublishedItem> {
   const registry = REGISTRY_SOURCES.find((entry) => entry.id === source)!;
   // Item documents sit beside registry.json in the same directory on every one of the
   // five, which is part of the shadcn registry layout rather than a per-vendor guess.
@@ -227,14 +271,16 @@ export async function GET(request: Request) {
 
   try {
     const key = diskKey(source, name);
+    const retry = Number(params.get("retry") ?? 0) > 0;
+    if (retry) documents.delete(`${source}:${name}`);
     const html = await remember(`${source}:${name}`, async () => {
-      const cached = await readDisk(key);
+      const cached = retry ? null : await readDisk(key);
       if (cached) return cached;
       const compiled = await compile(source as SourceId, name);
       await writeDisk(key, compiled);
       return compiled;
     });
-    return new Response(html, {
+    return new Response(withStatus(html), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": `public, max-age=${BROWSER_FRESH_SECONDS}, stale-while-revalidate=${BROWSER_STALE_SECONDS}`,
@@ -243,7 +289,7 @@ export async function GET(request: Request) {
   } catch (cause) {
     // A registry can temporarily remove an item. The gallery still gets a visual
     // interpretation instead of surfacing compiler prose inside the design surface.
-    return new Response(generatedDocument(name, cause instanceof Error ? cause.message : String(cause)), {
+    return new Response(withStatus(generatedDocument(name, cause instanceof Error ? cause.message : String(cause))), {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     });
   }
@@ -274,6 +320,17 @@ async function compile(source: SourceId, name: string): Promise<string> {
   const bundledCss = bundle.outputFiles?.find((file) => file.path.endsWith(".css"))?.text ?? "";
   const utilityCss = await tailwindFor(files);
   return documentFor(name, code, `${utilityCss}\n${bundledCss}`);
+}
+
+/** Report the mounted surface, including runtime fallbacks, to its owning card. */
+function withStatus(html: string): string {
+  return html.replace("</body>", `<script>
+const report=()=>{const fallback=document.querySelector('.dp-auto-visual');const root=document.getElementById('root');const status=fallback?'fallback':root&&root.childElementCount?'ready':'rendering';parent.postMessage({type:'dp-preview-status',status},'*');};
+new MutationObserver(report).observe(document.body,{childList:true,subtree:true});
+addEventListener('error',()=>parent.postMessage({type:'dp-preview-status',status:'failed'},'*'));
+addEventListener('unhandledrejection',()=>parent.postMessage({type:'dp-preview-status',status:'failed'},'*'));
+requestAnimationFrame(()=>requestAnimationFrame(report));
+</script></body>`);
 }
 
 /**
@@ -314,6 +371,9 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
     name: "registry-virtual-fs",
     setup(build) {
       const resolveRegistryImport = (args: esbuild.OnResolveArgs) => {
+        // Once a local package has been admitted, let esbuild resolve its own relative
+        // and transitive imports normally rather than treating them as registry files.
+        if (args.namespace === "file" && args.importer.includes("node_modules")) return;
         const local = localTarget(args.path, args.importer);
         if (local) return { path: local, namespace: "virtual" };
         if (args.path.startsWith("@/") || args.path.startsWith("~/") || args.path.startsWith(".") || args.path.startsWith("/")) {
@@ -322,6 +382,8 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
         }
         if (args.path === "lucide-react" || args.path === "@central-icons-react/all") return shim(args.path, args.importer, "icon-shim");
         if (args.path.startsWith("next/font")) return shim(args.path, args.importer, "font-shim");
+        const installed = installedPackagePath(args.path);
+        if (installed) return { path: installed };
         return { path: packageUrl(args.path), namespace: "remote" };
       };
 
@@ -374,12 +436,51 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
       build.onLoad({ filter: /.*/, namespace: "empty-style" }, () => ({ contents: "", loader: "css" }));
 
       build.onLoad({ filter: /.*/, namespace: "remote" }, async (args) => {
-        const response = await fetch(args.path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-        if (!response.ok) throw new Error(`Could not fetch ${args.path} (HTTP ${response.status})`);
-        return { contents: await response.text(), loader: "js" };
+        const contents = await rememberResource(
+          remoteModules,
+          args.path,
+          REMOTE_MODULE_CACHE_ENTRIES,
+          async () => {
+            const response = await fetch(args.path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+            if (!response.ok) throw new Error(`Could not fetch ${args.path} (HTTP ${response.status})`);
+            return response.text();
+          },
+        );
+        return { contents, loader: "js" };
       });
     },
   };
+}
+
+/**
+ * Static paths keep these packages on local disk without asking Next's server bundler
+ * to evaluate a dynamic require.resolve expression. Esbuild resolves every import
+ * below these entry files normally, including Motion's nested Framer Motion package.
+ */
+function installedPackagePath(specifier: string): string | null {
+  const modules = path.join(process.cwd(), "node_modules");
+  if (specifier === "react") return path.join(modules, "react/index.js");
+  if (specifier.startsWith("react/")) return path.join(modules, `react/${specifier.slice(6)}.js`);
+  if (specifier === "react-dom") return path.join(modules, "react-dom/index.js");
+  if (specifier.startsWith("react-dom/")) return path.join(modules, `react-dom/${specifier.slice(10)}.js`);
+
+  if (specifier === "motion") return path.join(modules, "motion/dist/es/index.mjs");
+  if (specifier.startsWith("motion/")) {
+    return path.join(modules, `motion/dist/es/${specifier.slice(7)}.mjs`);
+  }
+  if (specifier === "framer-motion") {
+    return path.join(modules, "motion/node_modules/framer-motion/dist/es/index.mjs");
+  }
+  if (specifier.startsWith("framer-motion/")) {
+    return path.join(modules, `motion/node_modules/framer-motion/dist/es/${specifier.slice(14)}.mjs`);
+  }
+
+  if (specifier === "gsap") return path.join(modules, "gsap/index.js");
+  if (specifier.startsWith("gsap/")) {
+    const subpath = specifier.slice(5);
+    return path.join(modules, `gsap/${subpath}${subpath.endsWith(".js") ? "" : ".js"}`);
+  }
+  return null;
 }
 
 const normalize = (path: string) => path.replace(/^\.?\//, "");

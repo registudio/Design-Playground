@@ -492,6 +492,7 @@ body {
 
 @media (max-width: 620px) {
   .dp-navbar-links { display: none; }
+  .dp-navbar .dp-mobile-menu { display: block; }
   .dp-features-items,
   .dp-features-bento .dp-features-items { grid-template-columns: 1fr; }
   .dp-features-bento .dp-feature:first-child { grid-column: span 1; grid-row: span 1; }

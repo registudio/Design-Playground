@@ -169,6 +169,8 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 /* Stands in for the rows outside the mounted window, so the scrollbar still describes
    the whole result set and scroll position survives cards being dropped. */
 .grid-spacer { flex:none;pointer-events:none; }
+.grid-edge-sentinel { height:1px;pointer-events:none; }
+.workflow-progress{position:sticky;top:51px;z-index:12;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 24px;background:#171d13;border-bottom:1px solid #344329;font-size:11px}.workflow-progress nav{display:flex;flex-wrap:wrap;gap:8px}.workflow-progress button{padding:4px 7px;border-radius:4px}.workflow-progress button[aria-current]{background:#cbe99a;color:#182512}.workflow-progress small{color:#a8ba91}.preview-status{position:absolute;bottom:8px;left:8px;z-index:3;padding:4px 8px;border-radius:5px;background:#111e;color:#cbe99a;font-size:10px;text-transform:capitalize}.preview-status button{margin-left:9px;text-decoration:underline}.compact-previews .element-canvas{height:150px}.compact-previews{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .grid-sentinel { display:flex;align-items:center;justify-content:center;gap:10px;padding:34px 0;font-size:10px;color:#87997b; }
 .grid-sentinel span { font-size:9px;color:#657a55; }
 

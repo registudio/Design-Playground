@@ -497,7 +497,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         referenceOnly: element.referenceOnly,
         variant: element.variant,
         engineDependency: element.engineDependency,
-        addedAt: Date.now(),
+          addedAt: Date.now(),
+          npmDependencies: element.npmDependencies,
+          registryDependencies: element.registryDependencies,
       };
       draft.selections.push(selection);
     });

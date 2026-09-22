@@ -8,6 +8,7 @@ import { EditableOverlay } from "@/preview/EditableOverlay";
 import { pageSections, type PageSection } from "@/schema/composition";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
 import { sourceById } from "@/registry/sources";
+import { RegistryPreview } from "@/components/RegistryPreview";
 import { getAsset } from "@/store/persistence";
 import { toHex } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
@@ -22,7 +23,7 @@ import { resolveSemantic } from "@/color/semantic";
  * own colours or type, which always come from Foundation (§11.3).
  */
 
-export function SamplePage({ project, editable = false, assetUrls = {} }: { project: DesignProject; editable?: boolean; assetUrls?: Record<string, string> }) {
+export function SamplePage({ project, editable = false, assetUrls = {}, staticExport = false }: { project: DesignProject; editable?: boolean; assetUrls?: Record<string, string>; staticExport?: boolean }) {
   const { components } = project.recipe;
   const brand = project.client || project.name || "Northwind";
   const rootRef = useRef<HTMLDivElement>(null);
@@ -56,10 +57,10 @@ export function SamplePage({ project, editable = false, assetUrls = {} }: { proj
     blog: <Blog variant={components.blog}/>, cta: <Cta variant={components.cta}/>, footer: <Footer variant={components.footer} brand={brand}/>,
   };
   const accent = toHex(resolveSemantic(project.tokens.colors, "light", "primary"));
-  const renderElements = (placement: string) => (project.recipe.elements ?? []).filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => {
+  const renderElements = (placement: string) => <>{(project.recipe.elements ?? []).filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => {
     const item = ELEMENTS.find(item => item.id === e.id);
     return item ? <section key={e.id} className="dp-selected-effect" data-element={e.id}><iframe title={item.title} sandbox="allow-scripts" srcDoc={elementDocument(e.id, accent)} style={{ width: "100%", height: 360, border: 0, display: "block" }}/></section> : null;
-  });
+  })}{project.selections.filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => <section key={e.id} className="dp-selected-effect" data-element={e.id}><p>{e.title} · <a href={sourceById(e.source)?.homepage} target="_blank" rel="noreferrer">{sourceById(e.source)?.label}</a></p>{staticExport ? <p>Install this external component: <code>{e.installCommand}</code>. Live preview is available in Design Playground.</p> : <div className="dp-registry-preview"><RegistryPreview element={e}/></div>}{e.intendedUse && <p>{e.intendedUse}</p>}</section>)}</>;
 
   return (
     // Element variants are applied via data attributes on the root so a card or
@@ -74,10 +75,10 @@ export function SamplePage({ project, editable = false, assetUrls = {} }: { proj
       data-editable={editable ? "true" : undefined}
     >
       <CustomCursor variant={components.cursor} image={project.recipe.cursorImage} />
-      {order.map(key => <Fragment key={key}>{sections[key]}{renderElements(key)}</Fragment>)}
+      <p className="dp-demo-notice">Design sample · Names, claims, prices and links are examples. Replace them before publishing.</p>
+      {order.map(key => <Fragment key={key}><div id={`section-${key}`}>{sections[key]}</div>{renderElements(key)}</Fragment>)}
       {renderElements("page")}
-      {!order.length && !project.recipe.elements?.length && <div style={{ padding: "100px 30px", textAlign: "center" }}>Your blank canvas. Add sections or elements to bring it to life.</div>}
-      {project.selections.length > 0 && <aside style={{ padding: "24px", borderTop: "1px solid currentColor", opacity: .8 }}><strong>Registry selections · implementation references</strong><p>These third-party components are included in the handoff for installation. Open their source documentation to see the original demos.</p>{project.selections.map(s => <p key={s.id}>{s.title} · <a href={sourceById(s.source)?.homepage} target="_blank" rel="noreferrer">{sourceById(s.source)?.label ?? s.source} ↗</a>{s.intendedUse && ` — ${s.intendedUse}`}</p>)}</aside>}
+      {!order.length && !project.recipe.elements?.length && !project.selections.length && <div style={{ padding: "100px 30px", textAlign: "center" }}>Your blank canvas. Add sections or elements to bring it to life.</div>}
       {/* Never enabled for the static/shareable export (react-dom/server's SSR pass
           never fires the effect that attaches this anyway, but the prop keeps the
           intent explicit rather than relying on that). */}
@@ -97,6 +98,7 @@ function Navbar({ variant, brand, logo }: { variant: string; brand: string; logo
             <a key={link} className="dp-navbar-link" href="#0">{link}</a>
           ))}
         </nav>
+        <details className="dp-mobile-menu"><summary>Menu</summary><nav aria-label="Mobile navigation">{links.map((link, i) => <a key={link} href={`#section-${["features", "hero", "team", "cta"][i]}`}>{link}</a>)}</nav></details>
         <button className="dp-btn dp-btn-solid dp-btn-sm">Get in touch</button>
       </div>
     </header>

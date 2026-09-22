@@ -11,6 +11,7 @@ import { ELEMENTS, elementDocument } from "@/elements/catalogue";
 import { REGISTRY_SOURCES } from "@/registry/sources";
 import { toHex } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
+import { qualityReport } from "./quality-report";
 
 /**
  * Builds the export bundle (§15).
@@ -188,6 +189,8 @@ export function buildExport(
   // Stable file order, so the ZIP itself is reproducible.
   files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
+  files.push({ path: "EXPORT-QUALITY.md", content: qualityReport(project) });
+  files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
   return { files, issues };
 }
 

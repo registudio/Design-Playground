@@ -52,10 +52,10 @@ The esbuild resolver keeps four file families separate:
 
 1. Published local source files resolve inside the virtual filesystem.
 2. Missing project aliases resolve to lightweight shadcn, hook, icon or font adapters.
-3. npm packages are fetched through `esm.sh` on the server and bundled into the result.
+3. React, React DOM, Motion, Framer Motion and GSAP resolve from the app's installed packages; other npm packages are fetched through `esm.sh` on the server and bundled into the result.
 4. Imports made by remote npm modules remain remote URL imports during compilation, rather than being mistaken for missing registry files.
 
-React and React DOM are pinned to one version and bundled into the same module. This avoids duplicate React instances and hook invariant failures. Tailwind utilities are extracted from the published source and compiled on the server; the iframe does not need a runtime Tailwind compiler.
+React and React DOM are pinned to one version and bundled into the same module. This avoids duplicate React instances and hook invariant failures. Keeping the common render and motion runtimes on local disk also removes CDN latency from the first preview. Tailwind utilities are extracted from the published source and compiled on the server; the iframe does not need a runtime Tailwind compiler.
 
 The generated harness supplies representative text, images, collections, chart data, progress values, open states and no-op callbacks. Source and name based prop recipes cover charts, galleries, carousels, text effects, forms, overlays and loaders. A React error boundary swaps an unexpected runtime exception for an animated visual surface, so one component cannot blank its card or stop adjacent previews.
 
@@ -63,19 +63,19 @@ The generated harness supplies representative text, images, collections, chart d
 
 ### 1. Proximity and search activation
 
-An external iframe is created when its card comes within 700 px of the catalogue viewport. A search that narrows the result to eight or fewer entries activates those entries immediately. Offscreen previews remain mounted for a 12-second grace period to avoid recompiling during a small reverse scroll.
+An external iframe is created when its card comes within 320 px of the catalogue viewport. A search that narrows the result to eight or fewer entries activates those entries immediately. Offscreen previews retain their slot for only 750 ms, allowing the newly visible row to start within the three-second interaction budget.
 
 ### 2. Visible-grid concurrency budget
 
-Up to 12 external previews may be live together. This covers a large three-column viewport and one approaching row, so visible cards do not remain stuck in a waiting poster. Additional near-viewport cards enter a FIFO queue.
+Up to 12 external previews may be live together. This covers a large three-column viewport and one approaching row, so visible cards do not remain stuck in a waiting poster. Additional near-viewport cards enter a FIFO queue. Iframes use eager loading once admitted because proximity has already performed the lazy-loading decision.
 
-### 3. Memory, disk and browser caching
+### 3. Shared downloads, memory, disk and browser caching
 
-In-flight promises are shared, so simultaneous requests for one item produce one fetch and compile. The server keeps 96 compiled documents in memory and up to 400 on disk. Browser responses remain fresh for one hour and may be reused during one day of stale revalidation. A compiler version is included in disk-cache keys so runtime changes invalidate old error documents.
+In-flight promises are shared at three levels. Simultaneous requests for one preview produce one compile, registry dependencies are fetched once across different cards, and uncommon npm modules are downloaded once across different bundles. The server keeps 96 compiled documents in memory, 640 registry item documents, 256 remote module documents and up to 400 compiled previews on disk. Browser responses remain fresh for one hour and may be reused during one day of stale revalidation. A compiler version is included in disk-cache keys so runtime changes invalidate old error documents.
 
 ### 4. Bounded catalogue DOM and teardown
 
-Search results enter the DOM in batches of 36. At most four batches remain mounted, with measured spacers preserving scroll position for removed rows. When an offscreen preview passes its grace period, its iframe is removed, releasing its React root, observers, timers, animation loops and WebGL context.
+Search results enter the DOM in batches of 36. At most four batches remain mounted, with measured spacers preserving scroll position for removed rows. A near-edge sentinel mounts the next batch before normal scrolling reaches a spacer, while separate far-edge sentinels handle direct Home, End and scrollbar jumps. Changing a filter returns the catalogue to its first row. When an offscreen preview passes its grace period, its iframe is removed, releasing its React root, observers, timers, animation loops and WebGL context.
 
 The loading poster is itself visual: an animated orbit and waveform remain visible until the source iframe reports that it has loaded. No card shows its description as a substitute for a preview.
 
@@ -90,6 +90,16 @@ The route accepts only the five allow-listed registry sources and conservative c
 Each card identifies its publishing library and inferred motion engine. Playground Originals can be exported as runnable HTML because their implementation belongs to this project. External elements retain their verified install command, concrete variant, dependencies, placement and user note; their third-party source is executed for preview and is not silently vendored into an export.
 
 ## Verification
+
+### Precompile a starting collection
+
+With the dev server or a deployment running, run `npm run warm:previews` (set `DP_PREVIEW_BASE` for a deployment). This compiles eight curated entry points with three workers into the existing disk cache. Run before directing traffic to the deployment. No popularity telemetry is collected; the shortlist can be replaced with measured popular IDs later.
+
+### Preview state and queue priority
+
+Cards show queued, rendering, ready, fallback or failed. The sandbox reports component mounting and fallback DOM using a message checked against the owning iframe window. Ready does not certify pixels or interaction correctness. Retry recompiles the preview. Queue priority is evaluated from current viewport distance, with narrow searches and pointer interest promoted. Leaving proximity immediately removes queued work; already active frames retain the short teardown grace. Compact selected previews use distinct queue identities so duplicate cards cannot steal one another's slots.
+
+ZIP handoffs include `EXPORT-QUALITY.md`. Preview observations are session-local; unviewed elements are explicitly unobserved. Runtime cost is qualitative and dependency installation in the target repository is not verified.
 
 Run the focused catalogue audit while the development server is active:
 
@@ -106,3 +116,5 @@ npm run verify
 ```
 
 For visual QA, search for at least one item from each source, confirm the loading poster is replaced by a visual iframe, scroll far enough to exercise teardown and remounting, and check a WebGL or canvas item such as React Bits `ASCIIText`.
+
+The interactive latency check is measured from a search edit to the target card's loading poster disappearing. The current local measurement for React Bits `BlurText` is 406 ms, within the three-second budget. A cold direct compile of the same source completed in 389 ms before browser rendering.

@@ -16,13 +16,13 @@
 export const MAX_LIVE_PREVIEWS = 12;
 
 /** How far outside the viewport a card starts loading. */
-export const ACTIVATION_MARGIN_PX = 700;
+export const ACTIVATION_MARGIN_PX = 320;
 
 /**
  * How long an offscreen preview is kept before teardown. Long enough that a small
  * reverse scroll does not unmount and remount everything it passes.
  */
-export const OFFSCREEN_GRACE_MS = 12_000;
+export const OFFSCREEN_GRACE_MS = 750;
 
 /**
  * A search this narrow is taken as "show me these", so its results activate without
@@ -50,6 +50,33 @@ export const CATALOGUE_BATCH = 36;
  * window never catches up with a fast scroll.
  */
 export const MAX_MOUNTED_BATCHES = 4;
+
+export interface CatalogueWindow {
+  start: number;
+  end: number;
+}
+
+const mountedLimit = CATALOGUE_BATCH * MAX_MOUNTED_BATCHES;
+
+/** Moves the bounded card window down, or directly to the final rows after an End jump. */
+export function advanceCatalogueWindow(
+  current: CatalogueWindow,
+  total: number,
+  jumpToEnd = false,
+): CatalogueWindow {
+  const end = jumpToEnd ? total : Math.min(total, current.end + CATALOGUE_BATCH);
+  return { start: Math.max(current.start, end - mountedLimit), end };
+}
+
+/** Moves the bounded card window up, or directly to the first rows after a Home jump. */
+export function retreatCatalogueWindow(
+  current: CatalogueWindow,
+  total: number,
+  jumpToStart = false,
+): CatalogueWindow {
+  const start = jumpToStart ? 0 : Math.max(0, current.start - CATALOGUE_BATCH);
+  return { start, end: Math.min(total, start + mountedLimit) };
+}
 
 /** Compiled documents held on the server. */
 export const DOCUMENT_CACHE_ENTRIES = 96;

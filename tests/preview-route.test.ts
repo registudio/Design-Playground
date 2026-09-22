@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { GET } from "../app/api/element-preview/route";
 import {
   ACTIVATION_MARGIN_PX,
+  advanceCatalogueWindow,
   CATALOGUE_BATCH,
   DOCUMENT_CACHE_ENTRIES,
   MAX_LIVE_PREVIEWS,
   NARROW_SEARCH_LIMIT,
   OFFSCREEN_GRACE_MS,
+  retreatCatalogueWindow,
 } from "@/elements/preview-budget";
 
 /**
@@ -72,16 +74,33 @@ describe("element preview route", () => {
 describe("preview budgets", () => {
   it("matches the values the visualisation contract states", () => {
     expect(MAX_LIVE_PREVIEWS).toBe(12);
-    expect(ACTIVATION_MARGIN_PX).toBe(700);
-    expect(OFFSCREEN_GRACE_MS).toBe(12_000);
+    expect(ACTIVATION_MARGIN_PX).toBe(320);
+    expect(OFFSCREEN_GRACE_MS).toBe(750);
     expect(CATALOGUE_BATCH).toBe(36);
     expect(DOCUMENT_CACHE_ENTRIES).toBe(96);
     expect(NARROW_SEARCH_LIMIT).toBe(8);
   });
 
-  it("keeps the grace period well above a scroll bounce", () => {
-    // Short enough and a small reverse scroll unmounts and remounts everything it passes.
-    expect(OFFSCREEN_GRACE_MS).toBeGreaterThan(5_000);
+  it("releases offscreen slots quickly enough for the visible grid", () => {
+    expect(OFFSCREEN_GRACE_MS).toBeLessThan(1_000);
+  });
+
+  it("keeps a bounded, continuous catalogue window in both directions", () => {
+    let window = { start: 0, end: CATALOGUE_BATCH };
+    for (let index = 0; index < 5; index += 1) {
+      window = advanceCatalogueWindow(window, 490);
+    }
+    expect(window).toEqual({ start: 72, end: 216 });
+    expect(window.end - window.start).toBe(CATALOGUE_BATCH * 4);
+
+    window = retreatCatalogueWindow(window, 490);
+    expect(window).toEqual({ start: 36, end: 180 });
+  });
+
+  it("jumps to either edge without mounting the blank spacer or all 490 cards", () => {
+    const end = advanceCatalogueWindow({ start: 0, end: CATALOGUE_BATCH }, 490, true);
+    expect(end).toEqual({ start: 346, end: 490 });
+    expect(retreatCatalogueWindow(end, 490, true)).toEqual({ start: 0, end: 144 });
   });
 });
 

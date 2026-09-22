@@ -10,7 +10,13 @@ import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
 import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
 import { describeElement } from "@/elements/descriptions";
 import { RegistryPreview } from "./RegistryPreview";
-import { CATALOGUE_BATCH, MAX_MOUNTED_BATCHES, NARROW_SEARCH_LIMIT, SEARCH_DEBOUNCE_MS } from "@/elements/preview-budget";
+import {
+  advanceCatalogueWindow,
+  CATALOGUE_BATCH,
+  NARROW_SEARCH_LIMIT,
+  retreatCatalogueWindow,
+  SEARCH_DEBOUNCE_MS,
+} from "@/elements/preview-budget";
 
 /**
  * The element library.
@@ -41,6 +47,15 @@ type LibraryItem = {
 
 /** Source id for the authored elements, which have no registry behind them. */
 const ORIGINALS = "playground";
+
+/** The catalogue scrolls inside the studio main area rather than the browser window. */
+function scrollRoot(node: HTMLElement): HTMLElement | null {
+  for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+    const overflow = getComputedStyle(parent).overflowY;
+    if (overflow === "auto" || overflow === "scroll") return parent;
+  }
+  return null;
+}
 
 export function ElementLibrary({ exploring = false, onCreate }: { exploring?: boolean; onCreate?: () => void }) {
   const project = useProjectStore(s => s.project);
@@ -85,10 +100,11 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const [registryOpen, setRegistryOpen] = useState(false);
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [collection, setCollection] = useState("All collections");
   const [replay, setReplay] = useState(0);
-  const [visible, setVisible] = useState(CATALOGUE_BATCH);
-  /** First mounted index. Rises behind the viewport so the window stays bounded. */
-  const [start, setStart] = useState(0);
+  /** Inclusive/exclusive mounted range. Both edges move so it always stays bounded. */
+  const [cardWindow, setCardWindow] = useState({ start: 0, end: CATALOGUE_BATCH });
   /** Measured from live cards, so the spacers match whatever the grid is actually doing. */
   const [rowHeight, setRowHeight] = useState(0);
   const [columns, setColumns] = useState(3);
@@ -139,32 +155,29 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const results = useMemo(() => {
     const text = settledQuery.trim().toLowerCase();
     return items.filter(item =>
+      (collection === "All collections" ||
+        (collection === "Hero effects" && ["Text animations", "Backgrounds"].includes(item.category)) ||
+        (collection === "Subtle interactions" && ["Hover effects", "Buttons & inputs"].includes(item.category)) ||
+        (collection === "Lightweight originals" && item.preview && /CSS/.test(elementOrigin(item.id).runtime)) ||
+        (collection === "Mobile starting points" && item.preview && ["Text animations", "Loaders & feedback"].includes(item.category))) &&
       (category === "All elements" || category === item.category) &&
       (!source || (source === ORIGINALS ? !item.registry : item.registry?.source === source)) &&
       (!text || `${item.title} ${item.description} ${item.category} ${item.registry?.name ?? ""} ${item.registry?.installCommand ?? ""} ${item.registry?.npmDependencies.join(" ") ?? ""}`.toLowerCase().includes(text)) &&
-      (!onlySelected || isSelected(item)));
-  }, [items, category, source, settledQuery, onlySelected, selected, picked]);
+      (!(onlySelected || compact) || isSelected(item)));
+  }, [items, category, source, settledQuery, onlySelected, compact, collection, selected, picked]);
 
   // Any change to the filters starts the list again from the top, so you never land
   // mid-way through a result set you have not scrolled.
-  useEffect(() => { setVisible(CATALOGUE_BATCH); setStart(0); }, [category, source, settledQuery, onlySelected]);
+  useEffect(() => {
+    setCardWindow({ start: 0, end: CATALOGUE_BATCH });
+    const root = grid.current ? scrollRoot(grid.current) : null;
+    root?.scrollTo({ top: 0, behavior: "auto" });
+  }, [category, source, settledQuery, onlySelected, compact, collection]);
 
   const sentinel = useRef<HTMLDivElement>(null);
+  const farSentinel = useRef<HTMLDivElement>(null);
   const topSentinel = useRef<HTMLDivElement>(null);
-
-  /**
-   * The scrolling ancestor, which both observers need as their root.
-   *
-   * An intersection is clipped by every scrolling ancestor and `rootMargin` widens only
-   * the root, so measured against the viewport these margins would be silently ignored.
-   */
-  const scrollRoot = (node: HTMLElement): HTMLElement | null => {
-    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-      const overflow = getComputedStyle(parent).overflowY;
-      if (overflow === "auto" || overflow === "scroll") return parent;
-    }
-    return null;
-  };
+  const farTopSentinel = useRef<HTMLDivElement>(null);
 
   // Measured rather than assumed: the grid is responsive, so a hard-coded row height
   // would make the spacers wrong at exactly the widths where they matter most.
@@ -183,46 +196,52 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     const resize = new ResizeObserver(measure);
     resize.observe(node);
     return () => resize.disconnect();
-  }, [visible, start]);
+  }, [cardWindow.end, cardWindow.start]);
 
   useEffect(() => {
     const node = sentinel.current;
+    const farNode = farSentinel.current;
     if (!node) return;
     // rootMargin lets the next batch land before the sentinel is reached, so scrolling
     // stays continuous rather than stepping.
     const observer = new IntersectionObserver(
       entries => {
-        if (!entries[0]?.isIntersecting) return;
-        setVisible(v => {
-          const next = Math.min(v + CATALOGUE_BATCH, results.length);
-          // Drop the same amount off the top, which is what bounds the window.
-          setStart(s => Math.max(s, next - CATALOGUE_BATCH * MAX_MOUNTED_BATCHES));
-          return next;
-        });
+        const intersecting = entries.filter(entry => entry.isIntersecting);
+        if (!intersecting.length) return;
+        const jumpedToEnd = farNode ? intersecting.some(entry => entry.target === farNode) : false;
+        setCardWindow(current => advanceCatalogueWindow(current, results.length, jumpedToEnd));
       },
       { root: scrollRoot(node), rootMargin: "600px" },
     );
     observer.observe(node);
+    if (farNode) observer.observe(farNode);
     return () => observer.disconnect();
-  }, [results.length]);
+  }, [results.length, cardWindow.end, rowHeight]);
 
   // Scrolling back up re-mounts what the window dropped.
   useEffect(() => {
     const node = topSentinel.current;
+    const farNode = farTopSentinel.current;
     if (!node) return;
     const observer = new IntersectionObserver(
-      entries => { if (entries[0]?.isIntersecting) setStart(s => Math.max(0, s - CATALOGUE_BATCH)); },
+      entries => {
+        const intersecting = entries.filter(entry => entry.isIntersecting);
+        if (!intersecting.length) return;
+        const jumpedToStart = farNode ? intersecting.some(entry => entry.target === farNode) : false;
+        setCardWindow(current => retreatCatalogueWindow(current, results.length, jumpedToStart));
+      },
       { root: scrollRoot(node), rootMargin: "600px" },
     );
     observer.observe(node);
+    if (farNode) observer.observe(farNode);
     return () => observer.disconnect();
-  }, [start]);
+  }, [results.length, cardWindow.start, rowHeight]);
 
-  const shown = results.slice(start, visible);
+  const shown = results.slice(cardWindow.start, cardWindow.end);
   // Spacers stand in for the rows either side of the window so the scrollbar keeps
   // describing the whole result set rather than just the mounted part.
-  const rowsAbove = Math.ceil(start / columns);
-  const rowsBelow = Math.ceil(Math.max(0, results.length - visible) / columns);
+  const rowsAbove = Math.ceil(cardWindow.start / columns);
+  const rowsBelow = Math.ceil(Math.max(0, results.length - cardWindow.end) / columns);
   const active = ELEMENTS.find(e => e.id === inspecting);
   useEffect(() => { if (!active) return; const key = (e: KeyboardEvent) => { if (e.key === "Escape") setInspecting(null); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); }, [active]);
 
@@ -246,13 +265,16 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     <div className="library-toolbar"><label className="search-field"><span>⌕</span><input ref={searchRef} aria-label="Search curated elements" placeholder="Find your next idea…" value={query} onChange={e => setQuery(e.target.value)}/><kbd>/</kbd></label><button className="quiet-button" onClick={() => setPaused(!paused)}>{paused ? "▶ Play previews" : "Ⅱ Pause previews"}</button><button className="quiet-button" onClick={() => setRegistryOpen(true)}>Registry detail ↗</button></div>
     <div className="filter-row">{categories.map(c => <button key={c} className={category === c ? "active" : ""} onClick={() => setCategory(c)}>{c}{c === "All elements" && <span>{items.length}</span>}</button>)}{!exploring && <button className={onlySelected ? "active" : ""} onClick={() => setOnlySelected(!onlySelected)}>Selected · {totalSelected}</button>}</div>
     <div className="filter-row source-row"><button className={!source ? "active" : ""} onClick={() => setSource(null)}>Every source</button><button className={source === ORIGINALS ? "active" : ""} onClick={() => setSource(source === ORIGINALS ? null : ORIGINALS)}>Playground originals<span>{ELEMENTS.length}</span></button>{REGISTRY_SOURCES.map(s => <button key={s.id} className={source === s.id ? "active" : ""} onClick={() => setSource(source === s.id ? null : s.id)}>{s.label}<span>{registry.elements.filter(e => e.source === s.id).length}</span></button>)}</div>
+    <div className="filter-row" aria-label="Curated collections">{["All collections", "Hero effects", "Subtle interactions", "Lightweight originals", "Mobile starting points"].map(label => <button key={label} className={collection === label ? "active" : ""} onClick={() => setCollection(label)}>{label}</button>)}{!exploring && <button aria-pressed={compact} onClick={() => setCompact(!compact)}>{compact ? "Back to library" : "Compact selected previews"}</button>}</div>
+    {compact && !results.length && <p>Select elements in the library to view them together here. Clear any source or collection filters to show more selections.</p>}
     <div className="gallery-meta"><span>{results.length} elements to explore{registryState === "loading" && " · loading the registries…"}</span><span>LIVE PREVIEWS <i/> HOVER. SCROLL. PLAY.</span></div>
 
-    {start > 0 && <>
-      <div ref={topSentinel} aria-hidden="true" />
+    {cardWindow.start > 0 && <>
+      {rowHeight > 0 && <div ref={farTopSentinel} className="grid-edge-sentinel" aria-hidden="true" />}
       <div className="grid-spacer" style={{ height: rowsAbove * rowHeight }} aria-hidden="true" />
+      <div ref={topSentinel} className="grid-edge-sentinel" aria-hidden="true" />
     </>}
-    <div className="element-grid" ref={grid}>{shown.map((item, index) => {
+    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid}>{shown.map((item, index) => {
       const chosen = isSelected(item);
       const note = item.registry ? picked.find(s => s.id === item.id) : selected.find(s => s.id === item.id);
       return <article className={`element-card ${chosen ? "is-selected" : ""}`} key={item.id}>
@@ -277,12 +299,12 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
 
     {/* Watched rather than a "load more" button: scrolling is already the gesture for
         "show me more of this", and 448 cards mounted at once would be a stutter. */}
-    {visible < results.length && <>
-      {/* Spacer first, sentinel last. The other way round, the sentinel sat above the
-          spacer — so jumping straight to the bottom of the scroller landed past it,
-          nothing loaded, and the user was left in blank space. */}
+    {cardWindow.end < results.length && <>
+      {/* The near sentinel fills the next batch before normal scrolling reaches the
+          spacer. The far sentinel handles an End-key or scrollbar jump in one update. */}
+      <div ref={sentinel} className="grid-sentinel">Loading more elements… <span>{cardWindow.end} of {results.length}</span></div>
       <div className="grid-spacer" style={{ height: rowsBelow * rowHeight }} aria-hidden="true" />
-      <div ref={sentinel} className="grid-sentinel">Loading more elements… <span>{visible} of {results.length}</span></div>
+      {rowHeight > 0 && <div ref={farSentinel} className="grid-edge-sentinel" aria-hidden="true" />}
     </>}
 
     {!results.length && <div className="empty-state"><h2>No elements here yet.</h2><p>{registry.elements.length === 0 ? "The registry index hasn't been fetched yet. Open Registry detail to pull it in." : "Try another search or add something to your collection."}</p><button className="quiet-button" onClick={() => { setQuery(""); setCategory("All elements"); setSource(null); setOnlySelected(false); }}>Reset filters</button></div>}

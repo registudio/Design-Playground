@@ -11,6 +11,12 @@ import { fixtureProject } from "./fixture";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("deterministic export", () => {
+  it("includes a quality report without presenting estimates as measured results", () => {
+    const report = buildExport(fixtureProject()).files.find(file => file.path === "EXPORT-QUALITY.md");
+    expect(report?.content).toContain("Selected components");
+    expect(report?.content).toContain("not a bundle-size or frame-rate measurement");
+    expect(report?.content).toContain("has not been checked");
+  });
   it("produces byte-identical files across runs", () => {
     const a = buildExport(fixtureProject());
     const b = buildExport(fixtureProject());

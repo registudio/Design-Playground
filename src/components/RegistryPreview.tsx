@@ -7,6 +7,7 @@ import {
   OFFSCREEN_GRACE_MS,
 } from "@/elements/preview-budget";
 import type { DesignElement } from "@/registry/schema";
+import { previewKey, recordPreview, type PreviewStatus } from "@/elements/preview-status";
 
 /**
  * A live preview of one published registry component.
@@ -29,9 +30,9 @@ import type { DesignElement } from "@/registry/schema";
  * could start at all.
  */
 const live = new Set<string>();
-const waiting = new Map<string, () => void>();
+const waiting = new Map<string, { start: () => void; priority: () => number }>();
 
-function requestSlot(id: string, start: () => void): void {
+function requestSlot(id: string, start: () => void, priority = () => 0): void {
   if (live.has(id)) return;
   if (live.size < MAX_LIVE_PREVIEWS) {
     live.add(id);
@@ -39,7 +40,7 @@ function requestSlot(id: string, start: () => void): void {
     return;
   }
   // Keyed, so re-entering the viewport twice cannot queue the same card twice.
-  waiting.set(id, start);
+  waiting.set(id, { start, priority });
 }
 
 function releaseSlot(id: string): void {
@@ -47,12 +48,12 @@ function releaseSlot(id: string): void {
   if (!live.delete(id)) return;
   // FIFO: the card waiting longest is the one nearest to being scrolled past, so
   // serving it first is also what keeps the grid feeling continuous.
-  const next = waiting.entries().next();
-  if (next.done) return;
-  const [nextId, start] = next.value;
+  const next = [...waiting.entries()].sort((a,b) => a[1].priority() - b[1].priority())[0];
+  if (!next) return;
+  const [nextId, entry] = next;
   waiting.delete(nextId);
   live.add(nextId);
-  start();
+  entry.start();
 }
 
 /**
@@ -85,19 +86,27 @@ export function RegistryPreview({
    */
   paused = false,
 }: {
-  element: DesignElement;
+  element: Pick<DesignElement, "id" | "source" | "name" | "title" | "category" | "variant">;
   eager?: boolean;
   paused?: boolean;
 }) {
   const [active, setActive] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [status, setStatus] = useState<PreviewStatus>("queued");
+  const [attempt, setAttempt] = useState(0);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const instance = useRef(Math.random().toString(36).slice(2));
+  const interested = useRef(false);
+  const observationKey = previewKey(element);
   const host = useRef<HTMLDivElement>(null);
   const teardown = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const node = host.current;
     if (!node) return;
-    const id = element.id;
+    const id = `${element.id}:${instance.current}`;
+    const start = () => { setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); };
+    const priority = () => { if (interested.current) return -2; const rect = node.getBoundingClientRect(); const root = scrollParent(node)?.getBoundingClientRect(); return Math.max(0, rect.top - (root?.bottom ?? innerHeight), (root?.top ?? 0) - rect.bottom); };
 
     // Paused: give up the slot outright rather than merely declining new ones, so
     // pausing frees whatever is already running.
@@ -114,7 +123,7 @@ export function RegistryPreview({
     };
 
     if (eager) {
-      requestSlot(id, () => setActive(true));
+      requestSlot(id, start, () => -1);
       return () => {
         cancelTeardown();
         releaseSlot(id);
@@ -126,17 +135,19 @@ export function RegistryPreview({
         const near = entries[0]?.isIntersecting ?? false;
         if (near) {
           cancelTeardown();
-          requestSlot(id, () => setActive(true));
+          requestSlot(id, start, priority);
           return;
         }
         // Not torn down immediately: a small reverse scroll would otherwise unmount and
         // remount every preview it passes, which costs far more than holding them.
+        waiting.delete(id);
         if (teardown.current) return;
         teardown.current = setTimeout(() => {
           teardown.current = null;
           releaseSlot(id);
           setActive(false);
           setLoaded(false);
+          setStatus("queued");
         }, OFFSCREEN_GRACE_MS);
       },
       { root: scrollParent(node), rootMargin: `${ACTIVATION_MARGIN_PX}px` },
@@ -148,26 +159,42 @@ export function RegistryPreview({
       cancelTeardown();
       releaseSlot(id);
     };
-  }, [element.id, eager, paused]);
+  }, [element.id, eager, paused, observationKey]);
+
+  useEffect(() => {
+    const receive = (event: MessageEvent) => {
+      if (event.source !== frame.current?.contentWindow || event.data?.type !== "dp-preview-status") return;
+      const next = event.data.status as PreviewStatus;
+      if (!["ready", "fallback", "failed", "rendering"].includes(next)) return;
+      setStatus(next); setLoaded(next !== "rendering"); recordPreview(observationKey, next);
+    };
+    window.addEventListener("message", receive);
+    const timeout = active ? setTimeout(() => { setStatus(current => { if (current !== "rendering") return current; recordPreview(observationKey, "failed"); return "failed"; }); }, 15000) : undefined;
+    return () => { window.removeEventListener("message", receive); clearTimeout(timeout); };
+  }, [observationKey, active, attempt]);
 
   // React Bits collapses four published variants into one catalogue record. The
   // preview route needs the concrete registry item, just like the install command.
   const concreteName = element.source === "react-bits" && element.variant
     ? `${element.name}-${element.variant.language}-${element.variant.styling}`
     : element.name;
-  const src = `/api/element-preview?v=4&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}`;
+  const src = `/api/element-preview?v=5&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
 
   return (
-    <div className="registry-canvas" ref={host} data-active={active ? "yes" : "no"}>
+    <div className="registry-canvas" ref={host} data-active={active ? "yes" : "no"} onPointerEnter={() => { interested.current = true; }} onPointerLeave={() => { interested.current = false; }}>
       {active && (
         // sandbox without allow-same-origin: the frame gets no access to this origin,
         // no forms, no popups and no top-level navigation.
         <iframe
+          ref={frame}
           title={`${element.title} preview`}
           sandbox="allow-scripts"
           src={src}
-          loading="lazy"
-          onLoad={() => setLoaded(true)}
+          // Proximity and the global slot queue already decide when this frame may
+          // exist. Native lazy loading added a second, opaque delay after a slot was
+          // granted, so an on-screen card could still sit on its poster.
+          loading="eager"
+          onError={() => { setStatus("failed"); recordPreview(observationKey, "failed"); }}
         />
       )}
       {!loaded && (
@@ -176,6 +203,7 @@ export function RegistryPreview({
           <div className="placeholder-bars"><i/><i/><i/><i/><i/></div>
         </div>
       )}
+      <div className="preview-status" role="status">{paused ? "Paused" : status === "fallback" ? "Fallback demo" : status}{(status === "failed" || status === "fallback") && <button onClick={() => { setLoaded(false); setStatus("rendering"); setAttempt(n => n + 1); }}>Retry</button>}</div>
     </div>
   );
 }

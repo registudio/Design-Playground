@@ -30,7 +30,7 @@ export function buildStaticPage(project: DesignProject, previewCss: string, asse
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
   const fontHref = googleFontUrl(fontEntries);
 
-  const markup = renderToStaticMarkup(<SamplePage project={project} assetUrls={assetUrls} />);
+  const markup = renderToStaticMarkup(<SamplePage project={project} assetUrls={assetUrls} staticExport />);
   const title = project.client ? `${project.name} — ${project.client}` : project.name;
 
   return `<!doctype html>
