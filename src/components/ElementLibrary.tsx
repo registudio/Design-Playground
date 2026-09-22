@@ -8,6 +8,8 @@ import { pageSections, SECTION_LABELS } from "@/schema/composition";
 import type { DesignElement } from "@/registry/schema";
 import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
 import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
+import { RegistryPreview } from "./RegistryPreview";
+import { CATALOGUE_BATCH, NARROW_SEARCH_LIMIT } from "@/elements/preview-budget";
 
 /**
  * The element library.
@@ -35,9 +37,6 @@ type LibraryItem = {
   tag?: string;
   registry?: DesignElement;
 };
-
-/** Rendered per scroll batch. Large enough to fill a tall screen, small enough to stay cheap. */
-const BATCH = 36;
 
 /** Source id for the authored elements, which have no registry behind them. */
 const ORIGINALS = "playground";
@@ -75,23 +74,33 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [replay, setReplay] = useState(0);
-  const [visible, setVisible] = useState(BATCH);
+  const [visible, setVisible] = useState(CATALOGUE_BATCH);
 
   const selected = exploring ? [] : project?.recipe.elements ?? [];
   const picked = exploring ? [] : project?.selections ?? [];
 
-  const items = useMemo<LibraryItem[]>(() => [
-    ...ELEMENTS.map(e => ({ id: e.id, title: e.title, description: e.description, category: e.category, tag: e.tag, preview: true })),
-    ...registry.elements.map(e => ({
-      id: e.id,
-      title: e.title,
-      description: e.description,
-      // Browsed by subject rather than by publisher — see elements/taxonomy.ts.
-      category: browseCategory(e),
-      preview: false,
-      registry: e,
-    })),
-  ], [registry.elements]);
+  const items = useMemo<LibraryItem[]>(() => {
+    const all: LibraryItem[] = [
+      ...ELEMENTS.map(e => ({ id: e.id, title: e.title, description: e.description, category: e.category, tag: e.tag, preview: true })),
+      ...registry.elements.map(e => ({
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        // Browsed by subject rather than by publisher — see elements/taxonomy.ts.
+        category: browseCategory(e),
+        preview: false,
+        registry: e,
+      })),
+    ];
+    // Grouped by category, originals leading each group. Listing all the originals
+    // first instead would mean scrolling past 54 cards before meeting a single registry
+    // component, which made "All elements" look like a gallery of our own work.
+    const rank = new Map(BROWSE_CATEGORIES.map((c, i) => [c as string, i]));
+    return all.sort((a, b) =>
+      (rank.get(a.category) ?? 99) - (rank.get(b.category) ?? 99) ||
+      Number(b.preview) - Number(a.preview) ||
+      a.title.localeCompare(b.title));
+  }, [registry.elements]);
 
   // Ordered by the taxonomy rather than by first appearance, so the chip row does not
   // reshuffle as the registry loads, and only categories that actually have entries show.
@@ -114,17 +123,24 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
 
   // Any change to the filters starts the list again from the top, so you never land
   // mid-way through a result set you have not scrolled.
-  useEffect(() => { setVisible(BATCH); }, [category, source, query, onlySelected]);
+  useEffect(() => { setVisible(CATALOGUE_BATCH); }, [category, source, query, onlySelected]);
 
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = sentinel.current;
     if (!node) return;
     // rootMargin lets the next batch land before the sentinel is actually reached, so
-    // scrolling stays continuous rather than stepping.
+    // scrolling stays continuous rather than stepping. The root has to be the scrolling
+    // element: an intersection is clipped by every scrolling ancestor, and rootMargin
+    // widens only the root, so against the viewport the margin would be ignored here.
+    let root: HTMLElement | null = null;
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      const overflow = getComputedStyle(parent).overflowY;
+      if (overflow === "auto" || overflow === "scroll") { root = parent; break; }
+    }
     const observer = new IntersectionObserver(
-      entries => { if (entries[0]?.isIntersecting) setVisible(v => Math.min(v + BATCH, results.length)); },
-      { rootMargin: "600px" },
+      entries => { if (entries[0]?.isIntersecting) setVisible(v => Math.min(v + CATALOGUE_BATCH, results.length)); },
+      { root, rootMargin: "600px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -166,7 +182,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
             ? (paused
                 ? <button className="paused-demo" onClick={() => setPaused(false)}>▶<span>{item.title}</span></button>
                 : <iframe title={`${item.title} live preview`} sandbox="allow-scripts" srcDoc={elementDocument(item.id)} loading={index < 6 ? "eager" : "lazy"}/>)
-            : <RegistryCanvas element={item.registry!}/>}
+            : <RegistryPreview element={item.registry!} eager={results.length <= NARROW_SEARCH_LIMIT}/>}
           {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => setInspecting(item.id)}>↗</button>}
         </div>
         <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category}</span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>
@@ -190,33 +206,6 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   </>;
 }
 
-/**
- * Stands in for the live preview a registry component cannot have.
- *
- * Rather than an apologetic blank, it shows what the registry does give us — the
- * dependencies it pulls in and the command that installs it — so the card still
- * answers "is this the one I want?" as far as the data allows.
- */
-function RegistryCanvas({ element }: { element: DesignElement }) {
-  const source = sourceById(element.source);
-  return <div className="registry-canvas">
-    <span className="registry-glyph">↗</span>
-    <p>{element.description || "No description published."}</p>
-    <div className="registry-deps">{element.npmDependencies.slice(0, 3).map(d => <i key={d}>{d}</i>)}{element.npmDependencies.length > 3 && <i>+{element.npmDependencies.length - 3}</i>}</div>
-    {source && <a href={source.homepage} target="_blank" rel="noreferrer noopener" onClick={e => e.stopPropagation()}>See it on {source.label} ↗</a>}
-  </div>;
-}
-
-/**
- * Advanced detail for a registry element: what it will install, and which variant.
- *
- * The variant picker answers the spec's own open question — whether React Bits' four
- * published variants ever matter here — by making it a choice rather than a guess. The
- * default stays TypeScript + Tailwind, which is what this scaffold uses; the others are
- * there for the case the question was raised for, a consumer that is not on Tailwind.
- * It only appears once an element is selected, because there is nothing to change the
- * variant of until then.
- */
 function ElementAdvanced({ element, selected }: { element: DesignElement; selected: boolean }) {
   const stored = useProjectStore(s => s.project?.selections.find(sel => sel.id === element.id));
   const setSelectionVariant = useProjectStore(s => s.setSelectionVariant);
