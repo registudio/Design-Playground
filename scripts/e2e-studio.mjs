@@ -73,7 +73,7 @@ ok(`the mounted window stays bounded (${mounted})`, mounted <= 36 * 4 + 6);
 console.log(`  ${meta.trim()} · mounted ${firstBatch} -> ${mounted} of ${total}`);
 
 // --- Motion is previewed, engines are derived --------------------------------
-await page.getByRole("button", { name: /Motion & engines/ }).click();
+await page.locator(".sidebar-link", { hasText: "Motion" }).click();
 await page.waitForTimeout(900);
 ok("motion options render as animated tiles", (await page.locator(".motion-tile").count()) > 10);
 ok("the tiles are genuinely animating", (await page.evaluate(() =>
@@ -85,8 +85,8 @@ await page.screenshot({ path: `${OUT}/studio-02-motion.png` });
 
 // --- Advanced adds real depth on every step ----------------------------------
 const controls = () => page.locator(".studio-main input, .studio-main select, .studio-main textarea, .studio-main button").count();
-for (const step of ["The basics", "Page sections", "Elements", "Motion & engines"]) {
-  await page.getByRole("button", { name: new RegExp(step) }).first().click();
+for (const step of ["The basics", "Page sections", "Elements", "Motion"]) {
+  await page.locator(".sidebar-link", { hasText: step }).first().click();
   await page.waitForTimeout(900);
   await page.getByRole("button", { name: "Basic", exact: true }).click();
   await page.waitForTimeout(500);

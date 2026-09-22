@@ -63,6 +63,6 @@ function PageRhythm() {
       <NumberField label="Gutter" value={tokens.layout.gutter} min={0} max={6} step={0.25} unit="rem" provenancePath="tokens.layout.gutter" onChange={set("gutter", "gutter")}/>
       <NumberField label="Grid columns" value={tokens.layout.gridColumns} min={1} max={24} step={1} unit="cols" provenancePath="tokens.layout.gridColumns" onChange={set("gridColumns", "grid columns")}/>
     </div>
-    <Choice label="Alignment" options={["left", "center"] as const} value={tokens.layout.alignment} provenancePath="tokens.layout.alignment" onChange={alignment => edit("Set alignment", d => { d.tokens.layout.alignment = alignment; d.provenance["tokens.layout.alignment"] = "user"; })}/>
+    <Choice label="Alignment" options={["left", "center", "right"] as const} value={tokens.layout.alignment} provenancePath="tokens.layout.alignment" onChange={alignment => edit("Set alignment", d => { d.tokens.layout.alignment = alignment; d.provenance["tokens.layout.alignment"] = "user"; })}/>
   </section>;
 }

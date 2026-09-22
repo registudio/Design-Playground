@@ -288,12 +288,16 @@ export function Toggle({
         role="switch"
         aria-checked={value}
         onClick={() => onChange(!value)}
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+        className={`relative h-5 w-9 shrink-0 rounded-full p-0 transition-colors ${
           value ? "bg-chrome-accent" : "bg-chrome-border"
         }`}
       >
+        {/* Anchored to the left edge explicitly. Without it the knob took its static
+            position, which a button centres — so "on" slid it a further 18px from the
+            middle and it left the track entirely. */}
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+          aria-hidden="true"
+          className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
             value ? "translate-x-4.5" : "translate-x-0.5"
           }`}
         />

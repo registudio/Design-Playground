@@ -252,7 +252,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
 }
-.dp-navbar-split .dp-navbar-links { flex: 1; }
+.dp-navbar-split .dp-navbar-links { flex: 1; max-width: 36%; overflow: hidden; white-space: nowrap; }
 
 /* Mega: taller bar with a hairline second row implying a dropdown panel. */
 .dp-navbar-mega .dp-navbar-inner { padding-block: var(--dp-space-6); }
@@ -323,6 +323,12 @@ body {
 .dp-hero-centered .dp-hero-content { align-items: center; }
 .dp-hero-title { margin: 0; }
 .dp-hero-lede { color: var(--dp-color-muted); margin: 0; max-width: 36rem; }
+/* Alignment (tokens.layout.alignment). Hero variants that are centred by construction
+   (centered, dashboard, video-led) keep their own, more specific rule. */
+.dp-hero-content { text-align: var(--dp-layout-align, left); align-items: var(--dp-layout-align-items, flex-start); }
+.dp-hero-content .dp-row { justify-content: var(--dp-layout-align-items, flex-start); }
+.dp-section-heading, .dp-features-title, .dp-proof-eyebrow { text-align: var(--dp-layout-align, left); }
+.dp-feature, .dp-quote, .dp-post, .dp-person { text-align: var(--dp-layout-align, left); }
 .dp-hero-media { aspect-ratio: 4 / 3; }
 
 .dp-features { padding-block: var(--dp-layout-section-spacing); background: var(--dp-color-surface); }

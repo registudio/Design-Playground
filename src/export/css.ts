@@ -60,6 +60,27 @@ export function generateCss(tokens: DesignTokens, options: CssOptions = {}): str
   return lines.join("\n") + "\n";
 }
 
+/**
+ * The same variables, scoped to one element and one theme.
+ *
+ * For surfaces in the studio itself — the Basics specimen — that need to render the
+ * project's design without an iframe. Reusing these generators rather than restating
+ * any of it is the point: the specimen cannot drift from what the preview and the
+ * export produce, because it is the same output under a different selector.
+ */
+export function scopedTokenCss(tokens: DesignTokens, selector: string, theme: "light" | "dark" = "light"): string {
+  const useTheme = theme === "dark" && tokens.colors.dark ? "dark" : "light";
+  return [
+    `${selector} {`,
+    ...colorVars(tokens, useTheme),
+    ...typographyVars(tokens),
+    ...geometryVars(tokens),
+    ...layoutVars(tokens),
+    ...imageryVars(tokens),
+    "}",
+  ].join("\n");
+}
+
 function colorVars(tokens: DesignTokens, theme: "light" | "dark"): string[] {
   const out: string[] = [];
 
@@ -126,6 +147,10 @@ function layoutVars(tokens: DesignTokens): string[] {
     `  ${v("layout-gutter")}: ${l.gutter}rem;`,
     `  ${v("layout-section-spacing")}: ${l.sectionSpacing}rem;`,
     `  ${v("layout-columns")}: ${l.gridColumns};`,
+    // Text alignment and its flex/grid counterpart. Both are needed: a heading follows
+    // text-align, but a stack of buttons in a flex column follows align-items.
+    `  ${v("layout-align")}: ${l.alignment};`,
+    `  ${v("layout-align-items")}: ${{ left: "flex-start", center: "center", right: "flex-end" }[l.alignment]};`,
   ];
 }
 

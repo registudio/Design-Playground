@@ -9,6 +9,10 @@ import { AssetUpload } from "./AssetUpload";
 import { AdditionalAssets } from "./AdditionalAssets";
 import { ColorEditor } from "./ColorEditor";
 import { ALL_FONTS, FONT_PAIRINGS, GOOGLE_FONTS, SYSTEM_FONTS, findFont } from "@/fonts/catalogue";
+import { fontStack, useGoogleFonts } from "@/fonts/use-google-fonts";
+
+/** Every face the pairing list shows, so each option can be set in its own type. */
+const PAIRING_FAMILIES = FONT_PAIRINGS.flatMap((p) => [p.display, p.body]);
 
 /**
  * The Foundation section (§10).
@@ -21,6 +25,7 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
   const project = useProjectStore((s) => s.project);
   const edit = useProjectStore((s) => s.edit);
   const advanced = useProjectStore((s) => s.advanced);
+  useGoogleFonts(PAIRING_FAMILIES);
 
   if (!project) return null;
   const { tokens } = project;
@@ -67,14 +72,15 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
                       }
                     })
                   }
-                  className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                    active
-                      ? "border-chrome-accent bg-chrome-hover"
-                      : "border-chrome-border hover:bg-chrome-hover"
-                  }`}
+                  aria-pressed={active}
+                  className={`pairing-option ${active ? "active" : ""}`}
                 >
-                  <span className="block text-[12px] font-medium">{pairing.name}</span>
-                  <span className="block text-[11px] text-chrome-muted">{pairing.description}</span>
+                  {/* Each option set in the faces it would give you — the name in the
+                      display face, the description in the body face — so a pairing is
+                      chosen by how it looks rather than by what it is called. */}
+                  <strong style={{ fontFamily: fontStack(pairing.display) }}>{pairing.name}</strong>
+                  <span style={{ fontFamily: fontStack(pairing.body) }}>{pairing.description}</span>
+                  <small>{pairing.display === pairing.body ? pairing.display : `${pairing.display} + ${pairing.body}`}</small>
                 </button>
               );
             })}
@@ -116,6 +122,7 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
                   ))}
                 </optgroup>
               </select>
+              <FontSample family={tokens.typography[role].family} />
             </label>
           ))}
 
@@ -248,7 +255,7 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
         />
         <Choice
           label="Alignment"
-          options={["left", "center"] as const}
+          options={["left", "center", "right"] as const}
           value={tokens.layout.alignment}
           provenancePath="tokens.layout.alignment"
           onChange={(alignment) =>
@@ -408,6 +415,16 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
         )}
       </Panel>
     </>
+  );
+}
+
+/** One line set in a family, so a picker shows the face and not only its name. */
+function FontSample({ family }: { family: string }) {
+  useGoogleFonts([family]);
+  return (
+    <span className="font-sample" style={{ fontFamily: fontStack(family) }} aria-hidden="true">
+      Sphinx of black quartz, judge my vow
+    </span>
   );
 }
 

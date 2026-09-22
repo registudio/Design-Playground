@@ -155,7 +155,7 @@ export const LayoutTokens = z.object({
   gutter: z.number().min(0),
   sectionSpacing: z.number().min(0),
   gridColumns: z.number().int().min(1).max(24),
-  alignment: z.enum(["left", "center"]),
+  alignment: z.enum(["left", "center", "right"]),
 });
 export type LayoutTokens = z.infer<typeof LayoutTokens>;
 
