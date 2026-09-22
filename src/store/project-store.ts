@@ -5,6 +5,8 @@ import type { DesignProject, Snapshot } from "@/schema/project";
 import type { ProjectMeta } from "@/schema/project";
 import type { CustomPreset } from "@/schema/customPreset";
 import type { SelectedElement } from "@/schema/selection";
+import type { ElementVariant } from "@/registry/schema";
+import { installCommand } from "@/registry/sources";
 import { emptyIndex, RegistryIndex, type DesignElement } from "@/registry/schema";
 import { createProject } from "@/schema/defaults";
 import { engineRequirements, type EngineId } from "@/schema/engines";
@@ -139,6 +141,8 @@ interface ProjectState {
   deselectElement: (id: string) => void;
   setIntendedUse: (id: string, intendedUse: string) => void;
   setEngine: (engine: "motion" | "gsap" | "lenis" | "vanta", enabled: boolean) => void;
+  /** Switches which published variant of a React Bits component gets installed. */
+  setSelectionVariant: (id: string, variant: ElementVariant) => void;
 }
 
 /** Set once hydratePreferences has attached the save subscription, so it attaches once. */
@@ -520,6 +524,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     // and would be overwritten on the very next edit anyway.
     get().edit(`${enabled ? "Enable" : "Disable"} ${engine}`, (draft) => {
       draft.recipe.engines[engine] = enabled;
+    });
+  },
+
+  setSelectionVariant: (id, variant) => {
+    get().edit("Change variant", (draft) => {
+      const selection = draft.selections.find((s) => s.id === id);
+      if (!selection) return;
+      selection.variant = variant;
+      // The id keys off the base name so the selection survives a variant being dropped
+      // upstream, but the command has to name the concrete published item.
+      selection.installCommand = installCommand(
+        selection.source,
+        `${selection.name}-${variant.language}-${variant.styling}`,
+      );
     });
   },
 }));

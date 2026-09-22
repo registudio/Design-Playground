@@ -25,6 +25,11 @@ page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 
 await page.goto(BASE_URL, { waitUntil: "networkidle" });
+
+// The app opens on a welcome screen since the studio shell landed; the project
+// directory is one click in. Harmless if a previous project auto-reopens instead.
+const welcome = page.getByRole("button", { name: "+ New project" });
+if (await welcome.count()) await welcome.first().click();
 await page.getByPlaceholder("Project name").fill("Safety Verify");
 await page.getByRole("button", { name: "New project", exact: true }).click();
 await page.waitForTimeout(700);

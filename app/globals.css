@@ -259,6 +259,18 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .override-easing { grid-column:1/-1; }
 .binding-overrides>button { align-self:flex-start;font-size:9px;color:#9fb98a;text-decoration:underline; }
 
+/* Advanced: page-rhythm controls shown beside the section sequence they govern. */
+.page-rhythm { margin-top:24px;padding:20px;border:1px solid #3b4b2e;border-radius:9px;background:#192113;display:flex;flex-direction:column;gap:18px; }
+.page-rhythm>.eyebrow { font-size:8px; }
+.rhythm-numbers { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+
+.element-advanced-row { display:flex;align-items:center;gap:9px; }
+.element-advanced-row button { font-size:9px;border:1px solid #3c4d2e;border-radius:4px;padding:3px 7px;color:#b7cfa0; }
+.element-advanced-row button:hover { background:#2a3720; }
+.variant-picker { display:flex;gap:4px;flex-wrap:wrap; }
+.variant-picker button { font-size:8px;border:1px solid #3c4d2e;border-radius:4px;padding:3px 6px;color:#93a882; }
+.variant-picker button.active { background:#cbe99a;border-color:#cbe99a;color:#25311d; }
+
 @media(min-width:1700px){.element-canvas{height:290px}.studio-content{padding:45px 50px 0}.studio-sidebar{width:240px}.selection-sidebar{width:280px}}
 @media(max-width:1250px){.selection-sidebar{display:none}.element-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.element-canvas{height:210px}.collection-stamp{display:none}.template-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.header-context{display:none}.composition-layout{grid-template-columns:minmax(0,1fr) 240px}.studio-content{padding:30px 25px 0}}
 @media(max-width:950px){.studio-sidebar{width:184px;padding-inline:10px}.studio-brand{font-size:15px}.studio-header{padding:0 20px;gap:15px}.element-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.library-heading h1{font-size:32px}.composition-layout{grid-template-columns:1fr}.composition-layout>.section-order{order:-1}.composition-layout>.section-order ol{display:grid;grid-template-columns:1fr 1fr}.optional-note{flex-wrap:wrap}.optional-note>div{min-width:75%}.asset-grid{grid-template-columns:1fr}.cursor-choices{grid-template-columns:repeat(4,1fr)}.save-status{display:none}.foundation-grid{grid-template-columns:1fr 1fr}.library-toolbar{flex-wrap:wrap}.search-field{min-width:100%}.welcome{padding-top:50px}.welcome>h1{letter-spacing:-3px}.preview-toolbar{flex-wrap:wrap}}

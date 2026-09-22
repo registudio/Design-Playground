@@ -33,16 +33,21 @@ page.on("console", (m) => { if (m.type() === "error") pageErrors.push(`console: 
 
 await page.goto(BASE_URL, { waitUntil: "networkidle" });
 
+// The app opens on a welcome screen since the studio shell landed; the project
+// directory is one click in. Harmless if a previous project auto-reopens instead.
+const welcome = page.getByRole("button", { name: "+ New project" });
+if (await welcome.count()) await welcome.first().click();
+
 // Create a project. Type rather than fill, so the value lands after hydration.
 const nameInput = page.getByPlaceholder("Project name");
 await nameInput.click();
 await nameInput.pressSequentially("Northwind");
-await page.getByRole("button", { name: "New project" }).waitFor({ state: "attached" });
+await page.getByRole("button", { name: "New project", exact: true }).waitFor({ state: "attached" });
 await page.waitForFunction(
   () => !document.querySelector("button[type=submit]")?.hasAttribute("disabled"),
   null, { timeout: 15000 });
 await page.getByPlaceholder("Client (optional)").pressSequentially("Northwind Pte Ltd");
-await page.getByRole("button", { name: "New project" }).click();
+await page.getByRole("button", { name: "New project", exact: true }).click();
 await page.waitForSelector("iframe[title='Live preview']", { timeout: 10000 });
 
 // The preview must actually paint through the postMessage bridge.

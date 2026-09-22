@@ -38,6 +38,11 @@ const page = await browser.newPage({
 });
 await page.goto(BASE_URL, { waitUntil: "networkidle" });
 
+// The app opens on a welcome screen since the studio shell landed; the project
+// directory is one click in. Harmless if a previous project auto-reopens instead.
+const welcome = page.getByRole("button", { name: "+ New project" });
+if (await welcome.count()) await welcome.first().click();
+
 const nameInput = page.getByPlaceholder("Project name");
 await nameInput.click();
 await nameInput.pressSequentially("Elements Test");
@@ -46,7 +51,7 @@ await page.waitForFunction(
   null,
   { timeout: 15000 },
 );
-await page.getByRole("button", { name: "New project" }).click();
+await page.getByRole("button", { name: "New project", exact: true }).click();
 await page.waitForSelector("iframe[title='Live preview']");
 
 // --- The rail ---------------------------------------------------------------

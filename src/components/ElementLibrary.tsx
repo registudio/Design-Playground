@@ -166,7 +166,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         {item.registry
           ? <div className="element-origin"><span className="registry-source-badge" title="Installed from a third-party registry at build time">↗ {sourceById(item.registry.source)?.label}</span><small>{item.registry.referenceOnly ? "REFERENCE ONLY" : item.registry.engineDependency.length ? item.registry.engineDependency.join(" + ").toUpperCase() : "NO ENGINE"}</small></div>
           : <div className="element-origin"><span title="Authored for this playground; included as source in your export">✳ {elementOrigin(item.id).name}</span><small>{elementOrigin(item.id).runtime}</small></div>}
-        {advanced && item.registry && <div className="element-advanced"><code>{item.registry.installCommand}</code>{item.registry.registryDependencies.length > 0 && <small>needs {item.registry.registryDependencies.join(", ")}</small>}</div>}
+        {advanced && item.registry && <ElementAdvanced element={item.registry} selected={chosen}/>}
         {chosen && note && "note" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="Add a note… What do you have in mind?" value={note.note} onChange={e => edit(`Note for ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.note = e.target.value; }, `element-note:${item.id}`)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => edit(`Place ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.placement = e.target.value; })}><option value="page">End of page</option>{project && pageSections(project.recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
         {chosen && note && "intendedUse" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="What's it for? e.g. hero headline reveal" value={note.intendedUse} onChange={e => useProjectStore.getState().setIntendedUse(item.id, e.target.value)}/></div>}
       </article>;
@@ -197,5 +197,53 @@ function RegistryCanvas({ element }: { element: DesignElement }) {
     <p>{element.description || "No description published."}</p>
     <div className="registry-deps">{element.npmDependencies.slice(0, 3).map(d => <i key={d}>{d}</i>)}{element.npmDependencies.length > 3 && <i>+{element.npmDependencies.length - 3}</i>}</div>
     {source && <a href={source.homepage} target="_blank" rel="noreferrer noopener" onClick={e => e.stopPropagation()}>See it on {source.label} ↗</a>}
+  </div>;
+}
+
+/**
+ * Advanced detail for a registry element: what it will install, and which variant.
+ *
+ * The variant picker answers the spec's own open question — whether React Bits' four
+ * published variants ever matter here — by making it a choice rather than a guess. The
+ * default stays TypeScript + Tailwind, which is what this scaffold uses; the others are
+ * there for the case the question was raised for, a consumer that is not on Tailwind.
+ * It only appears once an element is selected, because there is nothing to change the
+ * variant of until then.
+ */
+function ElementAdvanced({ element, selected }: { element: DesignElement; selected: boolean }) {
+  const stored = useProjectStore(s => s.project?.selections.find(sel => sel.id === element.id));
+  const setSelectionVariant = useProjectStore(s => s.setSelectionVariant);
+  const [copied, setCopied] = useState(false);
+  const command = stored?.installCommand ?? element.installCommand;
+  const current = stored?.variant ?? element.variant;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      // Clipboard access can be refused; the command stays visible and selectable.
+    }
+  };
+
+  return <div className="element-advanced">
+    <code>{command}</code>
+    <div className="element-advanced-row">
+      <button type="button" onClick={() => void copy()} aria-label={`Copy install command for ${element.title}`}>{copied ? "Copied" : "Copy"}</button>
+      {element.registryDependencies.length > 0 && <small>needs {element.registryDependencies.join(", ")}</small>}
+    </div>
+    {selected && element.availableVariants.length > 1 && <div className="variant-picker">
+      {element.availableVariants.map(variant => {
+        const active = current?.language === variant.language && current?.styling === variant.styling;
+        return <button
+          key={`${variant.language}-${variant.styling}`}
+          type="button"
+          aria-pressed={active}
+          className={active ? "active" : ""}
+          onClick={() => setSelectionVariant(element.id, variant)}
+        >{variant.language}/{variant.styling}</button>;
+      })}
+    </div>}
   </div>;
 }
