@@ -78,3 +78,45 @@ export function defaultEngines(): EngineChoices {
 export function engineInfo(id: EngineId): EngineInfo {
   return ENGINES.find((engine) => engine.id === id)!;
 }
+
+/** Why an engine is in the project, for showing the derivation rather than asserting it. */
+export interface EngineRequirement {
+  id: EngineId;
+  required: boolean;
+  /** Human-readable causes: selected components and chosen motion recipes. */
+  reasons: string[];
+}
+
+/**
+ * Works out which engines a project needs from what it actually contains.
+ *
+ * Asking the user to tick Motion or GSAP was the wrong question: they cannot know the
+ * answer without reading the dependencies of every component they picked, and getting
+ * it wrong exports a recipe that cannot run. Both halves of the project already state
+ * their needs — each registry element carries its `engineDependency`, and each motion
+ * recipe declares its engine — so the answer is derivable and the question is not worth
+ * asking.
+ *
+ * Lenis and Vanta stay opt-in: nothing in the project implies them, since they change
+ * the feel of a whole page rather than serving one component.
+ */
+export function engineRequirements(
+  motionEngines: string[],
+  selections: Array<{ title: string; engineDependency: string[] }>,
+): EngineRequirement[] {
+  return ENGINES.map((engine) => {
+    const reasons: string[] = [];
+    if (engine.drivesProperties && motionEngines.includes(engine.id)) {
+      reasons.push("your chosen animations");
+    }
+    const components = selections.filter((s) => s.engineDependency.includes(engine.id));
+    if (components.length) {
+      reasons.push(
+        components.length <= 2
+          ? components.map((c) => c.title).join(" and ")
+          : `${components.length} selected components`,
+      );
+    }
+    return { id: engine.id, required: reasons.length > 0, reasons };
+  });
+}

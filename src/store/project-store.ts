@@ -7,6 +7,7 @@ import type { CustomPreset } from "@/schema/customPreset";
 import type { SelectedElement } from "@/schema/selection";
 import { emptyIndex, RegistryIndex, type DesignElement } from "@/registry/schema";
 import { createProject } from "@/schema/defaults";
+import { engineRequirements, type EngineId } from "@/schema/engines";
 import { captureCustomPresetFacets } from "@/presets";
 import { baselineDescription, baselineFor, resetPath } from "./baseline";
 import {
@@ -174,6 +175,23 @@ function scheduleSave(project: DesignProject, report: (update: Partial<ProjectSt
   }, AUTOSAVE_DEBOUNCE_MS);
 }
 
+/**
+ * Recomputes `recipe.engines` from the project's own contents.
+ *
+ * Lenis and Vanta are left as the user set them: nothing in a selection or a motion
+ * recipe implies either, so deriving them would mean silently switching off something
+ * deliberately turned on.
+ */
+function syncEngines(draft: DesignProject): void {
+  const motionEngines = ["entrance", "interaction", "scroll"]
+    .flatMap((group) => Object.values(draft.recipe.motion[group as "entrance"]))
+    .map((binding) => binding.engine);
+  for (const requirement of engineRequirements(motionEngines, draft.selections)) {
+    if (requirement.id === "lenis" || requirement.id === "vanta") continue;
+    draft.recipe.engines[requirement.id as EngineId] = requirement.required;
+  }
+}
+
 export const useProjectStore = create<ProjectState>((set, get) => ({
   project: null,
   history: emptyHistory(),
@@ -235,6 +253,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           draft.recipe.unset = draft.recipe.unset?.filter(item => item !== key);
         }
       }
+      // Engines follow from what the project contains, so they are recomputed after
+      // every edit rather than being a question the user has to answer. Doing it here,
+      // inside the same commit, keeps it on the undo stack with the change that caused
+      // it — a separate write would make undo leave the engine list out of step.
+      syncEngines(draft);
     }, coalesceKey);
     if (result.state === project) return;
     set({ project: result.state, history: result.history, dirty: true });
@@ -493,6 +516,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   setEngine: (engine, enabled) => {
+    // Only Lenis and Vanta remain switchable; Motion and GSAP are derived by syncEngines
+    // and would be overwritten on the very next edit anyway.
     get().edit(`${enabled ? "Enable" : "Disable"} ${engine}`, (draft) => {
       draft.recipe.engines[engine] = enabled;
     });

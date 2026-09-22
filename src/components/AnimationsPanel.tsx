@@ -1,8 +1,10 @@
 "use client";
 
 import { useProjectStore } from "@/store/project-store";
-import { findEngineConflicts } from "@/schema/recipe";
+import { findEngineConflicts, type RecipeBinding } from "@/schema/recipe";
+import type { DesignProject } from "@/schema/project";
 import { Choice, Panel, Slider } from "./controls";
+import { MotionChoice } from "./MotionChoice";
 import { MOTION_PROFILES, ENTRANCE_RECIPES, HOVER_RECIPES, SCROLL_RECIPES } from "@/motion/recipes";
 
 /**
@@ -58,12 +60,10 @@ export function AnimationsPanel() {
       </Panel>
 
       <Panel title="Entrance">
-        <Choice
-          label="Default entrance"
-          options={ENTRANCE_RECIPES.map((r) => r.id)}
+        <MotionChoice
+          label="How content arrives"
+          options={ENTRANCE_RECIPES.map((r) => ({ id: r.id, label: r.label, engine: r.binding.engine }))}
           value={motion.entrance.default?.recipe ?? ENTRANCE_RECIPES[0]!.id}
-          describe={(id) => { const r = ENTRANCE_RECIPES.find(r => r.id === id); return r ? `${r.label} · ${r.binding.engine === "motion" ? "Motion" : r.binding.engine.toUpperCase()}` : id; }}
-          provenancePath="recipe.motion.entrance.default"
           onChange={(id) =>
             edit("Set entrance animation", (draft) => {
               const recipe = ENTRANCE_RECIPES.find((r) => r.id === id)!;
@@ -72,35 +72,46 @@ export function AnimationsPanel() {
             })
           }
         />
+        {advanced && (
+          <BindingOverrides
+            path="recipe.motion.entrance.default"
+            binding={motion.entrance.default}
+            apply={(draft, mutate) => mutate(draft.recipe.motion.entrance.default!)}
+          />
+        )}
       </Panel>
 
       <Panel title="Interaction">
         {(["button", "card"] as const).map((target) => (
-          <Choice
-            key={target}
-            label={`${target === "button" ? "Button" : "Card"} hover`}
-            options={HOVER_RECIPES[target].map((r) => r.id)}
-            value={motion.interaction[target]?.recipe ?? HOVER_RECIPES[target][0]!.id}
-            describe={(id) => { const r = HOVER_RECIPES[target].find(r => r.id === id); return r ? `${r.label} · ${r.binding.engine === "motion" ? "Motion" : r.binding.engine.toUpperCase()}` : id; }}
-            provenancePath={`recipe.motion.interaction.${target}`}
-            onChange={(id) =>
-              edit(`Set ${target} hover`, (draft) => {
-                const recipe = HOVER_RECIPES[target].find((r) => r.id === id)!;
-                draft.recipe.motion.interaction[target] = { ...recipe.binding };
-                draft.provenance[`recipe.motion.interaction.${target}`] = "user";
-              })
-            }
-          />
+          <div key={target} className="flex flex-col gap-3">
+            <MotionChoice
+              label={`${target === "button" ? "Button" : "Card"} hover`}
+              options={HOVER_RECIPES[target].map((r) => ({ id: r.id, label: r.label, engine: r.binding.engine }))}
+              value={motion.interaction[target]?.recipe ?? HOVER_RECIPES[target][0]!.id}
+              onChange={(id) =>
+                edit(`Set ${target} hover`, (draft) => {
+                  const recipe = HOVER_RECIPES[target].find((r) => r.id === id)!;
+                  draft.recipe.motion.interaction[target] = { ...recipe.binding };
+                  draft.provenance[`recipe.motion.interaction.${target}`] = "user";
+                })
+              }
+            />
+            {advanced && (
+              <BindingOverrides
+                path={`recipe.motion.interaction.${target}`}
+                binding={motion.interaction[target]}
+                apply={(draft, mutate) => mutate(draft.recipe.motion.interaction[target]!)}
+              />
+            )}
+          </div>
         ))}
       </Panel>
 
       <Panel title="Scroll">
-        <Choice
-          label="Scroll behaviour"
-          options={SCROLL_RECIPES.map((r) => r.id)}
+        <MotionChoice
+          label="What scrolling does"
+          options={SCROLL_RECIPES.map((r) => ({ id: r.id, label: r.label, engine: r.binding.engine }))}
           value={motion.scroll.default?.recipe ?? SCROLL_RECIPES[0]!.id}
-          describe={(id) => { const r = SCROLL_RECIPES.find(r => r.id === id); return r ? `${r.label} · ${r.binding.engine === "motion" ? "Motion" : r.binding.engine.toUpperCase()}` : id; }}
-          provenancePath="recipe.motion.scroll.default"
           onChange={(id) =>
             edit("Set scroll behaviour", (draft) => {
               const recipe = SCROLL_RECIPES.find((r) => r.id === id)!;
@@ -109,6 +120,13 @@ export function AnimationsPanel() {
             })
           }
         />
+        {advanced && (
+          <BindingOverrides
+            path="recipe.motion.scroll.default"
+            binding={motion.scroll.default}
+            apply={(draft, mutate) => mutate(draft.recipe.motion.scroll.default!)}
+          />
+        )}
       </Panel>
 
       {advanced && (
@@ -191,3 +209,116 @@ export function AnimationsPanel() {
     </>
   );
 }
+
+/**
+ * Per-recipe overrides of the global motion profile.
+ *
+ * `RecipeBinding.overrides` has been in the schema and the export contract from the
+ * start (§12.1), but nothing ever set it: the profile sliders move every animation at
+ * once, so "keep everything professional, but let the hero arrive slowly" could not be
+ * expressed at all. This is the Advanced escape hatch for exactly that — each field
+ * falls back to the profile when left blank, so an override is opt-in per value rather
+ * than a wholesale copy of the defaults.
+ */
+function BindingOverrides({
+  path,
+  binding,
+  apply,
+}: {
+  path: string;
+  binding: RecipeBinding | undefined;
+  /** Reaches the same binding on the immer draft that `binding` reads from state. */
+  apply: (draft: DesignProject, mutate: (binding: RecipeBinding) => void) => void;
+}) {
+  const edit = useProjectStore((s) => s.edit);
+  const tokens = useProjectStore((s) => s.project?.tokens.motion);
+  if (!binding || !tokens) return null;
+
+  const set = (key: "duration" | "delay" | "stagger" | "distance", value: number | undefined) =>
+    edit(`Override ${key}`, (draft) => {
+      apply(draft, (target) => {
+        const overrides = { ...target.overrides };
+        if (value === undefined) delete overrides[key];
+        else overrides[key] = value;
+        // An empty object would serialize as `"overrides": {}` in the export — noise a
+        // consumer would have to ignore, so it is dropped entirely instead.
+        target.overrides = Object.keys(overrides).length ? overrides : undefined;
+      });
+      draft.provenance[path] = "user";
+    }, `${path}:${key}`);
+
+  const setEasing = (value: string) =>
+    edit("Override easing", (draft) => {
+      apply(draft, (target) => {
+        const overrides = { ...target.overrides };
+        if (!value) delete overrides.easing;
+        else overrides.easing = value;
+        target.overrides = Object.keys(overrides).length ? overrides : undefined;
+      });
+      draft.provenance[path] = "user";
+    }, `${path}:easing`);
+
+  const fields = [
+    { key: "duration" as const, label: "Duration", unit: "ms", fallback: tokens.duration.base, min: 0, max: 2000, step: 10 },
+    { key: "delay" as const, label: "Delay", unit: "ms", fallback: 0, min: 0, max: 2000, step: 10 },
+    { key: "stagger" as const, label: "Stagger", unit: "ms", fallback: tokens.stagger, min: 0, max: 400, step: 5 },
+    { key: "distance" as const, label: "Distance", unit: "px", fallback: tokens.distance, min: 0, max: 200, step: 2 },
+  ];
+
+  return (
+    <div className="binding-overrides">
+      <span>Override for this animation only</span>
+      <div className="override-grid">
+        {fields.map((field) => {
+          const current = binding.overrides?.[field.key];
+          return (
+            <label key={field.key}>
+              {field.label}
+              <input
+                type="number"
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                value={current ?? ""}
+                placeholder={`${field.fallback}`}
+                aria-label={`${field.label} override`}
+                onChange={(e) =>
+                  set(field.key, e.target.value === "" ? undefined : Number(e.target.value))
+                }
+              />
+              <small>{field.unit}</small>
+            </label>
+          );
+        })}
+        <label className="override-easing">
+          Easing
+          <select
+            value={binding.overrides?.easing ?? ""}
+            aria-label="Easing override"
+            onChange={(e) => setEasing(e.target.value)}
+          >
+            <option value="">Profile default</option>
+            {EASINGS.map((easing) => (
+              <option key={easing.value} value={easing.value}>{easing.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {binding.overrides && (
+        <button type="button" onClick={() => edit("Clear overrides", (draft) => {
+          apply(draft, (target) => { target.overrides = undefined; });
+        })}>Clear overrides</button>
+      )}
+    </div>
+  );
+}
+
+/** Named curves rather than a raw cubic-bezier field: the names are the useful part. */
+const EASINGS = [
+  { label: "Standard", value: "cubic-bezier(0.4, 0, 0.2, 1)" },
+  { label: "Ease out", value: "cubic-bezier(0, 0, 0.2, 1)" },
+  { label: "Ease in", value: "cubic-bezier(0.4, 0, 1, 1)" },
+  { label: "Gentle spring", value: "cubic-bezier(0.34, 1.26, 0.64, 1)" },
+  { label: "Snappy", value: "cubic-bezier(0.22, 1, 0.36, 1)" },
+  { label: "Linear", value: "linear" },
+];

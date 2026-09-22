@@ -169,6 +169,96 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .grid-sentinel { display:flex;align-items:center;justify-content:center;gap:10px;padding:34px 0;font-size:10px;color:#87997b; }
 .grid-sentinel span { font-size:9px;color:#657a55; }
 
+/* --- Motion preview tiles -------------------------------------------------- */
+/* Each tile animates three bars to convey the character of one recipe. Keyed on the
+   recipe's last path segment, so adding a recipe named after an existing demo picks up
+   its animation automatically and an unknown one simply sits still rather than breaking. */
+.motion-choice { display:flex;flex-direction:column;gap:10px; }
+.motion-choice-label { font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8b9a80;font-weight:600; }
+.motion-choice-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px; }
+.motion-tile { display:flex;flex-direction:column;gap:2px;padding:9px;border:1px solid #37462c;border-radius:8px;background:#1a2215;text-align:left;transition:border-color .18s,background .18s; }
+.motion-tile:hover { border-color:#7d9a5f; }
+.motion-tile.active { border-color:#cbe99a;background:#26331b; }
+.motion-tile strong { font-size:11px;font-weight:500;color:#dde8cf; }
+.motion-tile small { font-size:8px;letter-spacing:.06em;color:#8399729e;text-transform:uppercase; }
+.motion-tile em { font-size:9px;font-style:normal;color:#8d9f7e;line-height:1.5;margin-top:3px; }
+.motion-stage { position:relative;display:flex;align-items:center;justify-content:center;gap:5px;height:56px;margin-bottom:6px;border-radius:5px;background:#10170c;overflow:hidden; }
+.motion-stage i { width:15px;height:26px;border-radius:3px;background:#9dc478;display:block; }
+.motion-stage i:nth-child(2) { height:34px;background:#cbe99a; }
+
+/* Entrance */
+[data-demo="none"] i { opacity:.35; }
+[data-demo="fade"] i { animation:m-fade 1.6s ease-in-out infinite; }
+[data-demo="fade-up"] i { animation:m-fade-up 1.6s ease-out infinite; }
+[data-demo="blur-in"] i { animation:m-blur 1.8s ease-out infinite; }
+[data-demo="scale"] i { animation:m-scale 1.6s ease-out infinite; }
+[data-demo="mask-reveal"] i { animation:m-mask 1.8s ease-out infinite; }
+/* The stagger that makes a sequence read as a sequence. */
+[data-demo="fade-up"] i:nth-child(2),[data-demo="fade"] i:nth-child(2),[data-demo="blur-in"] i:nth-child(2),[data-demo="scale"] i:nth-child(2),[data-demo="mask-reveal"] i:nth-child(2) { animation-delay:.12s; }
+[data-demo="fade-up"] i:nth-child(3),[data-demo="fade"] i:nth-child(3),[data-demo="blur-in"] i:nth-child(3),[data-demo="scale"] i:nth-child(3),[data-demo="mask-reveal"] i:nth-child(3) { animation-delay:.24s; }
+@keyframes m-fade { 0%,15%{opacity:0} 45%,85%{opacity:1} 100%{opacity:0} }
+@keyframes m-fade-up { 0%,10%{opacity:0;transform:translateY(16px)} 45%,85%{opacity:1;transform:none} 100%{opacity:0} }
+@keyframes m-blur { 0%,10%{opacity:0;filter:blur(7px)} 50%,85%{opacity:1;filter:none} 100%{opacity:0;filter:blur(7px)} }
+@keyframes m-scale { 0%,10%{opacity:0;transform:scale(.55)} 50%,85%{opacity:1;transform:none} 100%{opacity:0} }
+@keyframes m-mask { 0%,10%{clip-path:inset(0 0 100% 0)} 50%,85%{clip-path:inset(0 0 0 0)} 100%{clip-path:inset(0 0 100% 0)} }
+
+/* Button and card interaction — shown looping, since there is no pointer on a tile. */
+[data-demo="arrow-shift"] i:nth-child(3) { animation:m-shift 1.4s ease-in-out infinite; }
+[data-demo="fill"] i { animation:m-fill 1.8s ease-in-out infinite; }
+[data-demo="magnetic"] i { animation:m-magnetic 1.8s ease-in-out infinite; }
+[data-demo="glow"] i:nth-child(2) { animation:m-glow 1.6s ease-in-out infinite; }
+[data-demo="lift"] i { animation:m-lift 1.6s ease-in-out infinite; }
+[data-demo="tilt"] i { animation:m-tilt 2s ease-in-out infinite; }
+[data-demo="image-zoom"] i:nth-child(2) { animation:m-zoom 1.8s ease-in-out infinite; }
+[data-demo="border-reveal"] i { animation:m-border 1.8s ease-in-out infinite; }
+[data-demo="spotlight"] i:nth-child(2) { animation:m-spot 2s ease-in-out infinite; }
+@keyframes m-shift { 50%{transform:translateX(7px)} }
+@keyframes m-fill { 0%,100%{background:#3f5230} 50%{background:#cbe99a} }
+@keyframes m-magnetic { 0%,100%{transform:none} 50%{transform:translate(4px,-3px)} }
+@keyframes m-glow { 50%{box-shadow:0 0 16px #cbe99a} }
+@keyframes m-lift { 50%{transform:translateY(-7px)} }
+@keyframes m-tilt { 50%{transform:perspective(200px) rotateY(24deg) rotateX(9deg)} }
+@keyframes m-zoom { 50%{transform:scale(1.35)} }
+@keyframes m-border { 0%,100%{box-shadow:inset 0 0 0 1px transparent} 50%{box-shadow:inset 0 0 0 2px #cbe99a} }
+@keyframes m-spot { 0%,100%{filter:brightness(.6)} 50%{filter:brightness(1.5)} }
+
+/* Scroll — the stage itself moves, standing in for the page moving past. */
+[data-demo="reveal"] i { animation:m-fade-up 1.8s ease-out infinite; }
+[data-demo="reveal"] i:nth-child(2) { animation-delay:.15s; }
+[data-demo="reveal"] i:nth-child(3) { animation-delay:.3s; }
+[data-demo="parallax"] i:nth-child(1) { animation:m-par-slow 2.4s ease-in-out infinite; }
+[data-demo="parallax"] i:nth-child(2) { animation:m-par-fast 2.4s ease-in-out infinite; }
+[data-demo="parallax"] i:nth-child(3) { animation:m-par-slow 2.4s ease-in-out infinite; }
+[data-demo="progress"]::after { content:"";position:absolute;left:0;bottom:0;height:4px;background:#cbe99a;animation:m-progress 2s linear infinite; }
+[data-demo="pinned"] i:nth-child(2) { animation:m-pin 2.2s ease-in-out infinite; }
+[data-demo="sticky"] i { animation:m-sticky 2.2s ease-in-out infinite; }
+[data-demo="scrubbed"] i { animation:m-scrub 2.4s linear infinite; }
+[data-demo="scrubbed"] i:nth-child(2) { animation-delay:.2s; }
+[data-demo="scrubbed"] i:nth-child(3) { animation-delay:.4s; }
+[data-demo="horizontal"] i { animation:m-horizontal 2.4s ease-in-out infinite; }
+@keyframes m-par-slow { 50%{transform:translateY(-6px)} }
+@keyframes m-par-fast { 50%{transform:translateY(-16px)} }
+@keyframes m-progress { 0%{width:0} 100%{width:100%} }
+@keyframes m-pin { 0%,20%{transform:translateY(16px)} 45%,70%{transform:none} 100%{transform:translateY(-16px)} }
+@keyframes m-sticky { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:none} }
+@keyframes m-scrub { 0%{transform:translateY(14px) rotate(-12deg)} 50%{transform:none} 100%{transform:translateY(-14px) rotate(12deg)} }
+@keyframes m-horizontal { 0%{transform:translateX(26px)} 50%{transform:none} 100%{transform:translateX(-26px)} }
+
+/* §12.7 — the tool must not fail the accessibility rule it checks for. */
+@media(prefers-reduced-motion:reduce){ .motion-stage i,.motion-stage::after { animation:none!important; } }
+
+/* Advanced: per-animation overrides. Blank means "follow the profile", which is why the
+   inputs show the inherited value as a placeholder rather than filling it in. */
+.binding-overrides { border:1px solid #37462c;border-radius:7px;padding:11px;background:#151c10;display:flex;flex-direction:column;gap:9px; }
+.binding-overrides>span { font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#87977a; }
+.override-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px; }
+.override-grid label { display:flex;align-items:center;gap:5px;font-size:10px;color:#9aab8c; }
+.override-grid input,.override-grid select { width:100%;min-width:0;background:#10170c;border:1px solid #33402a;border-radius:4px;padding:5px 6px;font-size:10px;color:#dce7d0; }
+.override-grid input::placeholder { color:#5f7052; }
+.override-grid small { font-size:8px;color:#72845f; }
+.override-easing { grid-column:1/-1; }
+.binding-overrides>button { align-self:flex-start;font-size:9px;color:#9fb98a;text-decoration:underline; }
+
 @media(min-width:1700px){.element-canvas{height:290px}.studio-content{padding:45px 50px 0}.studio-sidebar{width:240px}.selection-sidebar{width:280px}}
 @media(max-width:1250px){.selection-sidebar{display:none}.element-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.element-canvas{height:210px}.collection-stamp{display:none}.template-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.header-context{display:none}.composition-layout{grid-template-columns:minmax(0,1fr) 240px}.studio-content{padding:30px 25px 0}}
 @media(max-width:950px){.studio-sidebar{width:184px;padding-inline:10px}.studio-brand{font-size:15px}.studio-header{padding:0 20px;gap:15px}.element-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.library-heading h1{font-size:32px}.composition-layout{grid-template-columns:1fr}.composition-layout>.section-order{order:-1}.composition-layout>.section-order ol{display:grid;grid-template-columns:1fr 1fr}.optional-note{flex-wrap:wrap}.optional-note>div{min-width:75%}.asset-grid{grid-template-columns:1fr}.cursor-choices{grid-template-columns:repeat(4,1fr)}.save-status{display:none}.foundation-grid{grid-template-columns:1fr 1fr}.library-toolbar{flex-wrap:wrap}.search-field{min-width:100%}.welcome{padding-top:50px}.welcome>h1{letter-spacing:-3px}.preview-toolbar{flex-wrap:wrap}}
