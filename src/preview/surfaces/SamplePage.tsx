@@ -102,7 +102,7 @@ function Navbar({ variant, brand, logo, order, copy }: { variant: string; brand:
   return (
     <header className={`dp-navbar dp-navbar-${variant}`} data-animate="nav">
       <div className="dp-navbar-inner">
-        <span className="dp-navbar-brand">{logo ? <img src={logo} alt={brand} style={{ maxHeight: 36, maxWidth: 160 }}/> : brand}</span>
+        <span className="dp-navbar-brand">{logo ? <img className="dp-navbar-logo" src={logo} alt={brand}/> : brand}</span>
         <nav className="dp-navbar-links">
           {desktop.map((link) => (
             <a key={link} className="dp-navbar-link" href={`#section-${link}`}>{link === "cta" ? "Contact" : SECTION_LABELS[link]}</a>

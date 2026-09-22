@@ -217,8 +217,14 @@ body {
   gap: var(--dp-space-6);
   padding-block: var(--dp-space-4);
 }
-.dp-navbar-brand { font: 700 var(--dp-text-body-l)/1 var(--dp-font-display); }
-.dp-navbar-links { display: flex; gap: var(--dp-space-6); }
+.dp-navbar-brand { font: 700 var(--dp-text-body-l)/1 var(--dp-font-display); flex-shrink: 0; white-space: nowrap; }
+/* An uploaded logo is sized by height, like a real header, and never allowed wider than
+   its slot — the file itself can be any size. */
+.dp-navbar-logo { display: block; height: 36px; width: auto; max-width: 180px; object-fit: contain; }
+/* Links that do not fit wrap onto a second line that is clipped away, so they drop out
+   whole instead of running underneath the brand or being cut off mid-word. */
+.dp-navbar-links { display: flex; flex-wrap: wrap; column-gap: var(--dp-space-6); row-gap: 0; min-width: 0; max-height: 1.5em; line-height: 1.5; overflow: hidden; }
+.dp-navbar-link { white-space: nowrap; }
 .dp-navbar-link {
   color: var(--dp-color-muted);
   text-decoration: none;
@@ -236,23 +242,30 @@ body {
   box-shadow: var(--dp-shadow-md);
   z-index: 10;
 }
-/* Centered navigation puts the links in the middle, with brand and CTA flanking them. */
-.dp-navbar-centered .dp-navbar-inner { justify-content: space-between; }
-.dp-navbar-centered .dp-navbar-links {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+/* Centred and split layouts are three real columns. Both used to take their middle item
+   out of flow with absolute positioning, so nothing reserved room for it: a wide
+   uploaded logo sat on top of the links, and the links ran underneath it. The outer
+   columns are equal, so the middle one stays centred on the bar. */
+.dp-navbar-centered .dp-navbar-inner,
+.dp-navbar-split .dp-navbar-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
 }
-.dp-navbar-centered .dp-navbar-inner { position: relative; }
+.dp-navbar-centered .dp-navbar-inner > *,
+.dp-navbar-split .dp-navbar-inner > * { grid-row: 1; }
+.dp-navbar-centered .dp-navbar-inner > .dp-btn,
+.dp-navbar-centered .dp-navbar-inner > .dp-mobile-menu,
+.dp-navbar-split .dp-navbar-inner > .dp-btn,
+.dp-navbar-split .dp-navbar-inner > .dp-mobile-menu { grid-column: 3; justify-self: end; }
 
-/* Split: links divide either side of a centred brand. */
-.dp-navbar-split .dp-navbar-inner { position: relative; justify-content: space-between; }
-.dp-navbar-split .dp-navbar-brand {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.dp-navbar-split .dp-navbar-links { flex: 1; max-width: 36%; overflow: hidden; white-space: nowrap; }
+/* Centred: brand left, links in the middle. */
+.dp-navbar-centered .dp-navbar-brand { grid-column: 1; justify-self: start; }
+.dp-navbar-centered .dp-navbar-links { grid-column: 2; justify-content: center; }
+
+/* Split: links left, brand in the middle. */
+.dp-navbar-split .dp-navbar-links { grid-column: 1; }
+.dp-navbar-split .dp-navbar-brand { grid-column: 2; }
 
 /* Mega: taller bar with a hairline second row implying a dropdown panel. */
 .dp-navbar-mega .dp-navbar-inner { padding-block: var(--dp-space-6); }
@@ -508,6 +521,9 @@ body {
 @media (max-width: 620px) {
   .dp-navbar-links { display: none; }
   .dp-navbar .dp-mobile-menu { display: block; }
+  /* Links fold into the menu here, so the bar goes back to brand-left, actions-right. */
+  .dp-navbar-centered .dp-navbar-inner,
+  .dp-navbar-split .dp-navbar-inner { display: flex; }
   .dp-features-items,
   .dp-features-bento .dp-features-items { grid-template-columns: 1fr; }
   .dp-features-bento .dp-feature:first-child { grid-column: span 1; grid-row: span 1; }
@@ -901,7 +917,6 @@ body {
   .dp-features-alternating .dp-feature:nth-child(odd) { margin-inline: 0; }
   .dp-features-alternating .dp-feature::before { display: none; }
   .dp-cta-booking .dp-cta-inner { flex-direction: column; text-align: center; }
-  .dp-navbar-split .dp-navbar-brand { position: static; transform: none; }
 }
 
 @media (max-width: 620px) {
