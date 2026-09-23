@@ -170,6 +170,17 @@ packages with no registry to browse — they are turned on once for the whole pr
 motion binding that needs a switched-off engine blocks the export, since that recipe
 could not run.
 
+**Borrowed designs are credited as borrowed.** Two of the authored sets come from
+published libraries rather than from here, and they are credited differently because the
+relationships differ. The eight ShaderGradient cards run a WebGL runtime written for this
+project from the technique ShaderGradient publishes — installing the library itself would
+pull in React Three Fiber and a `three` upgrade that breaks the four working Vanta cards
+— so they name ShaderGradient as the source and WebGL as the runtime, in two separate
+fields that must not collapse into one. The eight cult-ui cards are ports: cult-ui's
+React components rebuilt as plain documents, shown as "cult-ui · Playground port" and
+linked to their docs. Neither set ships the library it credits, and neither is presented
+as a Playground Original.
+
 **Preview coverage is explicit.** Every original effect has a live visualiser. Registry entries link to their source documentation; automatic third-party React rendering is not implemented.
 
 ## Deviations from the build specification
@@ -210,7 +221,10 @@ filtered out by default with an opt-in toggle — findable by search, not occupy
 **No licence information is captured for third-party components.** An uploaded font
 without a recorded licence blocks the export; a registry component carries no equivalent
 check, even though most publishers state one. For work delivered to a client that is a
-real gap.
+real gap. The authored originals are not in it — where one borrows, the licence is named
+in its source file and, for anything the engine bundles carry, in
+`public/engine-demos/LICENSES.txt` — but that is by hand, for a set small enough to do by
+hand, and it does not scale to the registry index.
 
 Its open questions are still open, and each would change the shape of the index rather
 than just add to it: whether React Bits' JS/CSS variants are ever wanted here (if never,

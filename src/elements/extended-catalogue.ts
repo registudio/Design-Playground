@@ -1,12 +1,37 @@
 import { CHART_ELEMENTS } from "./chart-elements";
+import { CULT_ELEMENTS } from "./cult-elements";
 import { ENGINE_ELEMENTS } from "./engine-elements";
-/** Playground-authored demos. Engine attribution describes the runtime, not authorship. */
+import { SHADER_ELEMENTS } from "./shader-elements";
+/**
+ * Playground-authored demos. Engine attribution describes the runtime, not authorship.
+ *
+ * `label` is where the look comes from and `runtime` is what actually executes. For
+ * Motion, Lenis and Vanta they are the same library, because the bundle ships it.
+ * ShaderGradient is the exception: its technique is reproduced in plain WebGL rather
+ * than installed — see scripts/shader-runtime.mjs for why — so naming it as the runtime
+ * would be a claim about shipped code that is not true.
+ */
 export const ENGINE_SOURCES = [
-  { id: "motion", label: "Motion.dev", url: "https://motion.dev/docs" },
-  { id: "lenis", label: "Lenis", url: "https://github.com/darkroomengineering/lenis" },
-  { id: "vanta", label: "Vanta", url: "https://www.vantajs.com/" },
+  { id: "motion", label: "Motion.dev", url: "https://motion.dev/docs", runtime: "Motion.dev" },
+  { id: "lenis", label: "Lenis", url: "https://github.com/darkroomengineering/lenis", runtime: "Lenis" },
+  { id: "vanta", label: "Vanta", url: "https://www.vantajs.com/", runtime: "Vanta" },
+  { id: "shader", label: "ShaderGradient", url: "https://shadergradient.co/", runtime: "WebGL" },
 ] as const;
 export function engineFor(id: string) { return ENGINE_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
+
+/**
+ * Libraries whose components are rebuilt here rather than installed.
+ *
+ * An engine source ships the library and runs it, so the runtime credit and the source
+ * credit are the same name. A port ships none of it: the behaviour is reimplemented from
+ * the library's published source, which means the design belongs to them and the code
+ * belongs here, and a card that said "Playground Originals" would be claiming both.
+ * Matched by id prefix, the same way engines are.
+ */
+export const PORT_SOURCES = [
+  { id: "cult", label: "cult-ui", url: "https://www.cult-ui.com/docs/components" },
+] as const;
+export function portFor(id: string) { return PORT_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
 
 const palettes = ["#e5bcb0", "#c6d9a4", "#b5c6ef", "#d7b4eb"];
 const art = (i: number) => `<svg viewBox="0 0 300 200" role="img" aria-label="Abstract landscape ${i + 1}"><rect width="300" height="200" fill="${palettes[i]}"/><circle cx="${75 + i * 35}" cy="65" r="42" fill="#fff8"/><path d="M0 170 Q80 ${i * 20} 160 140 T300 100 V200 H0Z" fill="#25372f"/><path d="M0 190 Q140 90 300 175 V200 H0Z" fill="#587764"/></svg>`;
@@ -30,6 +55,8 @@ export const CAROUSELS = carouselStyles.map(([id, title, description, css]) => (
 export const EXTENDED_ELEMENTS = [
   ...CAROUSELS,
   ...ENGINE_ELEMENTS,
+  ...SHADER_ELEMENTS,
+  ...CULT_ELEMENTS,
   ...CHART_ELEMENTS,
   { id: "gallery-lightbox", title: "Landscape lightbox", category: "Galleries & media", description: "An illustrated gallery with keyboard-accessible, enlarged artwork.", tag: "INTERACTIVE", html: `<div class="art-grid">${palettes.map((_, i) => `<button aria-label="Open landscape ${i + 1}">${art(i)}</button>`).join("")}</div><dialog><button class="close">Close ×</button><div class="large"></div></dialog>`, css: '.art-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:85%}.art-grid button{padding:0;border:0;background:none;border-radius:10px;overflow:hidden}.art-grid svg{display:block;width:100%}dialog{background:#172019;border:1px solid var(--accent);color:white;width:min(90%,700px)}dialog::backdrop{background:#000b}.large svg{width:100%;max-height:70vh}.close{float:right;margin-bottom:12px}', js: "const dialog=document.querySelector('dialog');document.querySelectorAll('.art-grid button').forEach(b=>b.onclick=()=>{document.querySelector('.large').innerHTML=b.innerHTML;dialog.showModal()});document.querySelector('.close').onclick=()=>dialog.close();" },
   { id: "motion-spring", title: "Spring playground", category: "Hover effects", description: "A real Motion spring follows your click with a gentle bounce. Authored by Playground using Motion.dev.", tag: "Motion.dev", html: '<div class="spring-stage"><button class="spring-ball" aria-label="Move spring">✳</button><small>CLICK ANYWHERE TO MOVE</small></div>', css: '.spring-stage{position:relative;width:90%;height:80%;border:1px dashed #586b47;border-radius:18px}.spring-ball{position:absolute;left:20px;top:20px;width:62px;height:62px;background:var(--accent);border:0;border-radius:18px;color:#192013;font-size:36px}.spring-stage small{position:absolute;bottom:12px;width:100%;text-align:center}', js: '' },

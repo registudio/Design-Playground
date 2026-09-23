@@ -9,6 +9,8 @@
  * function, so `return` is an early exit and nothing leaks between demos.
  */
 
+import { SHADER_RUNTIME } from './shader-runtime.mjs';
+
 /** Every demo honours the OS setting the same way: same expression, one place. */
 const REDUCED = `matchMedia('(prefers-reduced-motion:reduce)').matches`;
 
@@ -208,6 +210,60 @@ import FOG from 'vanta/dist/vanta.fog.min.js';`,
       { id: 'vanta-waves', root: '#vanta-waves', source: `start(WAVES,{color:0x24422c,shininess:38,waveHeight:16,waveSpeed:0.75,zoom:0.92});` },
       { id: 'vanta-globe', root: '#vanta-globe', source: `start(GLOBE,{color:0xd2ef9e,color2:0x7fa563,backgroundColor:0x111412,size:0.9});` },
       { id: 'vanta-fog', root: '#vanta-fog', source: `start(FOG,{highlightColor:0xd2ef9e,midtoneColor:0x4c7a3f,lowlightColor:0x1d3326,baseColor:0x111412,blurFactor:0.62,speed:1.1,zoom:0.8});` },
+    ],
+  },
+
+  /**
+   * ShaderGradient-style gradients, drawn by the WebGL runtime in shader-runtime.mjs.
+   *
+   * The options are named after ShaderGradient's own controls — colors, density,
+   * amplitude, speed, grain, brightness, and `shape` for what it calls `type` — so a
+   * card can be matched back to a setting on shadergradient.co rather than to an
+   * invented vocabulary. Eight presets across its three surfaces.
+   */
+  shader: {
+    imports: SHADER_RUNTIME,
+    demos: [
+      {
+        id: 'shader-plane',
+        root: '#sg-plane',
+        source: `gradient(root,{shape:'plane',colors:['#ff5005','#dbba95','#d0bce1'],density:1.3,amplitude:1,speed:0.16});`,
+      },
+      {
+        id: 'shader-sphere',
+        root: '#sg-sphere',
+        source: `gradient(root,{shape:'sphere',colors:['#242e3d','#4a6fa5','#d2ef9e'],density:1.5,amplitude:0.9,speed:0.22,grain:0.04});`,
+      },
+      {
+        id: 'shader-water',
+        root: '#sg-water',
+        source: `gradient(root,{shape:'water',colors:['#05202e','#0e7c7b','#bfe3c6'],density:1.1,amplitude:1.15,speed:0.2});`,
+      },
+      {
+        id: 'shader-dusk',
+        root: '#sg-dusk',
+        source: `gradient(root,{shape:'plane',colors:['#1b1035','#8c3a72','#f7a072'],density:0.9,amplitude:1.3,speed:0.1,contrast:1.12});`,
+      },
+      {
+        id: 'shader-grain',
+        root: '#sg-grain',
+        source: `gradient(root,{shape:'plane',colors:['#111412','#3f5d3a','#d2ef9e'],density:1.8,amplitude:1,speed:0.14,grain:0.26,brightness:1});`,
+      },
+      {
+        id: 'shader-duotone',
+        root: '#sg-duotone',
+        source: `gradient(root,{shape:'plane',colors:['#101820','#101820','#f2aa4c'],density:2.4,amplitude:1.1,speed:0.24,contrast:1.5,grain:0.03});`,
+      },
+      {
+        id: 'shader-drift',
+        root: '#sg-drift',
+        source: `gradient(root,{shape:'water',colors:['#2b1055','#7597de','#ffd6a5'],density:0.7,amplitude:1.4,speed:0.05,grain:0.07});`,
+      },
+      {
+        id: 'shader-pointer',
+        root: '#sg-pointer',
+        source: `gradient(root,{shape:'sphere',colors:['#120d1f','#6d28d9','#f0abfc'],density:1.6,amplitude:1,speed:0.18,pointer:1.1});`,
+      },
     ],
   },
 };

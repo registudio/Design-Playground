@@ -28,7 +28,8 @@
     "verify": "npm run typecheck && npm run test && npm run build",
     "e2e:preview-states": "node scripts/e2e-preview-states.mjs",
     "e2e:navbar-logo": "node scripts/e2e-navbar-logo.mjs",
-    "fixture:previews": "node scripts/fixture-preview-index.mjs"
+    "fixture:previews": "node scripts/fixture-preview-index.mjs",
+    "audit:originals": "node scripts/audit-originals.mjs"
   },
   "dependencies": {
     "@tailwindcss/browser": "^4.3.3",

@@ -40,4 +40,22 @@ const notices = await Promise.all(['motion', 'lenis', 'vanta', 'three'].map(asyn
   }
   throw new Error(`Missing license for ${name}`);
 }));
-await writeFile('public/engine-demos/LICENSES.txt', notices.join('\n\n'));
+
+/**
+ * The shader bundle installs nothing, so there is no node_modules licence to copy — but
+ * it does carry glsl-noise's Perlin function verbatim and reproduces ShaderGradient's
+ * technique, and both deserve naming. Written by hand for exactly that reason.
+ */
+const borrowed = [
+  `## glsl-noise (MIT)
+
+Classic Perlin 3D noise in scripts/shader-cnoise.glsl is taken unmodified from
+https://github.com/hughsk/glsl-noise — MIT licensed, (c) Hugh Kennedy, after
+Stefan Gustavson and Ashima Arts.`,
+  `## ShaderGradient (MIT)
+
+The gradients in the shader bundle follow the technique published by ShaderGradient,
+https://shadergradient.co/ — MIT licensed, (c) ruucm. No ShaderGradient code ships
+here; the runtime is this project's own WebGL, see scripts/shader-runtime.mjs.`,
+];
+await writeFile('public/engine-demos/LICENSES.txt', [...notices, ...borrowed].join('\n\n'));

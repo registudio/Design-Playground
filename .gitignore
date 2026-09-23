@@ -9,3 +9,5 @@ next-env.d.ts
 coverage
 public/engine-demos/
 artifacts/render-audit/
+artifacts/originals/
+e2e-output/

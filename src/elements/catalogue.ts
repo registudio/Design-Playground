@@ -1,4 +1,4 @@
-import { EXTENDED_ELEMENTS, engineFor } from "./extended-catalogue";
+import { EXTENDED_ELEMENTS, engineFor, portFor } from "./extended-catalogue";
 /** Authored effects. The same documents run in the gallery, sample and ZIP. */
 export const ELEMENTS = [
   ...EXTENDED_ELEMENTS,
@@ -66,7 +66,11 @@ export type ElementId = (typeof ELEMENTS)[number]["id"];
 export function elementOrigin(id: string) {
   const item = ELEMENTS.find(e => e.id === id);
   const engine = engineFor(id);
-  return { name: engine ? `${engine.label} · Playground demo` : "Playground Originals", runtime: engine?.label ?? (item?.js ? "CSS + JavaScript" : "CSS"), url: engine?.url };
+  const port = portFor(id);
+  const runtime = engine?.runtime ?? (item?.js ? "CSS + JavaScript" : "CSS");
+  if (engine) return { name: `${engine.label} · Playground demo`, runtime, url: engine.url };
+  if (port) return { name: `${port.label} · Playground port`, runtime, url: port.url };
+  return { name: "Playground Originals", runtime, url: undefined as string | undefined };
 }
 /**
  * Elements whose script is interaction rather than animation.
@@ -74,9 +78,10 @@ export function elementOrigin(id: string) {
  * Everything else has its script skipped entirely under `prefers-reduced-motion`, which
  * is right for a decorative effect and wrong for a control: a carousel that cannot be
  * advanced, or a chart whose values can only be read by pointing at them, is broken
- * rather than calmed. These run either way and damp their own animation internally.
+ * rather than calmed, and neither is a tab strip that cannot change tabs. These run
+ * either way and damp their own animation internally.
  */
-const INTERACTION_ONLY = /^(carousel-|chart-|gallery-lightbox$)/;
+const INTERACTION_ONLY = /^(carousel-|chart-|cult-|gallery-lightbox$)/;
 
 export function elementDocument(id: string, accent = "#d2ef9e"): string {
   const item = ELEMENTS.find((e) => e.id === id);
