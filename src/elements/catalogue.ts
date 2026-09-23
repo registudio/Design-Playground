@@ -68,6 +68,16 @@ export function elementOrigin(id: string) {
   const engine = engineFor(id);
   return { name: engine ? `${engine.label} · Playground demo` : "Playground Originals", runtime: engine?.label ?? (item?.js ? "CSS + JavaScript" : "CSS"), url: engine?.url };
 }
+/**
+ * Elements whose script is interaction rather than animation.
+ *
+ * Everything else has its script skipped entirely under `prefers-reduced-motion`, which
+ * is right for a decorative effect and wrong for a control: a carousel that cannot be
+ * advanced, or a chart whose values can only be read by pointing at them, is broken
+ * rather than calmed. These run either way and damp their own animation internally.
+ */
+const INTERACTION_ONLY = /^(carousel-|chart-|gallery-lightbox$)/;
+
 export function elementDocument(id: string, accent = "#d2ef9e"): string {
   const item = ELEMENTS.find((e) => e.id === id);
   if (!item) return "";
@@ -75,5 +85,5 @@ export function elementDocument(id: string, accent = "#d2ef9e"): string {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${item.title}</title><style>
   :root{--accent:${safeAccent};color-scheme:dark}*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111412;color:#f2f3ed;font-family:Arial,sans-serif;position:relative}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.center{position:relative;text-align:center;display:flex;align-items:center;flex-direction:column;gap:20px}h1{font-size:clamp(28px,8vw,55px);letter-spacing:-.065em;line-height:1.05;margin:0;font-weight:600}h2{letter-spacing:-.04em}small{font-size:9px;letter-spacing:2px;color:#a4af9b}.hint{font-size:10px;color:#8b968b}${item.css}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.split span,.reveal-block{opacity:1!important;transform:none!important}}
-  </style><body>${item.html}<script>${id.startsWith("carousel-") || id === "gallery-lightbox" ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? `<script src="/engine-demos/${engineFor(id)!.id}.js"></script>` : ""}</body></html>`;
+  </style><body>${item.html}<script>${INTERACTION_ONLY.test(id) ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? `<script src="/engine-demos/${engineFor(id)!.id}.js"></script>` : ""}</body></html>`;
 }

@@ -1,6 +1,6 @@
 # Element visualisation runtime
 
-This is the implementation contract for rendering the complete Elements catalogue. It covers the 54 authored Playground Originals and all 436 entries currently indexed from Bklit, KokonutUI, Sora UI, Componentry and React Bits.
+This is the implementation contract for rendering the complete Elements catalogue. It covers the 87 authored Playground Originals and all 436 entries currently indexed from Bklit, KokonutUI, Sora UI, Componentry and React Bits.
 
 ## Rendering contract
 
@@ -130,7 +130,13 @@ An earlier local BlurText sample measured 406 ms from search edit to poster remo
 
 ## Local engine demos and curated media (23 September)
 
-Motion.dev, Lenis, and Vanta each have a Playground-authored demo using their actual runtime. `scripts/build-engine-demos.mjs` produces separate local bundles before development and production builds. Bundles load only in the relevant sandboxed demo frame and are embedded in ZIP/standalone HTML exports with license notices.
+Motion.dev, Lenis and Vanta each drive several Playground-authored demos on their actual runtime — seven, three and four respectively. The demo sources live in `scripts/engine-demos.mjs`; `scripts/build-engine-demos.mjs` bundles one script per engine before development and production builds.
+
+One bundle per engine rather than one per demo, because the library dominates the size: Three.js alone is ~600 KB, so four Vanta demos sharing a bundle cost a fraction of four bundles each carrying a copy, and the gallery fetches it once for every card. Each demo is guarded on its own root selector and wrapped in its own try/catch, so a document containing one demo runs only that one and an exception in one cannot stop the others. A test holds each demo's id and root against the element catalogue, since a root that stops matching produces a card that renders and never moves. Bundles load only in the relevant sandboxed demo frame and are embedded in ZIP/standalone HTML exports with license notices.
+
+### Charts and data visualisation
+
+The nine authored entries under Charts & data viz use no charting dependency. Marks are SVG paths or CSS boxes; every label, legend and axis tick is HTML, so text stays readable at card size rather than shrinking with a scaled drawing. Series colours are fixed rather than taken from the project accent — an arbitrary brand colour has no guarantee of being distinguishable from another, for colour-blind readers or at all — and are validated against this canvas (worst adjacent CVD ΔE 8.4, worst all-pairs 9.4, every slot above 3:1 on the surface), capped at four series for bars and lines and three for the scatter, where every pair has to hold. Each chart's full geometry is in the markup and each carries a visually hidden table of the same numbers, so no value is reachable only by hovering.
 
 Nine curated carousel designs and seven gallery/media designs now have distinct browse categories. Existing registry entries are retained. Every card supports a viewport-sized expanded preview; background card runtimes pause while it is open. Phone filters start collapsed.
 
