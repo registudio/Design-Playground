@@ -49,6 +49,29 @@ DP_REGISTRY_SNAPSHOT=/tmp/fixture-index.json npm run dev
 npm run e2e:elements
 ```
 
+Every element, in its card and full screen, timed. Opens each one in the real app and
+fails any view that never paints, paints only after 3 seconds, opens smaller than the
+window, or will not close on Escape. "Paints" is decided from pixels, not status:
+
+```bash
+npm run build && npx next start -p 3100                 # against the live registries
+npm run e2e:render-all
+```
+
+Offline, or to check the pipeline rather than third-party components, point it at the
+stand-in registry — `--healthy` makes every item render, so anything slow or empty is
+this app's fault:
+
+```bash
+node scripts/mock-registry.mjs 4599 --healthy
+npm run build && DP_REGISTRY_BASE=http://127.0.0.1:4599 npx next start -p 3100
+STRICT=1 npm run e2e:render-all
+```
+
+A full pass takes over an hour; `FILTER` (a regex on element ids) and `SHARD=i/n`
+narrow it. `npm run audit:originals` renders the authored elements outside the app, in
+both motion modes, in a couple of minutes.
+
 ## Export contract
 
 Export writes the design specification, a human-readable brief, the composed review page, and selected effect files:

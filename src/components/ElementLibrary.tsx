@@ -10,7 +10,8 @@ import type { DesignElement } from "@/registry/schema";
 import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
 import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
 import { describeElement } from "@/elements/descriptions";
-import { RegistryPreview } from "./RegistryPreview";
+import { OriginalPreview } from "./OriginalPreview";
+import { previewSrc, RegistryPreview } from "./RegistryPreview";
 import {
   advanceCatalogueWindow,
   CATALOGUE_BATCH,
@@ -301,16 +302,14 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       <div className="grid-spacer" style={{ height: rowsAbove * rowHeight }} aria-hidden="true" />
       <div ref={topSentinel} className="grid-edge-sentinel" aria-hidden="true" />
     </>}
-    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid}>{shown.map((item, index) => {
+    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid}>{shown.map((item) => {
       const chosen = isSelected(item);
       const note = item.registry ? picked.find(s => s.id === item.id) : selected.find(s => s.id === item.id);
-      return <article className={`element-card ${chosen ? "is-selected" : ""}`} key={item.id}>
+      return <article className={`element-card ${chosen ? "is-selected" : ""}`} key={item.id} data-element-id={item.id}>
         <div className="element-canvas">
           <span className="canvas-tag">{item.tag ?? sourceById(item.registry!.source)?.label}</span>
           {item.preview
-            ? (paused || inspecting || expanded
-                ? <button className="paused-demo" onClick={() => setPaused(false)}>▶<span>{item.title}</span></button>
-                : <iframe title={`${item.title} live preview`} sandbox="allow-scripts" srcDoc={elementDocument(item.id)} loading={index < 6 ? "eager" : "lazy"}/>)
+            ? <OriginalPreview id={item.id} title={item.title} paused={paused || !!inspecting || !!expanded} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onResume={() => setPaused(false)}/>
             : <RegistryPreview element={{...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant}} paused={paused || !!inspecting || !!expanded} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => setExpanded({...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant})}/>}
           {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => setInspecting(item.id)}>↗</button>}
         </div>
@@ -348,7 +347,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       </header>
       {/* The same compiled document the card shows, at a size where the component can
           actually lay itself out — several only make sense above a card's height. */}
-      <iframe title={`${expanded.title} expanded preview`} sandbox="allow-scripts" src={`/api/element-preview?source=${encodeURIComponent(expanded.source)}&name=${encodeURIComponent(expanded.source === "react-bits" && expanded.variant ? `${expanded.name}-${expanded.variant.language}-${expanded.variant.styling}` : expanded.name)}`}/>
+      <iframe title={`${expanded.title} expanded preview`} sandbox="allow-scripts" src={previewSrc(expanded)}/>
       <footer>
         <a className="quiet-button" href={sourceById(expanded.source)?.homepage ?? "#"} target="_blank" rel="noreferrer noopener">Open {sourceById(expanded.source)?.label} ↗</a>
         <button className="primary-button" onClick={() => { toggle({ id: expanded.id, title: expanded.title, description: expanded.description, category: browseCategory(expanded), preview: false, registry: expanded }); setExpanded(null); }}>{picked.some(s => s.id === expanded.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button>

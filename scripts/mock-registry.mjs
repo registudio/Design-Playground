@@ -102,14 +102,27 @@ const ITEMS = {
  *
  *   node scripts/mock-registry.mjs 4599 --any
  */
-const ANY = process.argv.includes("--any");
+const ANY = process.argv.includes("--any") || process.argv.includes("--healthy");
+
+/**
+ * --healthy: like --any, but every item is an ordinary component that paints.
+ *
+ * --any reproduces the real registries' mix of misbehaviour, which is right for checking
+ * that a failing card says why — and wrong for checking speed, because a fifth of the
+ * catalogue is then designed to fail and its timings say nothing. With every item
+ * healthy, any card or full-screen view that is slow or empty is the pipeline's fault,
+ * not the fixture's. The latency spread is kept, so the queue still has real work to do.
+ *
+ *   node scripts/mock-registry.mjs 4599 --healthy
+ */
+const HEALTHY = process.argv.includes("--healthy");
 
 const hash = (text) => { let h = 2166136261; for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; return h; };
 
 function synthetic(item) {
   const h = hash(item), roll = h % 100, delay = 150 + (h >>> 8) % 1650;
   const hue = h % 360;
-  const kind =
+  const kind = HEALTHY ? "visible" :
     roll < 80 ? "visible" : roll < 86 ? "zero-area" : roll < 91 ? "broken" : roll < 95 ? "slow" : roll < 98 ? "helper" : "never";
   const component =
     kind === "visible" ? `export default function Item() { return <div style={{ padding: 22, borderRadius: 14, background: "hsl(${hue} 45% 28%)", color: "#fff", fontSize: 18 }}>${item.replace(/[^\w -]/g, "")}</div>; }`

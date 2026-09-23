@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  ACTIVATION_MARGIN_PX,
-  IN_FLIGHT_PROTECTION_MS,
-  MAX_LIVE_PREVIEWS,
-  OFFSCREEN_GRACE_MS,
-} from "@/elements/preview-budget";
 import type { DesignElement } from "@/registry/schema";
 import { previewKey, recordPreview, type PreviewStatus } from "@/elements/preview-status";
-import { createSlotQueue } from "@/elements/preview-queue";
+import { useLiveSlot } from "./use-live-slot";
 
 /**
  * A live preview of one published registry component.
@@ -19,43 +13,30 @@ import { createSlotQueue } from "@/elements/preview-queue";
  * deliberately separate: proximity decides *whether* a preview is worth having, the
  * queue decides *how many* may run at once, and the grace period decides *when* one is
  * given up. Removing any of the three moves the cost somewhere else rather than saving it.
+ * All three live in use-live-slot.ts, shared with the authored previews, so the two kinds
+ * of card draw on one budget.
  */
 
 /**
- * Module-level rather than per-component: the budget is a property of the page, not of
- * any one card, and a queue each card kept its own copy of would not be a queue. The
- * rules for who gets a slot, and who gives one up, live in preview-queue.ts.
- */
-const slots = createSlotQueue(MAX_LIVE_PREVIEWS);
-
-/**
- * Scrollers already re-balancing on scrollend. Settling is the moment the set of cards
- * on screen is final, so it is when the queue should be checked again — not only when
- * a card happens to cross an observer threshold on the way.
- */
-const pumpedRoots = new WeakSet<EventTarget>();
-function pumpOnSettle(root: EventTarget): void {
-  if (pumpedRoots.has(root)) return;
-  pumpedRoots.add(root);
-  root.addEventListener("scrollend", slots.pump, { passive: true });
-}
-
-/**
- * The nearest scrolling ancestor, or null for the viewport.
+ * The URL of a registry item's preview document — for the card and the full-screen view
+ * alike.
  *
- * IntersectionObserver clips the intersection against every scrolling ancestor, and
- * `rootMargin` only expands the *root* — it does not widen that clipping. With the
- * default root the studio's scrolling main element cropped every card below the fold to
- * "not intersecting", so no preview outside the visible area ever activated and the
- * 700px activation margin did nothing at all. Naming the scroller as the root is what
- * makes the margin mean what it says.
+ * The two used to build it separately, and only the card's carried the document version.
+ * Documents are browser-cached for a day, so after a format change the full-screen view
+ * could be served the old one while the card showed the new; and with two different
+ * URLs the full-screen view never reused what the card had just downloaded. One function
+ * means one URL: a retry is the only thing that changes it.
  */
-function scrollParent(node: HTMLElement): HTMLElement | null {
-  for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-    const overflow = getComputedStyle(parent).overflowY;
-    if (overflow === "auto" || overflow === "scroll") return parent;
-  }
-  return null;
+export function previewSrc(
+  element: Pick<DesignElement, "source" | "name" | "variant">,
+  attempt = 0,
+): string {
+  // React Bits collapses four published variants into one catalogue record. The
+  // preview route needs the concrete registry item, just like the install command.
+  const concreteName = element.source === "react-bits" && element.variant
+    ? `${element.name}-${element.variant.language}-${element.variant.styling}`
+    : element.name;
+  return `/api/element-preview?v=6&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
 }
 
 export function RegistryPreview({
@@ -88,117 +69,18 @@ export function RegistryPreview({
   const [reason, setReason] = useState("");
   const [attempt, setAttempt] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
-  const instance = useRef(Math.random().toString(36).slice(2));
   const interested = useRef(false);
-  /** Inside the activation margin: still wanted, even while it has no slot. */
-  const near = useRef(false);
   const observationKey = previewKey(element);
   const host = useRef<HTMLDivElement>(null);
-  const teardown = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** When this preview began work, for the in-flight protection below. */
   const startedAt = useRef(0);
   /** True once the document has reported something final — ready, blank, fallback, failed. */
   const settled = useRef(false);
 
-  useEffect(() => {
-    const node = host.current;
-    if (!node) return;
-    const id = `${element.id}:${instance.current}`;
-    const start = () => { startedAt.current = Date.now(); settled.current = false; setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); };
-    const root = scrollParent(node);
-    pumpOnSettle(root ?? window);
-    const priority = () => {
-      if (interested.current) return -2;
-      if (eager) return -1;
-      const rect = node.getBoundingClientRect();
-      const box = root?.getBoundingClientRect();
-      // Measured to the card's centre line so a card half on screen counts as on screen.
-      const middle = (rect.top + rect.bottom) / 2;
-      return Math.max(0, middle - (box?.bottom ?? innerHeight), (box?.top ?? 0) - middle);
-    };
-    const evict = () => {
-      if (teardown.current) clearTimeout(teardown.current);
-      teardown.current = null;
-      setActive(false);
-      setLoaded(false);
-      setStatus("queued");
-      // Still wanted if it comes back, so it waits again at its (now low) priority.
-      return near.current;
-    };
-    slots.register(id, { priority, settled: () => settled.current, evict, start });
-
-    // Paused: give up the slot outright rather than merely declining new ones, so
-    // pausing frees whatever is already running.
-    if (paused) {
-      slots.unregister(id);
-      setActive(false);
-      setLoaded(false);
-      return;
-    }
-
-    const cancelTeardown = () => {
-      if (teardown.current) clearTimeout(teardown.current);
-      teardown.current = null;
-    };
-
-    if (eager) {
-      slots.request(id);
-      return () => {
-        cancelTeardown();
-        slots.unregister(id);
-      };
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        near.current = entries[0]?.isIntersecting ?? false;
-        if (near.current) {
-          cancelTeardown();
-          slots.request(id);
-          return;
-        }
-        // Not torn down immediately: a small reverse scroll would otherwise unmount and
-        // remount every preview it passes, which costs far more than holding them.
-        if (slots.isWaiting(id)) slots.release(id);
-        if (teardown.current) return;
-        // Work in flight is protected: tearing a compile down at the grace period and
-        // restarting it on the way back is how a card ends up loading forever.
-        const inFlight = !settled.current && startedAt.current > 0;
-        const elapsed = Date.now() - startedAt.current;
-        const delay = inFlight
-          ? Math.max(OFFSCREEN_GRACE_MS, IN_FLIGHT_PROTECTION_MS - elapsed)
-          : OFFSCREEN_GRACE_MS;
-        teardown.current = setTimeout(() => {
-          teardown.current = null;
-          slots.release(id);
-          setActive(false);
-          setLoaded(false);
-          setStatus("queued");
-        }, delay);
-      },
-      { root, rootMargin: `${ACTIVATION_MARGIN_PX}px` },
-    );
-
-    // A card already queued asks again once it is actually on screen, since reaching the
-    // activation margin is not the same as being looked at — and only a card on screen
-    // may take a slot from another.
-    const onScreen = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting || slots.isLive(id)) return;
-        slots.request(id);
-      },
-      { root, threshold: 0.5 },
-    );
-
-    observer.observe(node);
-    onScreen.observe(node);
-    return () => {
-      observer.disconnect();
-      onScreen.disconnect();
-      cancelTeardown();
-      slots.unregister(id);
-    };
-  }, [element.id, eager, paused, observationKey]);
+  useLiveSlot(host, `${element.id}|${observationKey}`, { paused, eager }, { startedAt, settled, interested }, {
+    start: () => { setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); },
+    stop: () => { setActive(false); setLoaded(false); setStatus("queued"); },
+  });
 
   useEffect(() => {
     const receive = (event: MessageEvent) => {
@@ -242,12 +124,7 @@ export function RegistryPreview({
     };
   }, [observationKey, active, attempt]);
 
-  // React Bits collapses four published variants into one catalogue record. The
-  // preview route needs the concrete registry item, just like the install command.
-  const concreteName = element.source === "react-bits" && element.variant
-    ? `${element.name}-${element.variant.language}-${element.variant.styling}`
-    : element.name;
-  const src = `/api/element-preview?v=6&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
+  const src = previewSrc(element, attempt);
 
   return (
     <div className="registry-canvas" ref={host} data-active={active ? "yes" : "no"} onPointerEnter={() => { interested.current = true; }} onPointerLeave={() => { interested.current = false; }}>
@@ -315,8 +192,3 @@ const STATUS_LABEL: Record<PreviewStatus, string> = {
   blank: "Nothing to show",
   failed: "Failed",
 };
-
-/** Exposed for the browser check, which asserts the concurrency budget is respected. */
-export function livePreviewCount(): number {
-  return slots.liveCount();
-}

@@ -90,5 +90,24 @@ export function elementDocument(id: string, accent = "#d2ef9e"): string {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${item.title}</title><style>
   :root{--accent:${safeAccent};color-scheme:dark}*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111412;color:#f2f3ed;font-family:Arial,sans-serif;position:relative}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.center{position:relative;text-align:center;display:flex;align-items:center;flex-direction:column;gap:20px}h1{font-size:clamp(28px,8vw,55px);letter-spacing:-.065em;line-height:1.05;margin:0;font-weight:600}h2{letter-spacing:-.04em}small{font-size:9px;letter-spacing:2px;color:#a4af9b}.hint{font-size:10px;color:#8b968b}${item.css}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.split span,.reveal-block{opacity:1!important;transform:none!important}}
-  </style><body>${item.html}<script>${INTERACTION_ONLY.test(id) ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? `<script src="/engine-demos/${engineFor(id)!.id}.js"></script>` : ""}</body></html>`;
+  </style><body>${item.html}<script>${INTERACTION_ONLY.test(id) ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? engineLoader(engineFor(id)!.id) : ""}</body></html>`;
+}
+
+/**
+ * Loads an engine bundle once the frame has painted its own markup and gone idle.
+ *
+ * A plain `<script src>` started the engine as soon as the document parsed. The card
+ * frames in the grid run in one renderer process of their own — out of the app's, but
+ * shared with each other — and starting Vanta is ~300ms of that process's thread —
+ * so four Vanta cards held up not only their own first paint but their neighbours':
+ * in the full render check the only slow cards were the four Vanta ones and the two
+ * registry cards straight after them, which had their slots in under 150ms and then
+ * waited seconds to paint. Deferred to idle, every card shows its markup first and the
+ * engines start in the gaps. The work is the same; nothing waits behind it.
+ *
+ * The bundle's path stays a literal in the document, which the export relies on to
+ * swap it for an embedded copy.
+ */
+function engineLoader(engine: string): string {
+  return `<script>(function(){var go=function(){var s=document.createElement('script');s.src='/engine-demos/${engine}.js';document.body.appendChild(s)};requestAnimationFrame(function(){window.requestIdleCallback?requestIdleCallback(go,{timeout:1200}):setTimeout(go,60)})})()</script>`;
 }

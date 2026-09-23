@@ -63,7 +63,7 @@ async function sample() {
     });
   });
   // An authored demo's frame exists immediately; it counts once its document has loaded.
-  const frames = await page.$$(".element-card .element-canvas > iframe");
+  const frames = await page.$$(".element-card .original-canvas iframe");
   const loaded = new Set();
   for (const handle of frames) {
     const frame = await handle.contentFrame().catch(() => null);
