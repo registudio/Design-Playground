@@ -117,6 +117,43 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .mini-page span { display:inline-block;width:30%;height:30px;background:#647d49;margin:10px 3px 0 0;border-radius:3px; }
 .resume-project { display:block;margin:22px auto;color:#8f9f81;font-size:12px; }.resume-project strong { color:#cbe99a;font-weight:400; }
 .welcome-bottom { display:flex;justify-content:space-between;border-top:1px solid #2f3728;color:#73806a;margin-top:38px;padding:22px 0;font-size:9px;letter-spacing:1px; }
+@media (max-height: 900px) {
+  .welcome { padding-top: 40px; }
+  .welcome>h1 { margin: 16px auto 14px; font-size: clamp(44px,5.4vw,66px); letter-spacing: -3.5px; }
+  .welcome>h1>sup { font-size: 34px; transform: translate(11px,-9px) rotate(-10deg); }
+  .welcome-paths { margin-top: 24px; }
+  .path-art { height: 112px; }
+  .path-art>span:first-child { font-size: 78px; }
+  .path-art>span:nth-child(2) { width: 56px; height: 56px; font-size: 38px; border-radius: 16px; }
+  .path-art>span:nth-child(3) { font-size: 66px; }
+  .mini-page { width: 186px; height: 100px; padding: 11px; transform: rotate(-5deg) translateY(10px); }
+  .mini-page i { margin-bottom: 12px; }
+  .mini-page span { height: 22px; }
+  .welcome-path>div:last-child { padding: 18px 26px 20px; }
+  .welcome-path h2 { font-size: 21px; margin: 7px 0; }
+  .resume-project { margin: 14px auto; }
+  .welcome-bottom { margin-top: 20px; padding: 13px 0; }
+}
+@media (max-height: 760px) {
+  .welcome { padding-top: 26px; }
+  .welcome>h1 { margin: 8px auto 8px; font-size: clamp(36px,4.6vw,54px); letter-spacing: -2.5px; }
+  .welcome>h1>sup { font-size: 27px; transform: translate(8px,-7px) rotate(-10deg); }
+  .welcome>p { font-size: 13px; line-height: 1.6; }
+  .welcome-paths { margin-top: 15px; gap: 14px; }
+  .path-art { height: 94px; }
+  .path-art>span:first-child { font-size: 64px; }
+  .path-art>span:nth-child(2) { width: 46px; height: 46px; font-size: 31px; border-radius: 13px; }
+  .path-art>span:nth-child(3) { font-size: 54px; }
+  .mini-page { width: 158px; height: 84px; padding: 9px; transform: rotate(-5deg) translateY(7px); }
+  .mini-page i { margin-bottom: 9px; height: 4px; }
+  .mini-page b { height: 6px; }
+  .mini-page span { height: 17px; margin-top: 7px; }
+  .welcome-path>div:last-child { padding: 14px 22px 16px; }
+  .welcome-path h2 { font-size: 18px; margin: 5px 0; }
+  .welcome-path p { line-height: 1.6; }
+  .resume-project { margin: 8px auto; }
+  .welcome-bottom { margin-top: 12px; padding: 8px 0; }
+}
 .project-directory { padding:25px; }.project-directory>div { min-height: calc(100vh - 170px); }
 .studio-body { display:flex; flex:1; min-height:0; }
 .studio-sidebar { width:219px;flex-shrink:0;border-right:1px solid #2d3328;padding:33px 18px 17px;display:flex;flex-direction:column;background:#141712;height:100%;overflow-y:auto; }

@@ -30,6 +30,27 @@ const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(e.message));
 
 await page.goto(BASE_URL, { waitUntil: "networkidle" });
+
+// --- The launch screen fits the window --------------------------------------
+// It used to overflow by 74–154px at ordinary laptop heights, which grew a scrollbar
+// and, where scrollbars are not overlaid, a gutter of dead space beside it.
+for (const [width, height] of [[1920, 1080], [1440, 900], [1366, 768], [1280, 800], [1280, 720], [1024, 640]]) {
+  await page.setViewportSize({ width, height });
+  await page.waitForTimeout(250);
+  const welcome = await page.locator("main.welcome").evaluate((node) => ({
+    over: node.scrollHeight - node.clientHeight,
+    gutter: node.offsetWidth - node.clientWidth,
+    full: Math.round(node.getBoundingClientRect().width) >= innerWidth - 1,
+  }));
+  ok(`the launch screen fits at ${width}x${height} (over by ${welcome.over}px)`, welcome.over <= 0);
+  ok(`no scrollbar gutter beside it at ${width}x${height}`, welcome.gutter === 0);
+  // Were it ever to scroll, the bar belongs at the window edge, not mid-page: the
+  // scroller must not also be the centred column.
+  ok(`the scroller spans the window at ${width}x${height}`, welcome.full);
+}
+await page.setViewportSize({ width: 1500, height: 950 });
+await page.waitForTimeout(250);
+
 await page.getByRole("button", { name: "+ New project" }).click();
 const nameInput = page.getByPlaceholder("Project name");
 await nameInput.click();
