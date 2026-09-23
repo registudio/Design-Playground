@@ -80,6 +80,12 @@ export function RegistryPreview({
   const [active, setActive] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState<PreviewStatus>("queued");
+  /**
+   * Why a stand-in is showing. A failed download, a component that threw on mount and
+   * one that painted nothing all put the same visual on the card, so without this the
+   * only thing anyone could report was "it isn't rendering".
+   */
+  const [reason, setReason] = useState("");
   const [attempt, setAttempt] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
   const instance = useRef(Math.random().toString(36).slice(2));
@@ -204,6 +210,7 @@ export function RegistryPreview({
       if (!["ready", "fallback", "blank", "failed", "rendering"].includes(next)) return;
       if (next !== "rendering") settled.current = true;
       setStatus(next);
+      setReason(typeof event.data.reason === "string" ? event.data.reason : "");
       // The frame is only revealed once something is actually on it. A blank surface
       // keeps the placeholder, because showing an empty rectangle and calling it done
       // is worse than admitting there is nothing to see.
@@ -265,7 +272,7 @@ export function RegistryPreview({
           <div className="placeholder-bars"><i/><i/><i/><i/><i/></div>
         </div>
       )}
-      <div className="preview-status" role="status">
+      <div className="preview-status" role="status" title={reason || undefined}>
         {paused ? "Paused" : STATUS_LABEL[status]}
         {!paused && (status === "failed" || status === "fallback" || status === "blank") && (
           <button
@@ -274,6 +281,7 @@ export function RegistryPreview({
               startedAt.current = Date.now();
               setLoaded(false);
               setStatus("rendering");
+              setReason("");
               setAttempt((n) => n + 1);
             }}
           >
@@ -281,6 +289,9 @@ export function RegistryPreview({
           </button>
         )}
       </div>
+      {reason && !paused && (status === "fallback" || status === "failed") && (
+        <p className="preview-reason">{reason}</p>
+      )}
       {onExpand && (
         <button
           type="button"

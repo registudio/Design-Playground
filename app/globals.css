@@ -92,7 +92,7 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .element-origin>span,.registry-source-badge { border:1px solid #485b37;border-radius:4px;padding:4px 6px;background:#25311d; }
 .element-origin small { font-size:7px;white-space:nowrap;color:#778c66; }
 .registry-source-badge { color:#cbe99a; }
-.welcome { max-width: 1050px; margin: auto; padding: 66px 40px 0; }
+.welcome { padding: 66px max(40px, calc((100% - 1050px) / 2)) 0; }
 .welcome>.eyebrow { justify-content: center; }
 .welcome>h1 { position: relative; margin: 24px auto 22px; font-weight: 400; font-size: clamp(52px,6.2vw,85px); line-height: 1.03; letter-spacing: -5px; text-align: center; }
 .welcome>h1>span { color: #cbe99a; font-family: Georgia, serif; font-style: italic; }
@@ -153,6 +153,7 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 /* --- Registry cards in the main grid -------------------------------------- */
 /* These stand in for the live preview a third-party component cannot have, so they
    lead with the dependency and install information the registry does publish. */
+.preview-reason{position:absolute;left:0;right:0;bottom:0;z-index:2;margin:0;padding:7px 9px 30px;background:linear-gradient(#12160f00,#12160ff2 26%);color:#b9c7ac;font-size:9px;line-height:1.5;max-height:7.2em;overflow:hidden}
 .registry-canvas { display:flex;flex-direction:column;justify-content:flex-start;gap:12px;height:100%;padding:20px;background:linear-gradient(150deg,#1a2416,#131a10); }
 .registry-glyph { font-size:30px;color:#9ec47a;line-height:1; }
 .registry-canvas p { font-size:11px;line-height:1.7;color:#a9bb96;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden; }

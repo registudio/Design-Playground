@@ -63,6 +63,20 @@ const broken = `
 export default function Broken() { throw new Error("needs an application provider"); }
 `;
 
+/**
+ * Paints only after the blank grace has run out, so the stand-in is laid over it first.
+ * It must still take over and report ready when it arrives: the fallback is provisional,
+ * not a verdict.
+ */
+const latest = `
+import * as React from "react";
+export default function Latest() {
+  const [shown, setShown] = React.useState(false);
+  React.useEffect(() => { const t = setTimeout(() => setShown(true), 6500); return () => clearTimeout(t); }, []);
+  return shown ? <div style={{ padding: 24, background: "#2b3d1d", color: "#d9f0b8" }}>Arrived after the stand-in</div> : null;
+}
+`;
+
 /** A helper module with no component to render at all. */
 const helper = `export function useThing() { return true; }`;
 
@@ -72,6 +86,7 @@ const ITEMS = {
   slow: { name: "slow", files: [file("components/slow.tsx", slow)] },
   later: { name: "later", files: [file("components/later.tsx", later)] },
   broken: { name: "broken", files: [file("components/broken.tsx", broken)] },
+  latest: { name: "latest", files: [file("components/latest.tsx", latest)] },
   helper: { name: "helper", files: [file("hooks/use-thing.ts", helper)] },
   empty: { name: "empty", files: [] },
 };

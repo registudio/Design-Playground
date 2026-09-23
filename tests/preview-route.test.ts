@@ -219,3 +219,35 @@ describe("compiled document disk cache", () => {
     expect(a).not.toBe(b);
   });
 });
+
+describe("a stand-in says why it is there", () => {
+  /**
+   * Three very different things put the same generated visual on a card — the item never
+   * compiled, the component threw on mount, or it mounted and painted nothing. They were
+   * indistinguishable, which made "it isn't rendering" impossible to answer.
+   */
+  const body = async (query: string) =>
+    (await GET(new Request(`http://localhost/api/element-preview?${query}`))).text();
+
+  it("sends the reason alongside the status", async () => {
+    const html = await body("source=bklit&name=area-chart");
+    expect(html).toContain("dp-preview-status");
+    expect(html).toMatch(/send\(status, status === "fallback" \? reason\(\) : undefined\)/);
+  });
+
+  it("reads a compile failure's own words off the document", async () => {
+    const html = await body("source=react-bits&name=DefinitelyNotPublished");
+    expect(html).toContain('data-generated="true"');
+    expect(html).toMatch(/data-reason="[^"]+"/);
+  });
+
+  it("holds a slow component before calling it a fallback", async () => {
+    // A card that says "Fallback demo" for a moment and then changes its mind is worse
+    // than one that says "Rendering…" a little longer.
+    const html = await body("source=bklit&name=area-chart");
+    const grace = Number(html.match(/Date\.now\(\) - started > (\d+)/)?.[1] ?? 0);
+    const watch = Number(html.match(/Date\.now\(\) - started > (\d+)\) clearInterval/)?.[1] ?? 0);
+    expect(grace).toBeGreaterThanOrEqual(3500);
+    expect(watch).toBeGreaterThan(grace);
+  });
+});

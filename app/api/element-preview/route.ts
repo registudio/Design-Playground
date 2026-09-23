@@ -43,13 +43,15 @@ const TIMEOUT_MS = 9_000;
 /**
  * How long a surface may stay empty before the generated visual is laid over it.
  *
- * Short, because the fallback is no longer final: it sits over the component, and a
- * component that paints late — a staggered reveal, a delayed entrance — removes it and
- * reports ready. A long grace only kept cards that will never paint empty for longer.
+ * The fallback is not final — it sits over the component, and one that paints late
+ * removes it and reports ready — but it is still visible, and a card that says
+ * "Fallback demo" for a second before changing its mind is worse than one that says
+ * "Rendering…" a moment longer. So the grace is long enough to cover an ordinary
+ * staggered entrance, and the watch after it runs longer still.
  */
-const BLANK_GRACE_MS = 2000;
+const BLANK_GRACE_MS = 4000;
 /** How long after load the document keeps polling for a late first paint. */
-const LATE_PAINT_WATCH_MS = 8000;
+const LATE_PAINT_WATCH_MS = 12000;
 const PUBLISHED_ITEM_CACHE_ENTRIES = 640;
 const REMOTE_MODULE_CACHE_ENTRIES = 256;
 
@@ -396,7 +398,7 @@ function withStatus(html: string): string {
   // seconds — and its late "fallback" was landing on top of the retry's "rendering",
   // making Retry look like it had done nothing.
   const attempt = new URLSearchParams(location.search).get("retry") || "0";
-  const send = (status) => { try { parent.postMessage({ type: "dp-preview-status", status, attempt }, "*"); } catch {} };
+  const send = (status, reason) => { try { parent.postMessage({ type: "dp-preview-status", status, attempt, reason }, "*"); } catch {} };
 
   // Occupying a box is not the same as making a mark. A component whose outer element
   // is \`position:absolute; inset:0\` resolves against the viewport and therefore
@@ -442,6 +444,7 @@ function withStatus(html: string): string {
 
   const started = Date.now();
   let errored = false;
+  let thrown = "";
 
   // A card that ends empty is a card that was scrolled to and showed nothing, which is
   // the one outcome the gallery cannot have. So a surface that is still blank after the
@@ -462,6 +465,15 @@ function withStatus(html: string): string {
     document.body.appendChild(layer);
   };
 
+  // Three very different things put a stand-in on a card — the item never compiled, the
+  // component threw on mount, or it mounted and painted nothing — and they looked
+  // identical, which made every report of "it isn't rendering" unanswerable. The status
+  // now travels with the reason, and the card keeps it.
+  const reason = () => document.body.dataset.reason
+    || thrown
+    || (document.body.dataset.generated ? "This item could not be compiled." : "")
+    || "The component mounted but painted nothing in this frame.";
+
   const evaluate = () => {
     if (painted()) {
       if (layer) { layer.remove(); layer = null; }
@@ -476,7 +488,7 @@ function withStatus(html: string): string {
 
   const report = () => {
     const status = evaluate();
-    send(status);
+    send(status, status === "fallback" ? reason() : undefined);
     return status;
   };
 
@@ -484,8 +496,8 @@ function withStatus(html: string): string {
   // An error is only a failure if nothing is showing. Components throw from effects and
   // handlers all the time after painting perfectly well, and reporting those as failed
   // hid a working preview behind the placeholder.
-  addEventListener("error", () => { errored = true; report(); });
-  addEventListener("unhandledrejection", () => { errored = true; report(); });
+  addEventListener("error", (event) => { errored = true; thrown = thrown || ("An error was thrown: " + (event.message || event.error)); report(); });
+  addEventListener("unhandledrejection", (event) => { errored = true; thrown = thrown || ("A promise rejected: " + (event.reason && event.reason.message ? event.reason.message : event.reason)); report(); });
   // The card may ask at any time, which removes the race entirely: a status that
   // arrives before anyone is listening is no longer lost.
   addEventListener("message", (event) => { if (event.data && event.data.type === "dp-preview-ping") report(); });
@@ -806,6 +818,12 @@ function VisualFallback() {
 class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error) {
+    // Recorded where the status reporter can read it. A component that rejects this
+    // environment is the most common reason a card shows a stand-in, and swallowing the
+    // message left every one of those looking identical to a failed download.
+    document.body.dataset.reason = "The component threw while rendering: " + (error && error.message ? error.message : String(error));
+  }
   render() {
     if (this.state.error) {
       return React.createElement(VisualFallback);

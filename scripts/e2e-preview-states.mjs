@@ -33,28 +33,45 @@ await page.waitForTimeout(2000);
 // The authored originals lead the grid; narrow to the fixture registry source.
 await page.getByRole("button",{name:/^Bklit/}).click();
 await page.waitForTimeout(800);
-// Visit every card, as a person scrolling would. Previews start when they are scrolled
-// to, not before, so a card below the fold that nobody has reached is correctly idle.
-for (const card of await page.locator(".element-card").all()) {
-  await card.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(400);
-}
-// Long enough for the blank grace and the hang timeout to resolve.
-await page.waitForTimeout(20000);
-
-const cards = await page.evaluate(() => [...document.querySelectorAll(".element-card")].map(card => {
-  const canvas = card.querySelector(".registry-canvas");
-  const frame = card.querySelector(".registry-canvas iframe");
+/**
+ * Each card is read while it is on screen.
+ *
+ * Previews start when they are scrolled to and are given up again a few seconds after
+ * they leave, so scrolling the whole list and then reading every card at the end finds
+ * the early ones correctly back at "Queued" — a property of the budget, not a failure.
+ */
+const read = card => card.evaluate(node => {
+  const canvas = node.querySelector(".registry-canvas");
+  const frame = canvas?.querySelector("iframe");
   const rect = frame?.getBoundingClientRect();
   return {
-    title: card.querySelector("h3")?.textContent ?? "?",
+    title: node.querySelector("h3")?.textContent ?? "?",
     status: canvas?.querySelector(".preview-status")?.textContent?.replace("Retry","").trim() ?? "-",
     hasFrame: !!frame,
     frameVisible: !!rect && rect.width > 20 && rect.height > 20,
     hasRetry: !!canvas?.querySelector(".preview-status button"),
+    reason: canvas?.querySelector(".preview-reason")?.textContent ?? "",
     hasExpand: !!canvas?.querySelector(".expand-demo"),
   };
-}));
+});
+
+const cards = [];
+for (const card of await page.locator(".element-card").all()) {
+  await card.scrollIntoViewIfNeeded();
+  // Long enough for the blank grace and the hung-request timeout to resolve.
+  const from = Date.now(), until = from + 24000;
+  let seen = await read(card);
+  // A stand-in is provisional: a component that paints after it appeared takes over, so
+  // a card showing one is watched past the document's own late-paint window.
+  const unsettled = () => seen.status === "Queued" || seen.status === "Rendering…"
+    || (seen.status === "Fallback demo" && Date.now() - from < 14000);
+  while (Date.now() < until && unsettled()) {
+    await page.waitForTimeout(500);
+    seen = await read(card);
+  }
+  cards.push(seen);
+}
+
 console.log(JSON.stringify(cards, null, 1));
 
 const byTitle = Object.fromEntries(cards.map(c => [c.title, c]));
@@ -64,13 +81,21 @@ ok("a component that paints reports Ready", byTitle["Visible"]?.status === "Read
 ok("a component that paints nothing is not called Ready", byTitle["Zero Area"]?.status === "Fallback demo");
 ok("every card ends showing a visual, never an empty frame", cards.every(c => c.frameVisible));
 ok("a late-rendering component still reaches Ready", byTitle["Slow"]?.status === "Ready");
-ok("one that paints after the fallback appeared takes over and reports Ready", byTitle["Later"]?.status === "Ready");
+ok("one that paints before the grace is never called a fallback", byTitle["Later"]?.status === "Ready");
+ok("one that paints after the stand-in appeared takes over and reports Ready", byTitle["Latest"]?.status === "Ready");
 ok("an item with no component shows the fallback", byTitle["Helper"]?.status === "Fallback demo");
 // A source that stops answering resolves to the generated fallback with a retry,
 // rather than holding the placeholder indefinitely.
 ok(`a hung request resolves to a terminal state (${byTitle["Never"]?.status})`, ["Fallback demo","Failed"].includes(byTitle["Never"]?.status ?? ""));
 ok("nothing is left mid-render after the timeouts", !cards.some(c => c.status === "Rendering…" || c.status === "Queued"));
 ok("every non-ready card offers a retry", cards.filter(c => c.status !== "Ready").every(c => c.hasRetry));
+// Three very different failures put the same stand-in on a card. Without a reason on the
+// card, "it isn't rendering" is unanswerable — by us or by the person reporting it.
+ok("every card showing a stand-in says why", cards.filter(c => c.status === "Fallback demo").every(c => c.reason.length > 10));
+ok("a component that throws reports what it threw", /threw while rendering/i.test(byTitle["Broken"]?.reason ?? ""));
+ok("an item that never compiled says so", /could not be compiled|publishes no source|helper/i.test(byTitle["Helper"]?.reason ?? ""));
+ok("one that mounted but drew nothing says that instead", /painted nothing/i.test(byTitle["Zero Area"]?.reason ?? ""));
+console.log("  reasons:", cards.filter(c => c.reason).map(c => `${c.title}: ${c.reason}`).join("\n           "));
 ok("every registry card can be expanded", cards.every(c => c.hasExpand));
 await page.screenshot({path:`${OUT}/qa-01-grid.png`});
 

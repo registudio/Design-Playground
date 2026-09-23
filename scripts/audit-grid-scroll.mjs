@@ -20,6 +20,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
  *   DP_REGISTRY_BASE=http://127.0.0.1:4599 npm run dev
  *   node scripts/audit-grid-scroll.mjs
  *
+ * A card that paints nothing is held on "Rendering…" for the document's blank grace
+ * before its stand-in appears, so with a dwell shorter than that grace those cards count
+ * as misses here even though they resolve a moment later. Read the miss list, not just
+ * the count: "Queued" means the budget starved a visible card, which is the failure this
+ * audit exists to catch; "Rendering…" means it was still waiting.
+ *
  * DWELL_MS     time spent on each screenful (default 3500)
  * FLING_PAGES  after the steady pass, jump this many screens at once and dwell again
  */
