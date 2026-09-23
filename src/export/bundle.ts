@@ -6,7 +6,7 @@ import { SiteRecipe, findEngineConflicts, findDisabledEngineUses } from "@/schem
 import { toSelectionDocument } from "@/schema/selection";
 import { stableStringify, assertDeterministic } from "./serialize";
 import { generateCss } from "./css";
-import { buildHandoff } from "./handoff";
+import { buildHandoff, elementsHandoff } from "./handoff";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
 import { REGISTRY_SOURCES } from "@/registry/sources";
 import { toHex } from "@/color/oklch";
@@ -42,14 +42,49 @@ export interface ValidationIssue {
   message: string;
 }
 
+/**
+ * How much of the project the bundle carries.
+ *
+ * "everything" is the full design handoff. "elements" is for the common case of wanting
+ * the effects on their own — the standalone element documents and the install commands
+ * for registry picks, without tokens, recipe, assets or the sample page. Those are the
+ * parts that are genuinely self-contained: an element document already has the project's
+ * accent baked into it, so it needs nothing else from the bundle to look right.
+ */
+export type ExportScope = "everything" | "elements";
+
 export interface ExportResult {
   files: ExportFile[];
   issues: ValidationIssue[];
 }
 
-/** §15.7 requires schema validation before export. Errors block; warnings do not. */
-export function validate(project: DesignProject): ValidationIssue[] {
+/**
+ * §15.7 requires schema validation before export. Errors block; warnings do not.
+ *
+ * Scoped to what the bundle will actually contain: an elements-only export carries no
+ * tokens, recipe or asset manifest, so blocking it on a schema error in a document it
+ * does not ship would refuse an export that is perfectly valid.
+ */
+export function validate(project: DesignProject, scope: ExportScope = "everything"): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
+  const selectedElements = (project.recipe.elements ?? []).filter(element => ELEMENTS.some(item => item.id === element.id));
+
+  if (scope === "elements") {
+    if (!selectedElements.length && !project.selections.length) {
+      issues.push({ severity: "error", message: "No elements are selected, so there is nothing to export. Pick some in the Elements step first." });
+    }
+    for (const selection of project.selections) {
+      if (selection.referenceOnly) {
+        issues.push({ severity: "warning", message: `selections: "${selection.title}" is a reference-only source — adapt it rather than installing as-is` });
+      }
+      for (const engine of selection.engineDependency) {
+        if (!project.recipe.engines[engine]) {
+          issues.push({ severity: "warning", message: `selections: "${selection.title}" needs the ${engine} engine, which is switched off` });
+        }
+      }
+    }
+    return issues;
+  }
 
   const tokens = DesignTokens.safeParse(project.tokens);
   if (!tokens.success) {
@@ -148,8 +183,27 @@ export function validate(project: DesignProject): ValidationIssue[] {
 export function buildExport(
   project: DesignProject,
   assetBytes: Map<string, Uint8Array> = new Map(),
+  scope: ExportScope = "everything",
 ): ExportResult {
-  const issues = validate(project);
+  const issues = validate(project, scope);
+  const accent = toHex(resolveSemantic(project.tokens.colors, "light", "primary"));
+  const chosen = (project.recipe.elements ?? []).filter(element => ELEMENTS.some(item => item.id === element.id));
+  const registryFiles = (): ExportFile[] => project.selections.length ? [
+    { path: "components.registries.json", content: stableStringify({ registries: Object.fromEntries(REGISTRY_SOURCES.map(source => [`@${source.id}`, source.endpoint.replace("registry.json", "{name}.json")])) }) },
+    { path: "design-playground-selection.json", content: stableStringify(toSelectionDocument(project.selections)) },
+  ] : [];
+
+  if (scope === "elements") {
+    const selectionDocument = toSelectionDocument(project.selections);
+    if (project.selections.length) assertDeterministic(selectionDocument);
+    const files: ExportFile[] = [
+      { path: "elements/README.md", content: elementsHandoff(project, chosen) },
+      ...chosen.map(element => ({ path: `elements/${element.id}.html`, content: elementDocument(element.id, accent) })),
+      ...registryFiles(),
+    ];
+    files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+    return { files, issues };
+  }
 
   const tokensDoc = project.tokens;
   const recipeDoc = project.recipe;
@@ -165,20 +219,14 @@ export function buildExport(
     { path: "design/asset-manifest.json", content: stableStringify(manifestDoc) },
     { path: "design/globals.css", content: generateCss(tokensDoc) },
   ];
-  for (const element of project.recipe.elements ?? []) {
-    if (ELEMENTS.some(item => item.id === element.id)) files.push({ path: `elements/${element.id}.html`, content: elementDocument(element.id, toHex(resolveSemantic(project.tokens.colors, "light", "primary"))) });
+  for (const element of chosen) {
+    files.push({ path: `elements/${element.id}.html`, content: elementDocument(element.id, accent) });
   }
 
   // Omitted entirely when nothing is selected: §5 has Phase 2 skip its sourcing
   // question when the file is *present*, so shipping an empty one would suppress that
   // question while answering nothing.
-  if (selectionDoc.selections.length) {
-    files.push({ path: "components.registries.json", content: stableStringify({ registries: Object.fromEntries(REGISTRY_SOURCES.map(source => [`@${source.id}`, source.endpoint.replace("registry.json", "{name}.json")])) }) });
-    files.push({
-      path: "design-playground-selection.json",
-      content: stableStringify(selectionDoc),
-    });
-  }
+  files.push(...registryFiles());
 
   // Binary assets, keyed in the map by the same `file` value the manifest records.
   for (const entry of [...manifestDoc.images, ...manifestDoc.fonts]) {

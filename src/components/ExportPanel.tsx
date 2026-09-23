@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
-import { buildExport, type ValidationIssue } from "@/export/bundle";
+import { buildExport, type ExportScope, type ValidationIssue } from "@/export/bundle";
 import {
   downloadZip, pickDirectory, supportsDirectoryAccess, writeToDirectory, ensureWritable,
 } from "@/export/deliver";
@@ -25,6 +25,12 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
   const [directory, setDirectory] = useState<FileSystemDirectoryHandle | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /**
+   * Whether the delivery buttons send the whole handoff or only the effects. Most
+   * exports are the full brief, but wanting the elements on their own — to drop into an
+   * existing build — is common enough that it should not mean deleting seven files.
+   */
+  const [scope, setScope] = useState<ExportScope>("everything");
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -62,16 +68,23 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setStatus(null);
     try {
-      const result = buildExport(project, await collectAssets());
+      const elementsOnly = scope === "elements";
+      // Asset bytes are only ever referenced by the manifest, which an elements-only
+      // export does not carry, so reading them back would be work for nothing.
+      const result = buildExport(project, elementsOnly ? new Map() : await collectAssets(), scope);
       setIssues(result.issues);
       if (result.issues.some((i) => i.severity === "error")) return;
-      const response = await fetch("/api/preview-css");
-      if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
-      const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
-      result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
+      if (!elementsOnly) {
+        const response = await fetch("/api/preview-css");
+        if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
+        const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
+        result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
+      }
+      // Engine runtimes are embedded either way: an element that needs one is not
+      // standalone without it.
       await embedEngineAssets(result.files);
       await deliver(result.files);
-      setStatus("Your design handoff is ready.");
+      setStatus(elementsOnly ? `${result.files.length} element files ready.` : "Your design handoff is ready.");
     } catch (cause) { setStatus(cause instanceof Error ? cause.message : "Export failed. Please try again."); }
     finally { setBusy(false); }
   };
@@ -91,15 +104,50 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-[20px] font-semibold">Your ideas, ready to go.</h2>
-        <p className="mt-1 text-[13px] text-chrome-muted">
-          Download a complete design handoff: a sample page, Markdown brief, ordered sections,
-          design tokens, uploaded assets, element notes, and runnable built-in effects.
-          {project.selections.length > 0 && (
+
+        <div className="mt-4 flex gap-1 rounded-lg border border-chrome-border p-1" role="radiogroup" aria-label="What to export">
+          {([["everything", "Everything"], ["elements", "Elements only"]] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={scope === value}
+              onClick={() => { setScope(value); setIssues(null); setStatus(null); }}
+              className={`flex-1 rounded-md px-3 py-2 text-[12px] transition-colors ${
+                scope === value ? "bg-chrome-accent text-white" : "text-chrome-muted hover:bg-chrome-hover"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-3 text-[13px] text-chrome-muted">
+          {scope === "elements" ? (
             <>
-              {" "}
-              Selected elements are written alongside it as{" "}
-              <code className="font-mono">design-playground-selection.json</code>, at the
-              project root where the build step looks for them.
+              Just the effects: one standalone HTML file per built-in element, with the
+              project&rsquo;s accent already applied and its runtime embedded. No tokens,
+              recipe, assets or sample page.
+              {project.selections.length > 0 && (
+                <>
+                  {" "}
+                  Registry picks come as verified install commands in{" "}
+                  <code className="font-mono">design-playground-selection.json</code>.
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              A complete design handoff: a sample page, Markdown brief, ordered sections,
+              design tokens, uploaded assets, element notes, and runnable built-in effects.
+              {project.selections.length > 0 && (
+                <>
+                  {" "}
+                  Selected elements are written alongside it as{" "}
+                  <code className="font-mono">design-playground-selection.json</code>, at the
+                  project root where the build step looks for them.
+                </>
+              )}
             </>
           )}
         </p>
@@ -107,11 +155,11 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         <div className="mt-5 flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => run((files) => downloadZip(files, `${slug(project.name)}-design.zip`))}
+            onClick={() => run((files) => downloadZip(files, `${slug(project.name)}-${scope === "elements" ? "elements" : "design"}.zip`))}
             disabled={busy}
             className="rounded-md bg-chrome-accent px-4 py-2.5 text-[13px] font-medium text-white hover:opacity-90"
           >
-            {busy ? "Preparing ZIP…" : "Download ZIP"}
+            {busy ? "Preparing ZIP…" : scope === "elements" ? "Download elements ZIP" : "Download ZIP"}
           </button>
 
           {supportsDirectoryAccess() && (
@@ -130,7 +178,7 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
                 }
                 await run(async (files) => {
                   await writeToDirectory(handle!, files);
-                  setStatus(`Written to ${handle!.name}/design`);
+                  setStatus(`Written to ${handle!.name}/${scope === "elements" ? "elements" : "design"}`);
                 });
               }}
               className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"

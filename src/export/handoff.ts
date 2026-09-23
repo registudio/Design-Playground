@@ -26,3 +26,70 @@ export function buildHandoff(project: DesignProject): string {
     "- Check layout at mobile, tablet and desktop widths before shipping.", "",
   ].join("\n");
 }
+
+/**
+ * The README for an elements-only export.
+ *
+ * Deliberately short. The full handoff explains a whole design; this one answers the
+ * only questions someone opening a folder of element files actually has — what each
+ * file is, where it was meant to go, and what it needs to run.
+ */
+export function elementsHandoff(
+  project: DesignProject,
+  chosen: { id: string; note: string; placement: string }[],
+): string {
+  const engines = new Set<string>();
+  for (const element of chosen) {
+    const origin = elementOrigin(element.id);
+    if (origin.url) engines.add(origin.runtime);
+  }
+  const placed = (placement: string) =>
+    placement === "page" || !placement
+      ? "Not placed — decide during build"
+      : `After ${SECTION_LABELS[placement as PageSection] ?? placement}`;
+
+  return [
+    `# ${project.name} — elements`, "",
+    project.client ? `Client: ${project.client}` : "Personal project", "",
+    "Just the effects from this project. No tokens, no page recipe, no sample page — see",
+    "the full export for those.", "",
+    "## The files", "",
+    chosen.length
+      ? "Each `.html` file here is one effect, standalone: open it in a browser and it runs. There are no package dependencies, the project's accent colour is already applied, and each one keeps working with `prefers-reduced-motion` set. Lift the markup, CSS and script into your own components rather than embedding the file."
+      : "No built-in effects were selected, so there are no element files here.",
+    "",
+    ...(chosen.length ? chosen.flatMap(element => {
+      const origin = elementOrigin(element.id);
+      return [
+        `### ${ELEMENTS.find(item => item.id === element.id)?.title ?? element.id}`,
+        `File: \`${element.id}.html\``,
+        `Runtime: ${origin.runtime}${origin.url ? ` (${origin.url})` : ""}`,
+        `Placement: ${placed(element.placement)}`,
+        "",
+        element.note || "No additional note.",
+        "",
+      ];
+    }) : []),
+    ...(engines.size ? [
+      "## Bundled runtimes", "",
+      `${[...engines].join(", ")} ${engines.size === 1 ? "is" : "are"} embedded directly in the element files above, so nothing is fetched at runtime. Licence notices are in ENGINE-LICENSES.txt; keep them with the code if you ship it.`,
+      "",
+    ] : []),
+    ...(project.selections.length ? [
+      "## Registry components", "",
+      "These were chosen from third-party registries, so there is no source code here — only the verified install commands, in `design-playground-selection.json` at the root of this export. Register the aliases from `components.registries.json` in your project's `components.json` first.",
+      "",
+      ...project.selections.flatMap(selection => [
+        `### ${selection.title}`,
+        `Source: ${sourceById(selection.source)?.label ?? selection.source}${selection.referenceOnly ? " — reference only, adapt rather than install" : ""}`,
+        `Placement: ${placed(selection.placement)}`,
+        selection.engineDependency.length ? `Needs: ${selection.engineDependency.join(", ")}` : "",
+        "",
+        selection.intendedUse || "No additional note.",
+        "",
+        `Install: \`${selection.installCommand}\``,
+        "",
+      ].filter(line => line !== "")),
+    ] : []),
+  ].join("\n");
+}

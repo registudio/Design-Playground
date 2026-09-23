@@ -71,6 +71,29 @@ so shipping an empty one would suppress the question while answering nothing.
 Two delivery paths: a ZIP download that works anywhere, and a "save to project folder"
 that writes straight into the client project via the File System Access API.
 
+### Elements only
+
+The export dialog offers a second scope. "Elements only" ships the effects on their own:
+
+```
+elements/
+  README.md              what each file is, where it was meant to go, its note
+  <element-id>.html      one standalone effect per file
+  ENGINE-LICENSES.txt    if any of them embed a runtime
+design-playground-selection.json   install commands, if a registry component was picked
+components.registries.json
+```
+
+No tokens, recipe, asset manifest, `globals.css` or sample page. Those are the parts an
+element does not need: the project's accent is already baked into each document, and
+any engine runtime it uses is embedded as a data URI, so the file opens from `file://`
+with no server and no network. Registry picks have no source to ship, so they travel as
+the same verified install commands the full export uses.
+
+Validation is scoped to match. An elements-only export is not blocked by a schema error
+in a document it does not carry, but it is refused outright when nothing is selected,
+rather than delivering an empty folder.
+
 ### Why `globals.css` is in the export
 
 It is generated from `design.tokens.json` alone. That makes it a continuous proof that
