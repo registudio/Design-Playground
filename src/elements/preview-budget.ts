@@ -106,8 +106,13 @@ export const DOCUMENT_CACHE_ENTRIES = 96;
  * Larger than the memory tier because a file is far cheaper to hold than a live entry,
  * and the whole point is surviving restarts — a cache that only held the last session's
  * few previews would rarely hit.
+ *
+ * At least the whole registry index, with headroom: at 400 it held less than the 436
+ * published items, so walking the catalogue always evicted the start of the walk before
+ * reaching the end, and a full pass could never be served warm. A compiled document is
+ * about 1 MB (it carries React), so this is ~600 MB of disk at most.
  */
-export const DISK_CACHE_ENTRIES = 400;
+export const DISK_CACHE_ENTRIES = 600;
 
 /** Browser freshness, then how long a stale copy may be served while revalidating. */
 export const BROWSER_FRESH_SECONDS = 60 * 60;
