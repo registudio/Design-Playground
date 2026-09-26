@@ -223,6 +223,7 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .link-button{color:#cbe99a;text-decoration:underline;text-underline-offset:2px;font-size:inherit}
 .element-card{scroll-margin-top:170px;scroll-margin-bottom:24px}
 .element-card:focus-visible{outline:2px solid #cbe99a;outline-offset:3px}
+.demo-origin a{color:inherit;text-decoration:underline;text-underline-offset:2px}.licence-unknown{color:#f0b35a}
 .dialog-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .dialog-stepper{display:flex;align-items:center;gap:6px;color:#9fb78a;font-size:11px}
 .dialog-stepper span{min-width:64px;text-align:center}

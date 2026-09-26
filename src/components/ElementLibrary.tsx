@@ -8,6 +8,7 @@ import { ElementsBrowser } from "./ElementsBrowser";
 import { pageSections, SECTION_LABELS } from "@/schema/composition";
 import type { DesignElement } from "@/registry/schema";
 import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
+import { licenceFor, licenceLabel } from "@/registry/licences";
 import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
 import { describeElement } from "@/elements/descriptions";
 import { ALL_TYPES, clearLibraryView, COLLECTIONS, DEFAULT_VIEW, readLibraryView, writeLibraryView, type LibraryView } from "@/elements/library-url";
@@ -595,7 +596,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         <div>
           <h2>{expanded.title}</h2>
           <p>{describeElement(expanded)}</p>
-          <p className="demo-origin">Source: {sourceById(expanded.source)?.label ?? expanded.source} · {expanded.referenceOnly ? "reference only" : expanded.engineDependency.length ? expanded.engineDependency.join(" + ") : "no engine"}</p>
+          <p className="demo-origin">Source: {sourceById(expanded.source)?.label ?? expanded.source} · {expanded.referenceOnly ? "reference only" : expanded.engineDependency.length ? expanded.engineDependency.join(" + ") : "no engine"} · {licenceFor(expanded.source) ? <a href={licenceFor(expanded.source)!.url} target="_blank" rel="noreferrer noopener" title={licenceFor(expanded.source)!.restriction}>Licence: {licenceFor(expanded.source)!.name} ↗</a> : <span className="licence-unknown">{licenceLabel(expanded.source)}</span>}</p>
         </div>
         <div className="dialog-actions">{stepper}<button autoFocus className="quiet-button" onClick={closeFull}>Close ×</button></div>
       </header>

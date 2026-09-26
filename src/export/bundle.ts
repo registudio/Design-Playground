@@ -8,7 +8,8 @@ import { stableStringify, assertDeterministic } from "./serialize";
 import { generateCss } from "./css";
 import { buildHandoff, elementsHandoff } from "./handoff";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
-import { REGISTRY_SOURCES } from "@/registry/sources";
+import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
+import { licenceFor } from "@/registry/licences";
 import { toHex } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
 import { qualityReport } from "./quality-report";
@@ -59,6 +60,36 @@ export interface ExportResult {
 }
 
 /**
+ * A registry component's licence, as an export warning where it needs a person's
+ * attention: none could be verified, or it restricts more than MIT. A warning rather
+ * than an error — the terms may well be fine; what is missing is our confirmation.
+ */
+function licenceIssues(selection: DesignProject["selections"][number]): ValidationIssue[] {
+  const licence = licenceFor(selection.source);
+  if (!licence) return [{ severity: "warning", message: `selections: "${selection.title}" comes from ${sourceById(selection.source)?.label ?? selection.source}, which states no licence that could be verified — confirm the terms with the publisher before delivering it to a client` }];
+  if (licence.restriction) return [{ severity: "warning", message: `selections: "${selection.title}" is ${licence.name}: ${licence.restriction}` }];
+  return [];
+}
+
+/** Third-party licences for the registry picks, as a file a client's developer can keep. */
+export function thirdPartyLicences(selections: DesignProject["selections"]): string {
+  const bySource = new Map<string, string[]>();
+  for (const selection of [...selections].sort((a, b) => a.id.localeCompare(b.id))) {
+    bySource.set(selection.source, [...(bySource.get(selection.source) ?? []), selection.title]);
+  }
+  return ["# Third-party component licences", "",
+    "The registry components chosen for this project are installed from their publishers, not shipped here. These are the terms they are published under, as read from each publisher's licence file on the date shown. Re-check before launch: licences can change.", "",
+    ...[...bySource.entries()].flatMap(([source, titles]) => {
+      const licence = licenceFor(source as Parameters<typeof licenceFor>[0]);
+      const label = sourceById(source as Parameters<typeof sourceById>[0])?.label ?? source;
+      return [`## ${label}`, "",
+        licence ? `Licence: ${licence.name} — ${licence.url} (read ${licence.checked})` : "Licence: **not stated anywhere we could verify.** Confirm the terms with the publisher before delivering these to a client.",
+        ...(licence?.restriction ? ["", `Restriction: ${licence.restriction}`] : []),
+        "", ...titles.map(title => `- ${title}`), ""];
+    })].join("\n");
+}
+
+/**
  * §15.7 requires schema validation before export. Errors block; warnings do not.
  *
  * Scoped to what the bundle will actually contain: an elements-only export carries no
@@ -74,6 +105,7 @@ export function validate(project: DesignProject, scope: ExportScope = "everythin
       issues.push({ severity: "error", message: "No elements are selected, so there is nothing to export. Pick some in the Elements step first." });
     }
     for (const selection of project.selections) {
+      issues.push(...licenceIssues(selection));
       if (selection.referenceOnly) {
         issues.push({ severity: "warning", message: `selections: "${selection.title}" is a reference-only source — adapt it rather than installing as-is` });
       }
@@ -141,6 +173,7 @@ export function validate(project: DesignProject, scope: ExportScope = "everythin
   // install command and has to ask anyway, so this is worth flagging — but not
   // blocking, since a selection with no stated use is still a real selection.
   for (const selection of project.selections) {
+    issues.push(...licenceIssues(selection));
     if (!selection.intendedUse.trim()) {
       issues.push({
         severity: "warning",
@@ -191,6 +224,7 @@ export function buildExport(
   const registryFiles = (): ExportFile[] => project.selections.length ? [
     { path: "components.registries.json", content: stableStringify({ registries: Object.fromEntries(REGISTRY_SOURCES.map(source => [`@${source.id}`, source.endpoint.replace("registry.json", "{name}.json")])) }) },
     { path: "design-playground-selection.json", content: stableStringify(toSelectionDocument(project.selections)) },
+    { path: "THIRD-PARTY-LICENCES.md", content: thirdPartyLicences(project.selections) },
   ] : [];
 
   if (scope === "elements") {

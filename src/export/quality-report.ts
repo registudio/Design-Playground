@@ -2,13 +2,14 @@ import type { DesignProject } from "@/schema/project";
 import { previewStatuses, previewKey } from "@/elements/preview-status";
 import { elementOrigin } from "@/elements/catalogue";
 import { engineFor } from "@/elements/extended-catalogue";
+import { licenceFor } from "@/registry/licences";
 
 export function qualityReport(project: DesignProject): string {
   const engines = [...new Set(project.selections.flatMap(s => s.engineDependency))];
   const lines = project.selections.map(s => {
     const observation = previewStatuses.get(previewKey(s));
     const state = observation ? `${observation.status}, observed ${new Date(observation.observedAt).toISOString()}${Date.now() - observation.observedAt > 300_000 ? " (stale; recheck)" : ""}` : "not observed this session";
-    return `- ${s.title} (${s.source}, ${s.variant ? `${s.variant.language}/${s.variant.styling}` : "default variant"}): ${state}. Install: ${s.installCommand}. Engines: ${s.engineDependency.join(", ") || "not declared"}. npm packages: ${s.npmDependencies?.join(", ") || "not recorded"}. Registry dependencies: ${s.registryDependencies?.join(", ") || "none recorded"}.`;
+    return `- ${s.title} (${s.source}, ${s.variant ? `${s.variant.language}/${s.variant.styling}` : "default variant"}): ${state}. Install: ${s.installCommand}. Engines: ${s.engineDependency.join(", ") || "not declared"}. npm packages: ${s.npmDependencies?.join(", ") || "not recorded"}. Registry dependencies: ${s.registryDependencies?.join(", ") || "none recorded"}. Licence: ${licenceFor(s.source)?.name ?? "not verified — confirm with the publisher"}.`;
   });
   const originals = project.recipe.elements ?? [];
   const originalLines = originals.map(s => `- ${s.id}: ${elementOrigin(s.id).name}; runtime ${elementOrigin(s.id).runtime}; runnable source included.${engineFor(s.id) ? ` Bundled engine: ${engineFor(s.id)!.label}${s.id.startsWith("vanta-") ? " + Three.js (WebGL required)" : ""}.` : ""}`);
