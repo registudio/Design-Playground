@@ -6,6 +6,7 @@ import { SamplePage } from "@/preview/surfaces/SamplePage";
 import { escapeHtml } from "./htmlUtil";
 import { getAsset } from "@/store/persistence";
 import { embedEngineAssets } from "./engine-assets";
+import type { ExportFile } from "./bundle";
 
 /**
  * A shareable, standalone Sample Page (§Wave D Features-3): a frozen HTML bundle a
@@ -67,9 +68,12 @@ export async function downloadStaticPage(project: DesignProject): Promise<void> 
       reader.readAsDataURL(blob);
     });
   }));
-  const files = [{ path: "preview.html", content: buildStaticPage(project, previewCss, assetUrls) }];
-  await embedEngineAssets(files);
-  const html = files[0].content + (files[1] ? `<!-- Engine licenses\n${files[1].content.replaceAll("--", "—")} -->` : "");
+  const files: ExportFile[] = [{ path: "preview.html", content: buildStaticPage(project, previewCss, assetUrls) }];
+  // One file, so there is no folder to share a runtime from: embed it.
+  await embedEngineAssets(files, "inline");
+  const text = (path: string) => { const file = files.find(f => f.path === path); return typeof file?.content === "string" ? file.content : ""; };
+  const licences = text("elements/ENGINE-LICENSES.txt");
+  const html = text("preview.html") + (licences ? `<!-- Engine licenses\n${licences.replaceAll("--", "—")} -->` : "");
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

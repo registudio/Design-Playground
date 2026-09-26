@@ -102,15 +102,18 @@ The export dialog offers a second scope. "Elements only" ships the effects on th
 elements/
   README.md              what each file is, where it was meant to go, its note
   <element-id>.html      one standalone effect per file
-  ENGINE-LICENSES.txt    if any of them embed a runtime
+  engines/<bundle>.js    each engine runtime they use, once, shared by every file
+  ENGINE-LICENSES.txt    if any of them use a runtime
 design-playground-selection.json   install commands, if a registry component was picked
 components.registries.json
 ```
 
 No tokens, recipe, asset manifest, `globals.css` or sample page. Those are the parts an
 element does not need: the project's accent is already baked into each document, and
-any engine runtime it uses is embedded as a data URI, so the file opens from `file://`
-with no server and no network. Registry picks have no source to ship, so they travel as
+any engine runtime it uses ships once in `engines/` and is loaded by relative path, so
+the file opens from `file://` with no server and no network. (The review page is the
+exception: its sandboxed frames cannot load `file://` at all, so it carries each runtime
+once inside itself and hands it to its frames on load.) Registry picks have no source to ship, so they travel as
 the same verified install commands the full export uses.
 
 Validation is scoped to match. An elements-only export is not blocked by a schema error

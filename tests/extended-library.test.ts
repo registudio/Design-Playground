@@ -6,7 +6,8 @@ import { DesignProject } from '@/schema/project';
 import { SelectedElement } from '@/schema/selection';
 import { previewKey, previewStatuses, recordPreview } from '@/elements/preview-status';
 import { qualityReport } from '@/export/quality-report';
-import { embedEngineAssets } from '@/export/engine-assets';
+import { embedEngineAssets, relativePath } from '@/export/engine-assets';
+import type { ExportFile } from '@/export/bundle';
 import snapshot from '../data/registry-snapshot.json';
 
 afterEach(()=>{previewStatuses.clear();vi.unstubAllGlobals();});
@@ -33,13 +34,49 @@ describe('extended library regression checks',()=>{
     project.selections=[{...selection,variant:undefined}];
     expect(qualityReport(project)).toContain('not observed this session');
   });
-  it('embeds engine scripts and licenses into exported files without localhost dependencies',async()=>{
-    vi.stubGlobal('fetch',vi.fn(async(path:string)=>new Response(path.endsWith('.txt')?'MIT license':'window.demo=true;')));
-    const files=[{path:'elements/vanta-net.html',content:elementDocument('vanta-net')}];
-    await embedEngineAssets(files);
-    expect(files[0].content).toContain('data:text/javascript;base64,');
-    expect(files[0].content).not.toContain('/engine-demos/');
-    expect(files[1].content).toContain('MIT license');
+  it('ships each engine bundle once and points every document at it by relative path',async()=>{
+    const fetched:string[]=[];
+    vi.stubGlobal('fetch',vi.fn(async(path:string)=>{fetched.push(path);return new Response(path.endsWith('.txt')?'MIT license':`window.demo=${JSON.stringify(path.split("/").pop())};`);}));
+    const files:ExportFile[]=[
+      {path:'elements/vanta-net.html',content:elementDocument('vanta-net')},
+      {path:'elements/vanta-fog.html',content:elementDocument('vanta-fog')},
+      {path:'preview.html',content:`<iframe srcdoc="${elementDocument('vanta-net').replaceAll('"','&quot;')}"></iframe>`},
+    ];
+    await embedEngineAssets(files,'shared');
+    const byPath=new Map(files.map(f=>[f.path,f.content as string]));
+    // Three.js once for every Vanta document, one small file per effect.
+    expect([...byPath.keys()].filter(p=>p.startsWith('elements/engines/'))).toEqual(['elements/engines/vanta-fog.js','elements/engines/vanta-net.js','elements/engines/vanta-three.js']);
+    expect(fetched.filter(p=>p==='/engine-demos/vanta-three.js')).toHaveLength(1);
+    expect(byPath.get('elements/vanta-net.html')).toContain("'engines/vanta-three.js','engines/vanta-net.js'");
+    // Sandboxed srcdoc frames cannot load file:// at all, so the page carries each bundle
+    // once and fills its frames in on load rather than pointing them at the folder.
+    const page=byPath.get('preview.html')!;
+    expect(page).toContain('data-dp-srcdoc=');
+    expect(page).not.toMatch(/<iframe[^>]*\ssrcdoc=/);
+    expect(page).toContain('dp-engine:vanta-three');
+    expect(page.split(btoa('window.demo="vanta-three.js";')).length-1).toBe(1);
+    for(const [path,content] of byPath) {
+      expect(content,path).not.toContain('/engine-demos/');
+      if(path!=='preview.html') expect(content,path).not.toContain('data:text/javascript');
+    }
+    expect(byPath.get('elements/ENGINE-LICENSES.txt')).toContain('MIT license');
+  });
+  it('embeds engine bundles as data URIs for the single-file page',async()=>{
+    vi.stubGlobal('fetch',vi.fn(async(path:string)=>new Response(path.endsWith('.txt')?'MIT license':'window.demo="é";')));
+    const files:ExportFile[]=[{path:'preview.html',content:elementDocument('vanta-net')}];
+    await embedEngineAssets(files,'inline');
+    const page=files.find(f=>f.path==='preview.html')!.content as string;
+    expect(page).toContain('data:text/javascript;base64,');
+    expect(page).not.toContain('/engine-demos/');
+    expect(files.some(f=>f.path.startsWith('elements/engines/'))).toBe(false);
+    // UTF-8, not Latin-1: a minified bundle can carry any character.
+    const encoded=page.match(/data:text\/javascript;base64,([A-Za-z0-9+/=]+)/g)!.map(m=>m.split(',')[1]);
+    expect(encoded.map(b=>new TextDecoder().decode(Uint8Array.from(atob(b),c=>c.charCodeAt(0))))).toContain('window.demo="é";');
+  });
+  it('resolves shipped paths relative to the document that loads them',()=>{
+    expect(relativePath('elements/a.html','elements/engines/x.js')).toBe('engines/x.js');
+    expect(relativePath('preview.html','elements/engines/x.js')).toBe('elements/engines/x.js');
+    expect(relativePath('design/deep/a.html','elements/engines/x.js')).toBe('../../elements/engines/x.js');
   });
   it('fails export explicitly when a required runtime cannot be included',async()=>{
     vi.stubGlobal('fetch',vi.fn(async()=>new Response('',{status:503})));

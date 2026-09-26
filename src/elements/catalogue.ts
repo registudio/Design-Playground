@@ -1,4 +1,4 @@
-import { EXTENDED_ELEMENTS, engineFor, portFor } from "./extended-catalogue";
+import { EXTENDED_ELEMENTS, engineBundles, engineFor, portFor } from "./extended-catalogue";
 /** Authored effects. The same documents run in the gallery, sample and ZIP. */
 export const ELEMENTS = [
   ...EXTENDED_ELEMENTS,
@@ -90,7 +90,7 @@ export function elementDocument(id: string, accent = "#d2ef9e"): string {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${item.title}</title><style>
   :root{--accent:${safeAccent};color-scheme:dark}*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111412;color:#f2f3ed;font-family:Arial,sans-serif;position:relative}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.center{position:relative;text-align:center;display:flex;align-items:center;flex-direction:column;gap:20px}h1{font-size:clamp(28px,8vw,55px);letter-spacing:-.065em;line-height:1.05;margin:0;font-weight:600}h2{letter-spacing:-.04em}small{font-size:9px;letter-spacing:2px;color:#a4af9b}.hint{font-size:10px;color:#8b968b}${item.css}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.split span,.reveal-block{opacity:1!important;transform:none!important}}
-  </style><body>${item.html}<script>${INTERACTION_ONLY.test(id) ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? engineLoader(engineFor(id)!.id) : ""}</body></html>`;
+  </style><body>${item.html}<script>${INTERACTION_ONLY.test(id) ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? engineLoader(engineBundles(id)) : ""}</body></html>`;
 }
 
 /**
@@ -105,9 +105,11 @@ export function elementDocument(id: string, accent = "#d2ef9e"): string {
  * waited seconds to paint. Deferred to idle, every card shows its markup first and the
  * engines start in the gaps. The work is the same; nothing waits behind it.
  *
- * The bundle's path stays a literal in the document, which the export relies on to
- * swap it for an embedded copy.
+ * Each bundle's path stays a literal in the document, which the export relies on to
+ * swap it for a shipped or embedded copy. Several bundles (Vanta's shared Three.js, then
+ * the effect) are appended with `async = false`, which runs them in the order given.
  */
-function engineLoader(engine: string): string {
-  return `<script>(function(){var go=function(){var s=document.createElement('script');s.src='/engine-demos/${engine}.js';document.body.appendChild(s)};requestAnimationFrame(function(){window.requestIdleCallback?requestIdleCallback(go,{timeout:1200}):setTimeout(go,60)})})()</script>`;
+function engineLoader(bundles: string[]): string {
+  const list = bundles.map(bundle => `'/engine-demos/${bundle}.js'`).join(",");
+  return `<script>(function(){var go=function(){[${list}].forEach(function(src){var s=document.createElement('script');s.src=src;s.async=false;document.body.appendChild(s)})};requestAnimationFrame(function(){window.requestIdleCallback?requestIdleCallback(go,{timeout:1200}):setTimeout(go,60)})})()</script>`;
 }

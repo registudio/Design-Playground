@@ -72,7 +72,7 @@ export function elementsHandoff(
     }) : []),
     ...(engines.size ? [
       "## Bundled runtimes", "",
-      `${[...engines].join(", ")} ${engines.size === 1 ? "is" : "are"} embedded directly in the element files above, so nothing is fetched at runtime. Licence notices are in ENGINE-LICENSES.txt; keep them with the code if you ship it.`,
+      `${[...engines].join(", ")} ${engines.size === 1 ? "is" : "are"} shipped once in \`engines/\` and loaded by the element files above by relative path, so nothing is fetched from a server — keep the folder next to them. Licence notices are in ENGINE-LICENSES.txt; keep them with the code if you ship it.`,
       "",
     ] : []),
     ...(project.selections.length ? [

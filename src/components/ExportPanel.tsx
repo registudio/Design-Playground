@@ -80,9 +80,9 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
         result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
       }
-      // Engine runtimes are embedded either way: an element that needs one is not
-      // standalone without it.
-      await embedEngineAssets(result.files);
+      // Engine runtimes ship either way — an element that needs one is not standalone
+      // without it — once each, in elements/engines/, shared by every file using them.
+      await embedEngineAssets(result.files, "shared");
       await deliver(result.files);
       setStatus(elementsOnly ? `${result.files.length} element files ready.` : "Your design handoff is ready.");
     } catch (cause) { setStatus(cause instanceof Error ? cause.message : "Export failed. Please try again."); }

@@ -186,11 +186,16 @@ addEventListener('pagehide',()=>instance?.destroy());`,
   },
 
   vanta: {
-    imports: `import * as THREE from 'three';
-import NET from 'vanta/dist/vanta.net.min.js';
-import WAVES from 'vanta/dist/vanta.waves.min.js';
-import GLOBE from 'vanta/dist/vanta.globe.min.js';
-import FOG from 'vanta/dist/vanta.fog.min.js';`,
+    /**
+     * One bundle per effect rather than one for all four, plus a shared vanta-three.js.
+     * A card should not download three effects it never runs, and the Three.js they
+     * share is trimmed to the classes the effects touch — the build script works that
+     * subset out from the effect files and binds it as `THREE`, so nothing here names a
+     * Three.js class by hand.
+     */
+    split: true,
+    threeSubset: true,
+    imports: '',
     /**
      * Vanta effects differ only in which constructor they call, so the parts that
      * matter — the reduced-motion opt-out, the WebGL check, the teardown and the
@@ -206,10 +211,10 @@ import FOG from 'vanta/dist/vanta.fog.min.js';`,
   }catch{if(status)status.textContent='WebGL unavailable here · static scene shown'}
 };`,
     demos: [
-      { id: 'vanta-net', root: '#vanta-scene', source: `start(NET,{color:0xd2ef9e,backgroundColor:0x111412,points:7,maxDistance:19,spacing:17});` },
-      { id: 'vanta-waves', root: '#vanta-waves', source: `start(WAVES,{color:0x24422c,shininess:38,waveHeight:16,waveSpeed:0.75,zoom:0.92});` },
-      { id: 'vanta-globe', root: '#vanta-globe', source: `start(GLOBE,{color:0xd2ef9e,color2:0x7fa563,backgroundColor:0x111412,size:0.9});` },
-      { id: 'vanta-fog', root: '#vanta-fog', source: `start(FOG,{highlightColor:0xd2ef9e,midtoneColor:0x4c7a3f,lowlightColor:0x1d3326,baseColor:0x111412,blurFactor:0.62,speed:1.1,zoom:0.8});` },
+      { id: 'vanta-net', imports: `import NET from 'vanta/dist/vanta.net.min.js';`, root: '#vanta-scene', source: `start(NET,{color:0xd2ef9e,backgroundColor:0x111412,points:7,maxDistance:19,spacing:17});` },
+      { id: 'vanta-waves', imports: `import WAVES from 'vanta/dist/vanta.waves.min.js';`, root: '#vanta-waves', source: `start(WAVES,{color:0x24422c,shininess:38,waveHeight:16,waveSpeed:0.75,zoom:0.92});` },
+      { id: 'vanta-globe', imports: `import GLOBE from 'vanta/dist/vanta.globe.min.js';`, root: '#vanta-globe', source: `start(GLOBE,{color:0xd2ef9e,color2:0x7fa563,backgroundColor:0x111412,size:0.9});` },
+      { id: 'vanta-fog', imports: `import FOG from 'vanta/dist/vanta.fog.min.js';`, root: '#vanta-fog', source: `start(FOG,{highlightColor:0xd2ef9e,midtoneColor:0x4c7a3f,lowlightColor:0x1d3326,baseColor:0x111412,blurFactor:0.62,speed:1.1,zoom:0.8});` },
     ],
   },
 
@@ -268,7 +273,15 @@ import FOG from 'vanta/dist/vanta.fog.min.js';`,
   },
 };
 
-/** Flat {id, engine, root} for anything that needs to reason about demos, like tests. */
-export const ENGINE_DEMO_LIST = Object.entries(ENGINES).flatMap(([engine, { demos }]) =>
-  demos.map(({ id, root }) => ({ id, engine, root })),
+/**
+ * Flat {id, engine, root, bundles} for anything that needs to reason about demos, like
+ * tests. `bundles` are the files under public/engine-demos/ the demo's document loads,
+ * in order: the engine's shared bundle, or for an engine built split its trimmed
+ * Three.js (when it has one) followed by the demo's own.
+ */
+export const ENGINE_DEMO_LIST = Object.entries(ENGINES).flatMap(([engine, { demos, split, threeSubset }]) =>
+  demos.map(({ id, root }) => ({
+    id, engine, root,
+    bundles: split ? [...(threeSubset ? [`${engine}-three`] : []), id] : [engine],
+  })),
 );
