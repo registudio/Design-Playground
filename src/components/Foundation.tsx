@@ -10,6 +10,7 @@ import { AdditionalAssets } from "./AdditionalAssets";
 import { ColorEditor } from "./ColorEditor";
 import { ALL_FONTS, FONT_PAIRINGS, GOOGLE_FONTS, SYSTEM_FONTS, findFont } from "@/fonts/catalogue";
 import { fontStack, useGoogleFonts } from "@/fonts/use-google-fonts";
+import { FontUpload } from "./FontUpload";
 
 /** Every face the pairing list shows, so each option can be set in its own type. */
 const PAIRING_FAMILIES = FONT_PAIRINGS.flatMap((p) => [p.display, p.body]);
@@ -151,6 +152,7 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
         />
 
         {advanced && <TypeScaleEditor />}
+        <FontUpload />
       </Panel>
 
       <Panel title="Geometry">

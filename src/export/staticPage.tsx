@@ -21,7 +21,9 @@ import type { ExportFile } from "./bundle";
  * stylesheet the live preview uses, so it can never drift from what was approved.
  */
 export function buildStaticPage(project: DesignProject, previewCss: string, assetUrls: Record<string, string> = {}): string {
-  const tokensCss = generateCss(project.tokens, { tailwindTheme: false });
+  // Uploaded faces load from wherever the page's other assets do: the ZIP's asset
+  // folder, or data URLs in the single-file download.
+  const tokensCss = generateCss(project.tokens, { tailwindTheme: false, fontUrl: (file) => assetUrls[file] ?? null });
 
   const fontEntries = [
     project.tokens.typography.display.family,
@@ -58,7 +60,7 @@ export async function downloadStaticPage(project: DesignProject): Promise<void> 
   if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
   const previewCss = await response.text();
   const assetUrls: Record<string, string> = {};
-  await Promise.all(project.assets.images.map(async entry => {
+  await Promise.all([...project.assets.images, ...project.assets.fonts].map(async entry => {
     const blob = await getAsset(entry.hash);
     if (!blob) return;
     assetUrls[entry.file] = await new Promise<string>((resolve, reject) => {

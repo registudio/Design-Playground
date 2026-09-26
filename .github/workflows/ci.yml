@@ -105,6 +105,12 @@ jobs:
           BASE_URL: http://localhost:3100
           E2E_OUTPUT_DIR: ./e2e-output
 
+      - name: Run font upload test
+        run: npm run e2e:fonts
+        env:
+          BASE_URL: http://localhost:3100
+          E2E_OUTPUT_DIR: ./e2e-output
+
       - name: Run customisation smoke test
         run: npm run e2e:customisation
         env:

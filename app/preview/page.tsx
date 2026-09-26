@@ -6,6 +6,7 @@ import {
   isHostMessage, PREVIEW_ORIGIN_MARKER, type PreviewMessage, type PreviewState,
 } from "@/preview/bridge";
 import { watchContrast } from "@/preview/contrast-lens";
+import { useCustomFonts } from "@/fonts/use-custom-fonts";
 import { findFont, googleFontUrl } from "@/fonts/catalogue";
 import { System } from "@/preview/surfaces/System";
 import { Components } from "@/preview/surfaces/Components";
@@ -103,6 +104,8 @@ export default function PreviewPage() {
     document.head.appendChild(link);
     return () => link.remove();
   }, [fontKey]);
+
+  useCustomFonts(state?.project);
 
   if (!state) return null;
 

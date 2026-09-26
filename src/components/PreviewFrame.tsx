@@ -90,7 +90,8 @@ export function PreviewFrame({
     post({
       marker: PREVIEW_ORIGIN_MARKER,
       type: "tokens",
-      payload: { css: generateCss(project.tokens, { tailwindTheme: false }) },
+      // Uploaded faces are registered inside the frame from stored bytes; no URL here.
+      payload: { css: generateCss(project.tokens, { tailwindTheme: false, fontUrl: () => null }) },
     });
   }, [ready, project?.tokens]);
 

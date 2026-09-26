@@ -77,7 +77,7 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
       if (!elementsOnly) {
         const response = await fetch("/api/preview-css");
         if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
-        const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
+        const assetUrls = Object.fromEntries([...project.assets.images, ...project.assets.fonts].map(entry => [entry.file, `design/assets/${entry.file}`]));
         result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
       }
       // Engine runtimes ship either way — an element that needs one is not standalone

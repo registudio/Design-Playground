@@ -24,11 +24,48 @@ export interface CssOptions {
   tailwindTheme?: boolean;
   /** Emit the dark-theme override block. */
   includeDark?: boolean;
+  /**
+   * Where an uploaded font file is served from, or null to leave its @font-face out.
+   * Defaults to `assets/<file>`, beside globals.css in the exported design/ folder. The
+   * live preview passes null: it registers the faces itself from the stored bytes
+   * (fonts/use-custom-fonts.ts), where a URL to the export layout would only 404.
+   */
+  fontUrl?: (file: string) => string | null;
+}
+
+const FONT_FORMATS: Record<string, string> = { woff2: "woff2", woff: "woff", ttf: "truetype", otf: "opentype" };
+
+/** @font-face for every uploaded face the tokens name. */
+export function fontFaceCss(tokens: DesignTokens, fontUrl: (file: string) => string | null = (file) => `assets/${file}`): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const role of ["display", "body", "mono"] as const) {
+    const font = tokens.typography[role];
+    if (font.source !== "custom") continue;
+    for (const face of font.files ?? []) {
+      const url = fontUrl(face.file);
+      const key = `${font.family}|${face.file}`;
+      if (!url || seen.has(key)) continue;
+      seen.add(key);
+      const format = FONT_FORMATS[face.file.split(".").pop()?.toLowerCase() ?? ""];
+      out.push("@font-face {");
+      out.push(`  font-family: ${quoteFamily(font.family)};`);
+      out.push(`  src: url("${url}")${format ? ` format("${format}")` : ""};`);
+      out.push(`  font-weight: ${face.weight};`);
+      out.push(`  font-style: ${face.style};`);
+      out.push("  font-display: swap;");
+      out.push("}");
+    }
+  }
+  return out;
 }
 
 export function generateCss(tokens: DesignTokens, options: CssOptions = {}): string {
-  const { tailwindTheme = true, includeDark = true } = options;
+  const { tailwindTheme = true, includeDark = true, fontUrl } = options;
   const lines: string[] = [];
+
+  const faces = fontFaceCss(tokens, fontUrl);
+  if (faces.length) lines.push(...faces, "");
 
   const open = tailwindTheme ? "@theme {" : ":root {";
   lines.push(open);
