@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { DesignProject } from "@/schema/project";
 import {
-  isHostMessage, PREVIEW_ORIGIN_MARKER, type PreviewState,
+  isHostMessage, PREVIEW_ORIGIN_MARKER, type PreviewMessage, type PreviewState,
 } from "@/preview/bridge";
+import { watchContrast } from "@/preview/contrast-lens";
 import { findFont, googleFontUrl } from "@/fonts/catalogue";
 import { System } from "@/preview/surfaces/System";
 import { Components } from "@/preview/surfaces/Components";
@@ -43,13 +44,25 @@ export default function PreviewPage() {
       if (event.data.type === "state") {
         setState(event.data.payload);
       }
+      if (event.data.type === "contrastLens") {
+        stopLens?.();
+        stopLens = event.data.payload.on
+          ? watchContrast(document, (report) => window.parent.postMessage({
+              marker: PREVIEW_ORIGIN_MARKER,
+              type: "contrast",
+              payload: { checked: report.checked, failing: report.failing.length, unknown: report.unknown },
+            } satisfies PreviewMessage, window.location.origin))
+          : undefined;
+      }
     };
+    let stopLens: (() => void) | undefined;
 
     window.addEventListener("message", onMessage);
     window.parent.postMessage({ marker: PREVIEW_ORIGIN_MARKER, type: "ready" }, window.location.origin);
 
     return () => {
       window.removeEventListener("message", onMessage);
+      stopLens?.();
       style.remove();
     };
   }, []);

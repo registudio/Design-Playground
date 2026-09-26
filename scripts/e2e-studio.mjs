@@ -125,7 +125,7 @@ ok("page rhythm appears in Advanced", (await page.locator(".page-rhythm").count(
 // --- A variant choice reaches the export (§1a, §5) ---------------------------
 await page.getByRole("button", { name: /Elements/ }).first().click();
 await page.waitForTimeout(1200);
-await page.getByRole("button", { name: /^React Bits/ }).click();
+await page.locator(".library-filterbar select").nth(1).selectOption("react-bits");
 await page.waitForTimeout(700);
 const card = page.locator(".element-card").first();
 await card.getByRole("button", { name: /^Add / }).click();
@@ -140,6 +140,37 @@ await page.getByRole("button", { name: /^Visualise/ }).first().click();
 await page.waitForSelector("iframe[title='Live preview']", { timeout: 20000 });
 ok("Visualise reaches the live preview", true);
 await page.screenshot({ path: `${OUT}/studio-03-preview.png` });
+
+// --- The contrast lens checks the page as rendered -----------------------------
+// Its count and its outlines come from one scan, so they must agree; off, it leaves
+// nothing behind in the page.
+await page.waitForTimeout(1500);
+const lensButton = page.getByRole("button", { name: /Contrast check/ });
+await lensButton.click();
+await page.waitForFunction(() => /failing|all pass/.test([...document.querySelectorAll("button")].find((b) => b.textContent?.includes("Contrast check"))?.textContent ?? ""), null, { timeout: 10000 });
+const lensLabel = (await lensButton.textContent()) ?? "";
+const reported = /(\d+) failing/.exec(lensLabel)?.[1];
+const preview = page.frameLocator("iframe[title='Live preview']");
+const marked = await preview.locator("[data-dp-lens] > div").count();
+ok(`the lens reports what it outlines (${lensLabel.trim()})`, marked === Number(reported ?? 0));
+// A known failure, planted: #bbb on white is 1.9:1. The lens has to notice it arrive
+// (it watches the page) and outline it, and its count has to go up by one.
+await page.frames().find((f) => f.url().endsWith("/preview"))?.evaluate(() => {
+  const probe = document.createElement("p");
+  probe.id = "lens-probe";
+  probe.textContent = "Planted low-contrast text";
+  probe.style.cssText = "color:#bbb;background:#fff;font-size:14px;padding:8px";
+  document.body.prepend(probe);
+});
+await page.waitForFunction((before) => {
+  const label = [...document.querySelectorAll("button")].find((b) => b.textContent?.includes("Contrast check"))?.textContent ?? "";
+  return Number(/(\d+) failing/.exec(label)?.[1] ?? 0) === before + 1;
+}, Number(reported ?? 0), { timeout: 5000 }).then(() => ok("a planted 1.9:1 pair is caught as it appears", true), () => ok("a planted 1.9:1 pair is caught as it appears", false));
+ok("…and outlined with its ratio", /^1\.9\d:1/.test((await preview.locator("[data-dp-lens] span").first().textContent()) ?? ""));
+await page.screenshot({ path: `${OUT}/studio-03b-contrast-lens.png` });
+await lensButton.click();
+await page.waitForTimeout(400);
+ok("turning the lens off removes its outlines", (await preview.locator("[data-dp-lens]").count()) === 0);
 
 await page.getByRole("button", { name: /Export project/ }).click();
 const download = await Promise.all([

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { generateCss } from "@/export/css";
 import {
-  DEVICE_WIDTHS, isPreviewMessage, PREVIEW_ORIGIN_MARKER, type HostMessage,
+  DEVICE_WIDTHS, isPreviewMessage, PREVIEW_ORIGIN_MARKER, type ContrastSummary, type HostMessage,
 } from "@/preview/bridge";
 
 /**
@@ -18,7 +18,14 @@ import {
  * The frame is rendered at its true device width and scaled down to fit, so media
  * queries evaluate against the real width rather than a scaled-down lie.
  */
-export function PreviewFrame() {
+export function PreviewFrame({
+  contrastLens = false,
+  onContrast,
+}: {
+  /** Outline text that fails WCAG AA against what is behind it, in the page itself. */
+  contrastLens?: boolean;
+  onContrast?: (summary: ContrastSummary | null) => void;
+} = {}) {
   const project = useProjectStore((s) => s.project);
   const mode = useProjectStore((s) => s.previewMode);
   const device = useProjectStore((s) => s.device);
@@ -42,6 +49,7 @@ export function PreviewFrame() {
       if (event.origin !== window.location.origin) return;
       if (!isPreviewMessage(event.data)) return;
       if (event.data.type === "ready") setReady(true);
+      if (event.data.type === "contrast") contrastRef.current?.(event.data.payload);
       if (event.data.type === "setComponent") {
         const { field, value } = event.data.payload;
         // Same pattern as ComponentsPanel's own set() helper, so a click in the
@@ -56,6 +64,15 @@ export function PreviewFrame() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [edit]);
+
+  const contrastRef = useRef(onContrast);
+  contrastRef.current = onContrast;
+  // After the state message below on first connect, so the lens scans a rendered page.
+  useEffect(() => {
+    if (!ready) return;
+    post({ marker: PREVIEW_ORIGIN_MARKER, type: "contrastLens", payload: { on: contrastLens } });
+    if (!contrastLens) contrastRef.current?.(null);
+  }, [ready, contrastLens]);
 
   // Full state on connect and whenever anything structural changes.
   useEffect(() => {
