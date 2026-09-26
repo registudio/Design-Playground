@@ -107,6 +107,9 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
    */
   const [expanded, setExpanded] = useState<DesignElement | null>(null);
   const [paused, setPaused] = useState(false);
+  // Anything drawn over the whole grid. Its cards cannot be seen, so they give their
+  // slots up rather than compete with the view on top for the GPU and the main thread.
+  const covered = !!inspecting || !!expanded || registryOpen;
   const [compact, setCompact] = useState(false);
   const [collection, setCollection] = useState("All collections");
   const [filtersOpen, setFiltersOpen] = useState(true);
@@ -309,8 +312,8 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         <div className="element-canvas">
           <span className="canvas-tag">{item.tag ?? sourceById(item.registry!.source)?.label}</span>
           {item.preview
-            ? <OriginalPreview id={item.id} title={item.title} paused={paused || !!inspecting || !!expanded} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onResume={() => setPaused(false)}/>
-            : <RegistryPreview element={{...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant}} paused={paused || !!inspecting || !!expanded} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => setExpanded({...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant})}/>}
+            ? <OriginalPreview id={item.id} title={item.title} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onResume={() => setPaused(false)}/>
+            : <RegistryPreview element={{...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant}} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => setExpanded({...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant})}/>}
           {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => setInspecting(item.id)}>↗</button>}
         </div>
         <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category}</span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>

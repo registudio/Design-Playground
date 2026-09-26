@@ -21,6 +21,14 @@ export const ACTIVATION_MARGIN_PX = 320;
 /**
  * How long an offscreen preview is kept before teardown. Long enough that a small
  * reverse scroll does not unmount and remount everything it passes.
+ *
+ * Holding a preview this long costs its memory, not its animation. Measured in Chromium
+ * (September 2026): a sandboxed card frame scrolled out of the grid's own scroll
+ * container gets 0 requestAnimationFrame callbacks a second, against 60 on screen, so
+ * WebGL loops and rAF animation stop by themselves; a hidden tab stops them entirely.
+ * Only timers keep running, and the five originals that use one fire every few seconds.
+ * A pause script injected into each document was considered and left out for that
+ * reason — measure again before adding one.
  */
 export const OFFSCREEN_GRACE_MS = 8000;
 
