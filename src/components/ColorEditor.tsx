@@ -4,7 +4,7 @@ import { useProjectStore } from "@/store/project-store";
 import { SEMANTIC_TOKENS, type SemanticToken } from "@/schema/primitives";
 import type { ColorTokens } from "@/schema/tokens";
 import { fromCss, toHex } from "@/color/oklch";
-import { OWNS_SCALE, resolveSemantic } from "@/color/semantic";
+import { darkThemeFor, OWNS_SCALE, resolveSemantic } from "@/color/semantic";
 import { generateScale } from "@/color/scale";
 import { evaluatePair, type ContrastFinding } from "@/color/contrast";
 import { Panel, ProvenanceDot } from "./controls";
@@ -22,6 +22,7 @@ export function ColorEditor() {
   const theme = useProjectStore((s) => s.theme);
   const advanced = useProjectStore((s) => s.advanced);
   const edit = useProjectStore((s) => s.edit);
+  const setTheme = useProjectStore((s) => s.setTheme);
 
   if (!project) return null;
   const colors = project.tokens.colors;
@@ -52,10 +53,31 @@ export function ColorEditor() {
   };
 
   const findings = contrastFindings(project.tokens.colors, theme);
+  const hasDark = !!colors.dark;
+  const editingDark = theme === "dark" && hasDark;
 
   return (
     <>
       <Panel title="Semantic colours">
+        {/* The colours below belong to one theme at a time. Said out loud, because the
+            theme is also switched from the preview toolbar and the command palette, and
+            editing dark colours while believing they were light was easy to do. */}
+        {hasDark && (
+          <div className="mb-3 flex items-center gap-2 text-[11px] text-chrome-muted" role="group" aria-label="Theme being edited">
+            Editing
+            {(["light", "dark"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={(key === "dark") === editingDark}
+                onClick={() => setTheme(key)}
+                className={`rounded-md border px-2.5 py-1 capitalize ${(key === "dark") === editingDark ? "border-chrome-accent bg-chrome-accent text-white" : "border-chrome-border text-chrome-muted hover:bg-chrome-hover"}`}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-col gap-3">
           {SEMANTIC_TOKENS.map((token) => {
             const color = resolveSemantic(colors, theme, token);
@@ -124,7 +146,74 @@ export function ColorEditor() {
         )}
         {advanced && <PassingPairs tokens={project.tokens.colors} theme={theme} />}
       </Panel>
+
+      <Panel title="Dark theme">
+        <DarkTheme />
+      </Panel>
     </>
+  );
+}
+
+/**
+ * Whether the site has a dark theme, and keeping it sound.
+ *
+ * One is generated with the palette, which left it implicit: it could not be left out,
+ * and once edited by hand there was no way back to a generated one. Both are a decision
+ * worth recording, and the export follows it — left out, the tokens carry no dark theme
+ * and globals.css no dark block.
+ */
+function DarkTheme() {
+  const project = useProjectStore((s) => s.project);
+  const edit = useProjectStore((s) => s.edit);
+  const theme = useProjectStore((s) => s.theme);
+  const setTheme = useProjectStore((s) => s.setTheme);
+  if (!project) return null;
+  const colors = project.tokens.colors;
+  const status = (key: "light" | "dark") => {
+    const failing = contrastFindings(colors, key).length;
+    return failing ? `⚠ ${failing} ${failing === 1 ? "pair fails" : "pairs fail"} AA` : "✓ all pairs pass AA";
+  };
+  const regenerate = (label: string) => edit(label, (draft) => {
+    draft.tokens.colors.dark = { semantic: darkThemeFor(draft.tokens.colors.scales) };
+    draft.provenance["tokens.colors.dark"] = "user";
+  });
+
+  if (!colors.dark) {
+    return (
+      <div className="flex flex-col gap-2 text-[12px]">
+        <p className="text-chrome-muted">Not included — the site will be light only.</p>
+        <button type="button" className="self-start rounded-md border border-chrome-border px-3 py-1.5 hover:bg-chrome-hover" onClick={() => regenerate("Add a dark theme")}>
+          Add a dark theme
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2 text-[12px]">
+      <p className="text-chrome-muted">Included, from the same brand colours read off the dark end of each ramp.</p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        <dt className="text-chrome-muted">Light</dt><dd>{status("light")}</dd>
+        <dt className="text-chrome-muted">Dark</dt><dd>{status("dark")}</dd>
+      </dl>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="rounded-md border border-chrome-border px-3 py-1.5 hover:bg-chrome-hover" onClick={() => regenerate("Regenerate the dark theme")}>
+          Regenerate from brand colours
+        </button>
+        <button
+          type="button"
+          className="rounded-md border border-chrome-border px-3 py-1.5 hover:bg-chrome-hover"
+          onClick={() => {
+            edit("Leave out the dark theme", (draft) => {
+              delete draft.tokens.colors.dark;
+              draft.provenance["tokens.colors.dark"] = "user";
+            });
+            if (theme === "dark") setTheme("light");
+          }}
+        >
+          Leave out
+        </button>
+      </div>
+    </div>
   );
 }
 

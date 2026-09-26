@@ -201,6 +201,12 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 .source-row { margin-top:8px; }
 /* The preview toolbar's right-hand cluster: contrast lens and theme. */
 .preview-toolbar-end{display:flex;gap:8px;align-items:center}
+.theme-switch{display:flex;border:1px solid #3e4f31;border-radius:6px;padding:3px}
+.theme-switch button{padding:6px 10px;font-size:10px;border-radius:4px;color:#a8be92}
+.theme-switch button.active{background:#36492a;color:#dfefcf}
+.theme-switch button:disabled{opacity:.35;cursor:not-allowed}
+.preview-split{display:flex;min-height:0;flex:1}
+.preview-frame-label{position:absolute;top:6px;left:28px;font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:#8c9f7b}
 .preview-toolbar-end .quiet-button{font-size:10px;padding:8px 12px}
 .preview-toolbar-end .lens-on{background:#3a2323;border-color:#e5484d;color:#ffd9d9}
 /* The library's search, filters and active-filter chips: one sticky band. `top` is set
