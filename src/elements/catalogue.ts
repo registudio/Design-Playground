@@ -81,7 +81,7 @@ export function elementOrigin(id: string) {
  * rather than calmed, and neither is a tab strip that cannot change tabs. These run
  * either way and damp their own animation internally.
  */
-const INTERACTION_ONLY = /^(carousel-|chart-|cult-|gallery-lightbox$)/;
+export const INTERACTION_ONLY = /^(carousel-|chart-|cult-|gallery-lightbox$)/;
 
 export function elementDocument(id: string, accent = "#d2ef9e"): string {
   const item = ELEMENTS.find((e) => e.id === id);

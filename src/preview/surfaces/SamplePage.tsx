@@ -8,6 +8,8 @@ import { EditableOverlay } from "@/preview/EditableOverlay";
 import { pageSections, SECTION_LABELS, type PageSection } from "@/schema/composition";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
 import { sourceById } from "@/registry/sources";
+import { behaviourFor, plainSummary } from "@/elements/plain-language";
+import { browseCategory } from "@/elements/taxonomy";
 import { RegistryPreview } from "@/components/RegistryPreview";
 import { getAsset } from "@/store/persistence";
 import { toHex } from "@/color/oklch";
@@ -64,8 +66,9 @@ export function SamplePage({ project, editable = false, assetUrls = {}, staticEx
   const accent = toHex(resolveSemantic(project.tokens.colors, "light", "primary"));
   const renderElements = (placement: string) => <>{(project.recipe.elements ?? []).filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => {
     const item = ELEMENTS.find(item => item.id === e.id);
-    return item ? <section key={e.id} className="dp-selected-effect" data-element={e.id}><iframe title={item.title} sandbox="allow-scripts" srcDoc={elementDocument(e.id, accent)} style={{ width: "100%", height: 360, border: 0, display: "block" }}/></section> : null;
-  })}{project.selections.filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => <section key={e.id} className="dp-selected-effect" data-element={e.id}><p>{e.title} · <a href={sourceById(e.source)?.homepage} target="_blank" rel="noreferrer">{sourceById(e.source)?.label}</a></p>{staticExport ? <p>Install this external component: <code>{e.installCommand}</code>. Live preview is available in Design Playground.</p> : <div className="dp-registry-preview"><RegistryPreview element={e}/></div>}{e.intendedUse && <p>{e.intendedUse}</p>}</section>)}</>;
+    const summary = plainSummary(e.id);
+    return item ? <section key={e.id} className="dp-selected-effect" data-element={e.id}>{summary && <ReviewNote title={item.title} lines={[`${summary.what} ${summary.behaviour}`, summary.access]} note={e.note}/>}<iframe title={item.title} sandbox="allow-scripts" srcDoc={elementDocument(e.id, accent)} style={{ width: "100%", height: 360, border: 0, display: "block" }}/></section> : null;
+  })}{project.selections.filter(e => e.placement === placement || (placement === "page" && !order.includes(e.placement as PageSection))).map(e => <section key={e.id} className="dp-selected-effect" data-element={e.id}><ReviewNote title={e.title} lines={[behaviourFor(browseCategory(e))]} note={e.intendedUse}/><p>{e.title} · <a href={sourceById(e.source)?.homepage} target="_blank" rel="noreferrer">{sourceById(e.source)?.label}</a></p>{staticExport ? <p>Install this external component: <code>{e.installCommand}</code>. Live preview is available in Design Playground.</p> : <div className="dp-registry-preview"><RegistryPreview element={e}/></div>}</section>)}</>;
 
   return (
     // Element variants are applied via data attributes on the root so a card or
@@ -422,4 +425,17 @@ function Footer({ variant, brand, copy }: { variant: string; brand: string; copy
       </div>
     </footer>
   );
+}
+
+/**
+ * A reviewer's note above an effect: what it is and how it behaves, in plain words, with
+ * the project's own note for it. It is an annotation on the sample, like the banner
+ * saying the copy is illustrative, not part of the site being designed.
+ */
+function ReviewNote({ title, lines, note }: { title: string; lines: string[]; note?: string }) {
+  return <aside className="dp-review-note" aria-label={`About ${title}`}>
+    <strong>{title}</strong>
+    {lines.filter(Boolean).map(line => <p key={line}>{line}</p>)}
+    {note?.trim() && <p className="dp-review-note-own">Your note: {note.trim()}</p>}
+  </aside>;
 }

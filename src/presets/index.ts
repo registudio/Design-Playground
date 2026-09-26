@@ -47,7 +47,7 @@ export interface Preset {
    * question asked when a project starts — "it's a tuition centre" — and by mood only
    * for the style starters, which are for when the client type does not decide much.
    */
-  family: "Startups" | "Education" | "Agencies" | "Local business" | "Professional services" | "Styles" | "Custom";
+  family: "Startups" | "Education" | "Agencies" | "Local business" | "Hospitality & retail" | "Professional services" | "Styles" | "Custom";
   description: string;
   /** Who this template is shaped for, in the client's own terms. */
   bestFor?: string;
@@ -688,6 +688,48 @@ PRESETS.push(
   }),
 
   definePreset({
+    id: "charity", name: "Charity & Community", family: "Local business", copy: "charity",
+    bestFor: "Charities, non-profits, community groups and social enterprises",
+    description: "Warm and plain-spoken: the cause up front, impact in numbers, monthly giving and volunteering",
+    seed: "#d9480f", pairing: "warm-humanist", typeScale: 1.28, radius: 0.75,
+    layout: { density: "balanced", maxWidth: 70, gutter: 2, sectionSpacing: 8, alignment: "left" },
+    imagery: { radius: "lg", shadow: "sm", treatment: "contained", border: false },
+    components: { announcement: "banner", hero: "image-led", features: "cards", navbar: "split", card: "feature", button: "solid", socialProof: "metrics", pricing: "toggle", faq: "accordion", team: "grid", blog: "featured", cta: "newsletter", footer: "columns", cursor: "default" },
+    motion: "subtle",
+  }),
+
+  definePreset({
+    id: "online-shop", name: "Online Shop", family: "Hospitality & retail", copy: "shop",
+    bestFor: "Independent shops and brands selling online, with or without a physical store",
+    description: "Product-first and easy to buy from: new arrivals, delivery and returns answered, gift bundles",
+    seed: "#2f5d50", pairing: "neutral-modern", typeScale: 1.25, radius: 0.5,
+    layout: { density: "balanced", maxWidth: 78, gutter: 2, sectionSpacing: 7, alignment: "left" },
+    imagery: { radius: "md", shadow: "none", treatment: "contained", border: false },
+    components: { announcement: "banner", hero: "image-led", features: "grid", navbar: "split", card: "image", button: "solid", socialProof: "testimonial-grid", pricing: "tiers", faq: "two-column", team: "none", blog: "grid", cta: "newsletter", footer: "columns", cursor: "default" },
+    motion: "subtle",
+  }),
+  definePreset({
+    id: "boutique-hotel", name: "Boutique Hotel", family: "Hospitality & retail", copy: "hotel",
+    bestFor: "Boutique hotels, guesthouses, serviced apartments and resorts",
+    description: "Unhurried and photographic: the place first, rooms and rates clearly laid out, book direct",
+    seed: "#6b4f3a", pairing: "refined-serif", typeScale: 1.32, radius: 0.25,
+    layout: { density: "spacious", maxWidth: 76, gutter: 2.5, sectionSpacing: 10, alignment: "center" },
+    imagery: { radius: "sm", shadow: "none", treatment: "full-bleed", border: false },
+    components: { announcement: "floating", hero: "image-led", features: "alternating", navbar: "centered", card: "image", button: "outline", socialProof: "testimonial-carousel", pricing: "tiers", faq: "accordion", team: "minimal", blog: "featured", cta: "booking", footer: "columns", cursor: "default" },
+    motion: "cinematic",
+  }),
+  definePreset({
+    id: "events-weddings", name: "Events & Weddings", family: "Hospitality & retail", copy: "events",
+    bestFor: "Wedding planners, event companies, venues and celebrants",
+    description: "Romantic but organised: real events, packages by scope, and a date check as the first step",
+    seed: "#a14d62", pairing: "luxury-contrast", typeScale: 1.34, radius: 0.75,
+    layout: { density: "spacious", maxWidth: 72, gutter: 2.5, sectionSpacing: 10, alignment: "center" },
+    imagery: { radius: "lg", shadow: "sm", treatment: "contained", border: false },
+    components: { announcement: "banner", hero: "centered", features: "cards", navbar: "centered", card: "minimal", button: "pill", socialProof: "testimonial-grid", pricing: "tiers", faq: "accordion", team: "grid", blog: "featured", cta: "contact-form", footer: "social", cursor: "default" },
+    motion: "subtle",
+  }),
+
+  definePreset({
     id: "accounting-firm", name: "Accounting & Advisory", family: "Professional services", copy: "accounting",
     bestFor: "Accountants, bookkeepers, tax and corporate secretarial firms",
     description: "Steady and reassuring: services, fixed monthly packages, deadlines handled",
@@ -709,7 +751,7 @@ PRESETS.push(
   }),
 );
 
-export const PRESET_FAMILIES = ["Startups", "Education", "Agencies", "Local business", "Professional services", "Styles", "Custom"] as const;
+export const PRESET_FAMILIES = ["Startups", "Education", "Agencies", "Local business", "Hospitality & retail", "Professional services", "Styles", "Custom"] as const;
 
 // --- Custom presets (§Wave D Templating-1) --------------------------------------
 // Unlike the parametric presets above, a custom preset is built directly from a
