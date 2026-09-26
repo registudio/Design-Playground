@@ -6,11 +6,9 @@ import { chromium } from "playwright";
  * Real-browser regression suite for the studio shell.
  *
  * The older suites (e2e-smoke, e2e-export, e2e-safety, e2e-preferences,
- * e2e-customisation) were written against the three-column shell and assert against a
- * layout the step-wizard replaced — a right rail of panels, a logo dropzone on the first
- * screen, view toggles in a top bar. They are kept rather than deleted because most of
- * what they check still matters and they are worth porting, but they do not currently
- * run. This covers the new shell so the branch is not left without a net.
+ * e2e-customisation) were written against the three-column shell and have been ported
+ * to this one; they share its set-up through scripts/lib/studio.mjs. This one covers the
+ * shell itself: layout, the library's windowing, the steps, the preview and an export.
  *
  * Needs a populated element index; the committed snapshot has one. See e2e-elements.mjs
  * for how to run against a fixture instead.
