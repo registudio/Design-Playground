@@ -24,13 +24,32 @@ describe("element descriptions", () => {
 
   it("replaces build boilerplate, which reads as a description but is not one", () => {
     const result = describeElement({
-      id: "bklit:area-chart-example",
+      id: "x:area-chart-example",
       name: "area-chart-example",
       title: "Area Chart Example",
       description: "Composable area-chart demo for Open in v0",
     });
     expect(result).not.toMatch(/Open in v0/);
     expect(result).toMatch(/sample data/);
+  });
+
+  it("keeps a publisher's own words when the scaffold line is only appended to them", () => {
+    expect(describeElement({
+      id: "x:stat-card",
+      name: "stat-card-area-01-example",
+      description: "Revenue stat card with gradient area sparkline, NumberFlow, and trend badge — demo for Open in v0",
+    })).toBe("Revenue stat card with gradient area sparkline, NumberFlow, and trend badge.");
+  });
+
+  it("gives no catalogue entry only its name, or only the generic worked-example line", () => {
+    // A weekly refresh that brings in an entry with nothing useful published fails here,
+    // naming it — so its line is written before the refresh merges, not discovered later.
+    const generic = index.elements.filter((e) => {
+      const text = describeElement(e);
+      const fromName = `${e.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ").trim().toLowerCase()}.`;
+      return text.toLowerCase() === fromName || /^A worked .* with sample data\.$/.test(text);
+    }).map((e) => e.id);
+    expect(generic).toEqual([]);
   });
 
   it("falls back to a readable line derived from the name", () => {

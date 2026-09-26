@@ -75,6 +75,28 @@ const CURATED: Record<string, string> = {
   "componentry:wheel-carousel": "A carousel whose items arc around like a wheel.",
 
   "bklit:chart-grid": "Grid lines and axes for a chart, styled to sit behind the data rather than compete with it.",
+
+  // Bklit's worked examples all publish the same scaffold line, so without these every
+  // one read "A worked … chart with sample data" — true, and no help choosing between
+  // a funnel and a sankey. Each says what the chart is for.
+  "bklit:area-chart-example": "Worked example — an area chart, shaded beneath the line to show how a total changes over time.",
+  "bklit:bar-chart-example": "Worked example — a bar chart comparing values across categories.",
+  "bklit:candlestick-chart-example": "Worked example — a candlestick chart of open, high, low and close prices per period.",
+  "bklit:choropleth-chart-example": "Worked example — a choropleth map shading regions by their value.",
+  "bklit:composed-chart-example": "Worked example — bars, lines and areas layered on shared axes.",
+  "bklit:funnel-chart-example": "Worked example — a funnel showing how many drop out between stages, such as sign-up steps.",
+  "bklit:gauge-chart-example": "Worked example — a gauge reading one value against its range.",
+  "bklit:heatmap-chart-example": "Worked example — a heatmap colouring a grid of cells by intensity.",
+  "bklit:line-chart-example": "Worked example — a line chart tracing values over time.",
+  "bklit:live-line-chart-example": "Worked example — a line chart that streams in new points as they arrive.",
+  "bklit:pie-chart-example": "Worked example — a pie chart dividing a whole into proportional slices.",
+  "bklit:radar-chart-example": "Worked example — a radar chart comparing several measures on radial axes.",
+  "bklit:ring-chart-example": "Worked example — a ring (donut) chart of proportions around a hollow centre.",
+  "bklit:sankey-chart-example": "Worked example — a Sankey diagram of flows between stages, each band sized by volume.",
+  "bklit:scatter-chart-example": "Worked example — a scatter plot of points on two axes, for spotting a relationship.",
+  "bklit:sunburst-chart-example": "Worked example — a sunburst showing a hierarchy as concentric rings.",
+
+  "soralabs:index": "The library's index file, re-exporting its components — not a component itself.",
 };
 
 /**
@@ -114,6 +136,11 @@ export function describeElement(input: {
 
   const published = (input.description ?? "").trim();
   if (published && !BOILERPLATE.test(published)) return published;
+
+  // Some publishers write a real description and then append the scaffold line to it
+  // ("Revenue stat card with … trend badge — demo for Open in v0"). Keep their part.
+  const salvaged = published.replace(/\s*[—–-]\s*(demo|example)\s+for\s+Open\s+in\s+v0\.?\s*$/i, "").trim();
+  if (salvaged !== published && salvaged.split(/\s+/).length >= 3 && !BOILERPLATE.test(salvaged)) return `${salvaged.replace(/[.,;:]$/, "")}.`;
 
   // A worked example is still worth describing as one, rather than as its scaffold.
   if (published && BOILERPLATE.test(published)) {
