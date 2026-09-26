@@ -6,6 +6,9 @@ that `web-stack-init` and Claude Code can consume.
 
 Explore visual effects, compose a sample website, and export a design handoff. The bundle includes runnable original effects and a review page; it is not a production application.
 
+How the code is arranged, which parts are easy to break, and the full test map are in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ```
 business.md → assets → Design Playground → live preview → approval → /design/*.json → web-stack-init
 ```
@@ -13,20 +16,20 @@ business.md → assets → Design Playground → live preview → approval → /
 ## Workflow
 
 1. Explore without a project, create one, or resume a saved project.
-2. Optionally upload brand assets and choose a website template, including a blank canvas.
-3. Choose colours, typography and a cursor, including a custom image. Colours and typography can remain undecided.
+2. Optionally upload brand assets — or read them off the client's current website — and choose a website template, including a blank canvas.
+3. Choose colours, typography and a cursor, including a custom image and the brand's own uploaded typeface. Decide whether the site has a dark theme. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 87 interactive original effects with source/runtime labels, expanded previews, notes and placement, alongside every indexed registry component in the same grid. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
-6. Visualise the composition at desktop, tablet or mobile sizes. Return to editing as often as needed.
+5. Browse 103 interactive original effects with source/runtime labels, expanded previews, notes and placement, alongside every indexed registry component in the same grid. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+6. Visualise the composition at desktop, tablet or mobile sizes, light, dark or side by side, with a contrast lens that outlines failing text in place. Return to editing as often as needed.
 7. Download the ZIP handoff, a standalone review page, or a restorable project backup.
 
 Basic/Advanced modes, history, undo/redo, snapshots, saved templates, overrides, command search, the style guide and component gallery remain available.
 
 ## Preview coverage
 
-Original effects run in isolated iframe documents in the library, sample and export. Motion/GSAP page recipes run in the live sample. Each registry selection displays its actual source and links to that source; external registry components remain installation references and are not executed in the sample page. The standalone page preserves the composed appearance and original effects; React-driven page recipes and custom cursors require integration in the target application.
+Original effects run in isolated iframe documents in the library, sample and export. Motion/GSAP page recipes run in the live sample. Registry components are compiled from their published source on the server (`/api/element-preview`) and rendered in sandboxed frames — in the library, full screen, and the live sample page; the exported review page shows their install commands instead, since their code is installed, not shipped. The standalone page preserves the composed appearance and original effects; React-driven page recipes and custom cursors require integration in the target application.
 
-Custom font upload is not yet available. Typography includes the existing font catalogue and pairings.
+Each effect on the review page carries a plain-language note for the client — what it is, how it behaves, and what visitors who ask for less motion (or whose device lacks WebGL) will see.
 
 ## Getting started
 
@@ -38,8 +41,15 @@ npm run dev          # http://localhost:3000
 ```bash
 npm run verify       # typecheck + unit tests + production build
 npm run e2e          # browser smoke test (needs a server running)
-npm run e2e:export   # verifies the exported bundle end to end
+npm run e2e:export   # a real ZIP, unpacked and opened from file://
 ```
+
+The browser checks all run against a production server (`npm run build && npx next start
+-p 3100`) and share their set-up through `scripts/lib/studio.mjs`. CI runs `e2e`,
+`e2e:library`, `e2e:export`, `e2e:studio`, `e2e:fonts`, `e2e:brand-url`,
+`e2e:customisation`, `e2e:preferences`, `e2e:safety` and `e2e:dropzone` on every push.
+`e2e:brand-url` serves its own fixture site on 127.0.0.1, so its server needs
+`DP_BRAND_ALLOW_ADDRESSES=127.0.0.1` (see "Reading a brand from a website" below).
 
 The Elements browser regression check uses a deterministic fixture instead of depending on changing upstream registry content:
 
@@ -69,7 +79,9 @@ STRICT=1 npm run e2e:render-all
 ```
 
 A full pass takes over an hour; `FILTER` (a regex on element ids) and `SHARD=i/n`
-narrow it. `npm run audit:originals` renders the authored elements outside the app, in
+narrow it. `.github/workflows/render-all.yml` runs it nightly as eight shards against
+`--healthy`, after warming every registry preview (`WARM=all npm run warm:previews`) so
+it measures what a running deployment serves rather than first-ever compiles. `npm run audit:originals` renders the authored elements outside the app, in
 both motion modes, in a couple of minutes.
 
 ## Export contract
@@ -84,6 +96,10 @@ design/
   globals.css            generated from the tokens
   assets/                the referenced binaries
 design-playground-selection.json   chosen registry components, if any
+THIRD-PARTY-LICENCES.md            their publishers' licences, if any were chosen
+elements/<id>.html                 each chosen original effect, runnable
+elements/engines/<bundle>.js       engine runtimes, once each, shared by the effects
+preview.html                       the composed review page
 ```
 
 The selection file sits at the root rather than under `design/` because that is where
@@ -106,6 +122,7 @@ elements/
   ENGINE-LICENSES.txt    if any of them use a runtime
 design-playground-selection.json   install commands, if a registry component was picked
 components.registries.json
+THIRD-PARTY-LICENCES.md
 ```
 
 No tokens, recipe, asset manifest, `globals.css` or sample page. Those are the parts an
@@ -207,7 +224,15 @@ React components rebuilt as plain documents, shown as "cult-ui · Playground por
 linked to their docs. Neither set ships the library it credits, and neither is presented
 as a Playground Original.
 
-**Preview coverage is explicit.** Every original effect has a live visualiser. Registry entries link to their source documentation; automatic third-party React rendering is not implemented.
+**Preview coverage is explicit.** Every original effect has a live visualiser, and every registry entry a compiled one; a card that cannot render says why rather than showing a blank tile. Hooks and utilities, which have nothing to render, are hidden from the grid unless asked for (a search or their own type still finds them).
+
+**The library is keyboard-navigable and linkable.** The grid is one tab stop: arrow keys move between cards, Enter opens one full screen, Space adds it, and ← → step through the results in full screen. The view — search, filters, and the element open full screen — lives in the URL, so a link reproduces it and Back closes a full-screen view.
+
+**Registry licences are recorded per publisher**, in `src/registry/licences.ts`, each read from the publisher's own licence file with the date it was read. Bklit UI and KokonutUI are MIT; React Bits is MIT + Commons Clause (fine inside a client's site, not for reselling the components). Sora UI and Componentry state no licence anywhere that could be found — recorded as unknown, not guessed — and a pick from either exports with a warning to confirm terms with the publisher.
+
+**Reading a brand from a website.** On Brand assets, a client's current site can be read for its colours, typefaces and logo (`/api/brand-from-url`); each is offered, never applied until chosen. The server fetch refuses anything that is not the public internet, checking the address each socket connects to rather than the name beforehand. `DP_BRAND_ALLOW_ADDRESSES` exempts named addresses for tests; never set it on a deployment.
+
+**Uploaded fonts carry their licence.** A typeface is refused if it will not load as a real font, and cannot be added without a licence. Tokens record which asset files a custom face uses, so `globals.css` still comes from the tokens alone, now with its `@font-face`.
 
 ## Deviations from the build specification
 
@@ -227,33 +252,24 @@ Out of scope for the internal MVP per §15.8, and deliberately absent: Figma int
 multi-framework export, full React application export, freeform page building, CMS,
 real-time collaboration, and the public lead-generation playground (§15A).
 
-The newer playground flow takes precedence over the older spec where it asks for previews and section reordering. Remaining work includes live third-party registry component rendering, write access back to registries, and per-component category inference.
+The newer playground flow takes precedence over the older spec where it asks for previews and section reordering. Remaining work includes write access back to registries.
 
-## Known gaps, deliberately deferred
+## Known gaps
 
-Three improvements are understood and not yet built. They are recorded here rather than
-left implicit, because each is a real shortcoming rather than a nice-to-have.
+The three gaps this section used to record — no keyboard navigation in the element
+grid, hooks and utilities occupying preview tiles, and no licence information for
+registry components — are closed (see "Elements" above). What remains:
 
-**The element grid has no keyboard navigation.** Reaching a card partway down the
-catalogue means tabbing through every control on every card before it. A roving
-tabindex with arrow keys would fix it. This is the concrete core of the wider
-accessibility pass, and it is the one gap here that excludes people rather than
-inconveniencing them.
+**Two registries state no licence.** Sora UI and Componentry publish no licence that
+could be found. Picks from them export with a warning; the terms need confirming with
+the publishers, and `src/registry/licences.ts` updating when they are.
 
-**Hooks and utilities appear in a grid of previews.** The taxonomy identifies them
-correctly, but they still render as cards that can never show anything. They should be
-filtered out by default with an opt-in toggle — findable by search, not occupying a tile.
+**Licences are read by hand.** The weekly refresh updates the registry index but not the
+licences, which are checked against each publisher's licence file with a date recorded.
+Re-read them when that date ages.
 
-**No licence information is captured for third-party components.** An uploaded font
-without a recorded licence blocks the export; a registry component carries no equivalent
-check, even though most publishers state one. For work delivered to a client that is a
-real gap. The authored originals are not in it — where one borrows, the licence is named
-in its source file and, for anything the engine bundles carry, in
-`public/engine-demos/LICENSES.txt` — but that is by hand, for a set small enough to do by
-hand, and it does not scale to the registry index.
-
-Its open questions are still open, and each would change the shape of the index rather
-than just add to it: whether React Bits' JS/CSS variants are ever wanted here (if never,
-they should be dropped from the index rather than modelled), whether Componentry belongs
-in search results at all or in a separate inspiration section, and who refreshes the
-snapshot and how often.
+The index's open questions are still open, and each would change its shape rather than
+just add to it: whether React Bits' JS/CSS variants are ever wanted here (if never, they
+should be dropped from the index rather than modelled), whether Componentry belongs in
+search results at all or in a separate inspiration section, and who owns the weekly
+refresh PRs.
