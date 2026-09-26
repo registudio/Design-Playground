@@ -30,7 +30,8 @@
     "e2e:navbar-logo": "node scripts/e2e-navbar-logo.mjs",
     "fixture:previews": "node scripts/fixture-preview-index.mjs",
     "audit:originals": "node scripts/audit-originals.mjs",
-    "e2e:render-all": "node scripts/e2e-render-all.mjs"
+    "e2e:render-all": "node scripts/e2e-render-all.mjs",
+    "e2e:library": "node scripts/e2e-library.mjs"
   },
   "dependencies": {
     "@tailwindcss/browser": "^4.3.3",

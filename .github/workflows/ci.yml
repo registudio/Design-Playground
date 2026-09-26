@@ -80,6 +80,12 @@ jobs:
           BASE_URL: http://localhost:3100
           E2E_OUTPUT_DIR: ./e2e-output
 
+      - name: Run element library navigation test
+        run: npm run e2e:library
+        env:
+          BASE_URL: http://localhost:3100
+          E2E_OUTPUT_DIR: ./e2e-output
+
       - name: Run export smoke test
         run: npm run e2e:export
         env:

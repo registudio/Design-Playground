@@ -19,6 +19,11 @@ const SHORTCUTS: Array<[string, string]> = [
   ["⇧⌘Z", "Redo"],
   ["?", "Show this help"],
   ["Esc", "Close this, the search bar, or a menu"],
+  ["/", "Search the element library"],
+  ["← ↑ → ↓", "Move between element cards; Home and End jump to the ends"],
+  ["Enter", "Open the focused element full screen"],
+  ["Space", "Add or remove the focused element"],
+  ["← →", "Previous or next element, in full screen"],
 ];
 
 const TIPS: Array<[string, string]> = [

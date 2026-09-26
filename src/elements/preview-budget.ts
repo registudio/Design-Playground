@@ -97,6 +97,19 @@ export function retreatCatalogueWindow(
   return { start, end: Math.min(total, start + mountedLimit) };
 }
 
+/**
+ * A window that has `index` mounted, for a jump the sentinels never saw coming — an
+ * arrow key past the mounted rows, stepping through results in full screen, a link that
+ * opens an element deep in the list. Starts a batch before the target so there is room
+ * above it too, and on a batch boundary like the windows the sentinels produce, so the
+ * spacer arithmetic (whole rows) holds.
+ */
+export function windowAround(index: number, total: number): CatalogueWindow {
+  const target = Math.max(0, Math.min(index, total - 1));
+  const start = Math.max(0, (Math.floor(target / CATALOGUE_BATCH) - 1) * CATALOGUE_BATCH);
+  return { start, end: Math.min(total, start + CATALOGUE_BATCH * 3) };
+}
+
 /** Compiled documents held on the server. */
 export const DOCUMENT_CACHE_ENTRIES = 96;
 

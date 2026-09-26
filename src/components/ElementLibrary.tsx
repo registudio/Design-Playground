@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
 import { ENGINE_SOURCES, engineFor } from "@/elements/extended-catalogue";
 import { useProjectStore } from "@/store/project-store";
@@ -10,6 +10,7 @@ import type { DesignElement } from "@/registry/schema";
 import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
 import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
 import { describeElement } from "@/elements/descriptions";
+import { ALL_TYPES, clearLibraryView, COLLECTIONS, DEFAULT_VIEW, readLibraryView, writeLibraryView, type LibraryView } from "@/elements/library-url";
 import { OriginalPreview } from "./OriginalPreview";
 import { previewSrc, RegistryPreview } from "./RegistryPreview";
 import {
@@ -18,6 +19,7 @@ import {
   NARROW_SEARCH_LIMIT,
   retreatCatalogueWindow,
   SEARCH_DEBOUNCE_MS,
+  windowAround,
 } from "@/elements/preview-budget";
 
 /**
@@ -46,6 +48,10 @@ type LibraryItem = {
 
 /** Source id for the authored elements, which have no registry behind them. */
 const ORIGINALS = "playground";
+const UTILITIES = "Hooks & utilities";
+
+/** Everything inside a card that Tab would otherwise stop on. */
+const CARD_CONTROLS = "a[href],button,input,select,textarea,iframe,[tabindex]";
 
 /** The catalogue scrolls inside the studio main area rather than the browser window. */
 function scrollRoot(node: HTMLElement): HTMLElement | null {
@@ -66,6 +72,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const deselectElement = useProjectStore(s => s.deselectElement);
   const advanced = useProjectStore(s => s.advanced);
   const searchRef = useRef<HTMLInputElement>(null);
+  const controls = useRef<HTMLDivElement>(null);
 
   // Loaded here rather than only when the registry overlay opens: these entries are now
   // most of the grid, so waiting for a click would show a near-empty library.
@@ -81,9 +88,9 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const [category, setCategory] = useState("All elements");
-  const [source, setSource] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState(DEFAULT_VIEW.category);
+  const [source, setSource] = useState<string | null>(DEFAULT_VIEW.source);
+  const [query, setQuery] = useState(DEFAULT_VIEW.query);
   /**
    * The text actually filtered on, one beat behind the input.
    *
@@ -93,54 +100,95 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
    * was still typing past. `settled` is what gates that, so a preview only starts once
    * the query has stopped moving.
    */
-  const [settledQuery, setSettledQuery] = useState("");
+  const [settledQuery, setSettledQuery] = useState(DEFAULT_VIEW.query);
   const settled = settledQuery === query;
-  const [onlySelected, setOnlySelected] = useState(false);
-  const [registryOpen, setRegistryOpen] = useState(false);
-  const [inspecting, setInspecting] = useState<string | null>(null);
+  const [onlySelected, setOnlySelected] = useState(DEFAULT_VIEW.onlySelected);
   /**
-   * The registry element being shown full size.
-   *
-   * Only the authored originals could be expanded, so on a grid where most cards are
-   * registry components the affordance appeared to work at random — present on some
-   * cards, missing on others, with nothing to explain the difference.
+   * Hooks and utilities in the grid. Off by default: they are not visual, so their cards
+   * can never show anything, and a tile that never renders reads as a broken one. They
+   * stay findable — a search shows them, and so does choosing their type.
    */
-  const [expanded, setExpanded] = useState<DesignElement | null>(null);
+  const [utilities, setUtilities] = useState(DEFAULT_VIEW.utilities);
+  const [registryOpen, setRegistryOpen] = useState(false);
+  /**
+   * The element open full screen, original or registry, by id.
+   *
+   * One value for both kinds, so stepping to the next result can cross from an original
+   * to a registry component without closing one view and opening another.
+   */
+  const [fullId, setFullId] = useState<string | null>(DEFAULT_VIEW.open);
   const [paused, setPaused] = useState(false);
-  // Anything drawn over the whole grid. Its cards cannot be seen, so they give their
-  // slots up rather than compete with the view on top for the GPU and the main thread.
-  const covered = !!inspecting || !!expanded || registryOpen;
   const [compact, setCompact] = useState(false);
-  const [collection, setCollection] = useState("All collections");
-  const [filtersOpen, setFiltersOpen] = useState(true);
-  useEffect(() => { if (window.matchMedia("(max-width:680px)").matches) setFiltersOpen(false); }, []);
-  useEffect(() => {
-    if (!inspecting && !expanded) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = document.querySelector<HTMLElement>(".demo-dialog");
-    if (!dialog) return;
-    const focusable = () => [...dialog.querySelectorAll<HTMLElement>('button,a[href],iframe')];
-    const key = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const nodes = focusable(), first = nodes[0], last = nodes.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    };
-    document.addEventListener("keydown", key);
-    return () => { document.removeEventListener("keydown", key); previous?.focus(); };
-  }, [inspecting, expanded]);
+  const [collection, setCollection] = useState<string>(DEFAULT_VIEW.collection);
   const [replay, setReplay] = useState(0);
   /** Inclusive/exclusive mounted range. Both edges move so it always stays bounded. */
   const [cardWindow, setCardWindow] = useState({ start: 0, end: CATALOGUE_BATCH });
   /** Measured from live cards, so the spacers match whatever the grid is actually doing. */
   const [rowHeight, setRowHeight] = useState(0);
   const [columns, setColumns] = useState(3);
+  /** The card Tab lands on in the grid: one tab stop for the whole catalogue. */
+  const [focusIndex, setFocusIndex] = useState(0);
   const grid = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setSettledQuery(query), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [query]);
+
+  // ---- The view in the URL (elements/library-url.ts) --------------------------------
+  //
+  // Read after mount rather than during render: the page is prerendered, so the URL is
+  // not known on the server and reading it in render would not match on hydration.
+  // `urlReady` holds the write-back off until the read has been rendered — written any
+  // sooner, the defaults would overwrite the link that was just opened.
+  const [urlReady, setUrlReady] = useState(false);
+  /** The open full-screen view has a history entry of its own, pushed when it opened. */
+  const pushedOpen = useRef(false);
+  const applyView = (view: LibraryView) => {
+    setQuery(view.query);
+    setSettledQuery(view.query);
+    setCategory(view.category);
+    setSource(view.source);
+    setCollection(view.collection);
+    setOnlySelected(view.onlySelected);
+    setUtilities(view.utilities);
+    setFullId(view.open);
+  };
+  useEffect(() => {
+    applyView(readLibraryView(location.search));
+    setUrlReady(true);
+    const onPop = () => { pushedOpen.current = false; applyView(readLibraryView(location.search)); };
+    addEventListener("popstate", onPop);
+    return () => {
+      removeEventListener("popstate", onPop);
+      // Leaving the library: its filters should not follow the user to another step.
+      const rest = clearLibraryView(location.search);
+      if (rest !== location.search) history.replaceState(null, "", `${location.pathname}${rest}${location.hash}`);
+    };
+    // Mount only: applyView is a fresh closure each render but only calls setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!urlReady) return;
+    const next = writeLibraryView({ query: settledQuery, category, source, collection, onlySelected, utilities, open: fullId }, location.search);
+    if (next !== location.search) history.replaceState(null, "", `${location.pathname}${next}${location.hash}`);
+  }, [urlReady, settledQuery, category, source, collection, onlySelected, utilities, fullId]);
+
+  const openFull = (id: string) => {
+    setReplay(0);
+    setFullId(id);
+    // Its own history entry, so the browser's Back button closes it.
+    history.pushState(null, "", `${location.pathname}${writeLibraryView({ ...readLibraryView(location.search), open: id }, location.search)}${location.hash}`);
+    pushedOpen.current = true;
+  };
+  const closeFull = () => {
+    if (pushedOpen.current) {
+      pushedOpen.current = false;
+      history.back();
+      return;
+    }
+    setFullId(null);
+  };
 
   const selected = exploring ? [] : project?.recipe.elements ?? [];
   const picked = exploring ? [] : project?.selections ?? [];
@@ -169,37 +217,45 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       a.title.localeCompare(b.title));
   }, [registry.elements]);
 
-  // Ordered by the taxonomy rather than by first appearance, so the chip row does not
+  // Ordered by the taxonomy rather than by first appearance, so the options do not
   // reshuffle as the registry loads, and only categories that actually have entries show.
   const categories = useMemo(() => {
     const present = new Set(items.map(i => i.category));
-    return ["All elements", ...BROWSE_CATEGORIES.filter(c => present.has(c))];
+    return [ALL_TYPES, ...BROWSE_CATEGORIES.filter(c => present.has(c))];
   }, [items]);
 
   const isSelected = (item: LibraryItem) =>
     item.registry ? picked.some(s => s.id === item.id) : selected.some(s => s.id === item.id);
 
-  const results = useMemo(() => {
-    const text = settledQuery.trim().toLowerCase();
-    return items.filter(item =>
-      (collection === "All collections" ||
+  const text = settledQuery.trim().toLowerCase();
+  const { results, hiddenUtilities } = useMemo(() => {
+    const matching = items.filter(item =>
+      (collection === COLLECTIONS[0] ||
         (collection === "Hero effects" && ["Text animations", "Backgrounds"].includes(item.category)) ||
         (collection === "Subtle interactions" && ["Hover effects", "Buttons & inputs"].includes(item.category)) ||
         (collection === "CSS-only originals" && item.preview && elementOrigin(item.id).runtime === "CSS") ||
         (collection === "Text & feedback originals" && item.preview && ["Text animations", "Loaders & feedback"].includes(item.category))) &&
-      (category === "All elements" || category === item.category) &&
+      (category === ALL_TYPES || category === item.category) &&
       (!source || (source === ORIGINALS ? !item.registry && !engineFor(item.id) : item.registry?.source === source || engineFor(item.id)?.id === source)) &&
       (!text || `${item.title} ${item.description} ${item.category} ${item.registry?.name ?? ""} ${item.registry?.installCommand ?? ""} ${item.registry?.npmDependencies.join(" ") ?? ""}`.toLowerCase().includes(text)) &&
       (!(onlySelected || compact) || isSelected(item)));
-  }, [items, category, source, settledQuery, onlySelected, compact, collection, selected, picked]);
+    // Asked for by name — a search, or their own type — they show regardless.
+    const showUtilities = utilities || !!text || category === UTILITIES;
+    const shown = showUtilities ? matching : matching.filter(item => item.category !== UTILITIES);
+    return { results: shown, hiddenUtilities: matching.length - shown.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, category, source, text, onlySelected, compact, collection, utilities, selected, picked]);
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
 
   // Any change to the filters starts the list again from the top, so you never land
   // mid-way through a result set you have not scrolled.
   useEffect(() => {
     setCardWindow({ start: 0, end: CATALOGUE_BATCH });
+    setFocusIndex(0);
     const root = grid.current ? scrollRoot(grid.current) : null;
     root?.scrollTo({ top: 0, behavior: "auto" });
-  }, [category, source, settledQuery, onlySelected, compact, collection]);
+  }, [category, source, settledQuery, onlySelected, compact, collection, utilities]);
 
   const sentinel = useRef<HTMLDivElement>(null);
   const farSentinel = useRef<HTMLDivElement>(null);
@@ -224,6 +280,19 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     resize.observe(node);
     return () => resize.disconnect();
   }, [cardWindow.end, cardWindow.start]);
+
+  // The filter bar sticks below the workspace bar, whose height changes when it wraps.
+  useEffect(() => {
+    const node = controls.current;
+    const root = node ? scrollRoot(node) : null;
+    const bar = root?.querySelector<HTMLElement>(":scope > .workspace-tools");
+    if (!node || !bar) return;
+    const place = () => { node.style.top = `${bar.offsetHeight}px`; };
+    place();
+    const resize = new ResizeObserver(place);
+    resize.observe(bar);
+    return () => resize.disconnect();
+  }, []);
 
   useEffect(() => {
     const node = sentinel.current;
@@ -269,9 +338,143 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   // describing the whole result set rather than just the mounted part.
   const rowsAbove = Math.ceil(cardWindow.start / columns);
   const rowsBelow = Math.ceil(Math.max(0, results.length - cardWindow.end) / columns);
-  const active = ELEMENTS.find(e => e.id === inspecting);
-  useEffect(() => { if (!active) return; const key = (e: KeyboardEvent) => { if (e.key === "Escape") setInspecting(null); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); }, [active]);
-  useEffect(() => { if (!expanded) return; const key = (e: KeyboardEvent) => { if (e.key === "Escape") setExpanded(null); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); }, [expanded]);
+
+  // ---- Keyboard: one tab stop, arrows between cards ----------------------------------
+  //
+  // Reaching a card partway down used to mean tabbing through every control of every
+  // card before it — several hundred stops. The grid is now a single tab stop (a roving
+  // tabindex): arrows move between cards, Enter opens one, Space adds it, and Tab from a
+  // card goes through that card's own controls and then out of the grid.
+
+  /** Set when focus should land on a card once it is mounted and rendered. */
+  const pendingFocus = useRef<number | null>(null);
+  const moveFocus = (index: number) => {
+    const count = resultsRef.current.length;
+    if (!count) return;
+    const target = Math.max(0, Math.min(count - 1, index));
+    setFocusIndex(target);
+    pendingFocus.current = target;
+    // Past the mounted rows: mount the ones around it first, as a jump would.
+    setCardWindow(current => target >= current.start && target < current.end ? current : windowAround(target, count));
+  };
+  useEffect(() => {
+    const target = pendingFocus.current;
+    if (target === null) return;
+    const card = grid.current?.querySelector<HTMLElement>(`[data-index="${target}"]`);
+    if (!card) return;
+    pendingFocus.current = null;
+    card.focus({ preventScroll: true });
+    card.scrollIntoView({ block: "nearest" });
+  });
+  // The tab stop has to be a mounted card, or Tab would skip the grid entirely.
+  const tabStop = focusIndex >= cardWindow.start && focusIndex < cardWindow.end ? focusIndex : cardWindow.start;
+
+  // Only the tab-stop card's own controls are in the tab order. Its preview mounts and
+  // unmounts frames and buttons on its own schedule, hence the observer.
+  useEffect(() => {
+    const node = grid.current;
+    if (!node) return;
+    const apply = () => {
+      for (const card of node.querySelectorAll<HTMLElement>("article.element-card")) {
+        const current = card.tabIndex === 0;
+        for (const control of card.querySelectorAll<HTMLElement>(CARD_CONTROLS)) {
+          if (current && control.dataset.roving) {
+            control.removeAttribute("tabindex");
+            delete control.dataset.roving;
+          } else if (!current && !control.dataset.roving && control.getAttribute("tabindex") !== "-1") {
+            control.dataset.roving = "1";
+            control.setAttribute("tabindex", "-1");
+          }
+        }
+      }
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(node, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  });
+
+  const onGridKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (!target.matches("article.element-card")) {
+      // Out of a card's note or placement and back to the card, to carry on moving.
+      if (event.key === "Escape" && target.closest("article.element-card")) {
+        event.preventDefault();
+        target.closest<HTMLElement>("article.element-card")?.focus();
+      }
+      return;
+    }
+    const index = Number(target.dataset.index);
+    const item = results[index];
+    if (!item) return;
+    const page = columns * 3;
+    const moves: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns, PageDown: page, PageUp: -page };
+    if (event.key in moves) moveFocus(index + moves[event.key]);
+    else if (event.key === "Home") moveFocus(0);
+    else if (event.key === "End") moveFocus(results.length - 1);
+    else if (event.key === "Enter") openFull(item.id);
+    else if (event.key === " ") toggle(item);
+    else return;
+    event.preventDefault();
+  };
+
+  // ---- Full screen ---------------------------------------------------------------------
+
+  const withVariant = (element: DesignElement): DesignElement =>
+    ({ ...element, variant: picked.find(s => s.id === element.id)?.variant ?? element.variant });
+  const fullItem = fullId ? items.find(i => i.id === fullId) : undefined;
+  const active = fullItem?.preview ? ELEMENTS.find(e => e.id === fullId) : undefined;
+  const expanded = fullItem?.registry ? withVariant(fullItem.registry) : null;
+  /** Where the open element sits in the current results; -1 if a link opened one outside them. */
+  const fullIndex = fullItem ? results.findIndex(i => i.id === fullItem.id) : -1;
+  const step = (delta: number) => {
+    const next = results[fullIndex + delta];
+    if (fullIndex < 0 || !next) return;
+    setReplay(0);
+    setFullId(next.id);
+  };
+  // Anything drawn over the whole grid. Its cards cannot be seen, so they give their
+  // slots up rather than compete with the view on top for the GPU and the main thread.
+  const covered = !!fullItem || registryOpen;
+
+  const isOpen = !!fullItem;
+  const beforeOpen = useRef<HTMLElement | null>(null);
+  /** The element last shown full screen — stepping may have moved far from where it opened. */
+  const lastViewed = useRef<string | null>(null);
+  useEffect(() => { if (fullItem) lastViewed.current = fullItem.id; }, [fullItem]);
+  useEffect(() => {
+    if (isOpen) {
+      beforeOpen.current = document.activeElement as HTMLElement | null;
+      const trap = (event: KeyboardEvent) => {
+        const dialog = document.querySelector<HTMLElement>(".demo-dialog");
+        if (!dialog) return;
+        if (event.key === "Escape") { closeFull(); return; }
+        const typing = event.target instanceof HTMLElement && event.target.closest("input, textarea, select");
+        if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
+          event.preventDefault();
+          stepRef.current(event.key === "ArrowLeft" ? -1 : 1);
+          return;
+        }
+        if (event.key !== "Tab") return;
+        const nodes = [...dialog.querySelectorAll<HTMLElement>("button:not(:disabled),a[href],iframe")];
+        const first = nodes[0], last = nodes.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      };
+      document.addEventListener("keydown", trap);
+      return () => document.removeEventListener("keydown", trap);
+    }
+    // Closed: back to the card of the element last looked at, mounting it if need be.
+    const id = lastViewed.current;
+    lastViewed.current = null;
+    if (!id) return;
+    const index = resultsRef.current.findIndex(i => i.id === id);
+    if (index >= 0) moveFocus(index);
+    else beforeOpen.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+  const stepRef = useRef(step);
+  stepRef.current = step;
 
   const toggle = (item: LibraryItem) => {
     if (exploring || !project) { onCreate?.(); return; }
@@ -287,34 +490,82 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   };
 
   const totalSelected = selected.length + picked.length;
+  const resetFilters = () => { setQuery(""); setSource(null); setCategory(ALL_TYPES); setCollection(COLLECTIONS[0]); setOnlySelected(false); setCompact(false); setUtilities(false); };
+  const sources = [...REGISTRY_SOURCES, ...ENGINE_SOURCES];
+  const sourceLabel = (id: string) => id === ORIGINALS ? "Playground originals" : sources.find(s => s.id === id)?.label ?? id;
+  const sourceCount = (id: string) => id === ORIGINALS
+    ? ELEMENTS.filter(e => !engineFor(e.id)).length
+    : registry.elements.filter(e => e.source === id).length + ELEMENTS.filter(e => engineFor(e.id)?.id === id).length;
+  const utilityCount = items.filter(i => i.category === UTILITIES).length;
+  const typeCount = (c: string) => c === ALL_TYPES ? items.length - (utilities ? 0 : utilityCount) : items.filter(i => i.category === c).length;
+  /** Each filter that is narrowing the grid, as a removable chip. */
+  const activeFilters = [
+    ...(settledQuery.trim() ? [{ label: `“${settledQuery.trim()}”`, clear: () => setQuery("") }] : []),
+    ...(category !== ALL_TYPES ? [{ label: category, clear: () => setCategory(ALL_TYPES) }] : []),
+    ...(source ? [{ label: sourceLabel(source), clear: () => setSource(null) }] : []),
+    ...(collection !== COLLECTIONS[0] ? [{ label: collection, clear: () => setCollection(COLLECTIONS[0]) }] : []),
+    ...(onlySelected ? [{ label: "Selected only", clear: () => setOnlySelected(false) }] : []),
+    ...(utilities ? [{ label: "Showing hooks & utilities", clear: () => setUtilities(false) }] : []),
+  ];
+
+  const stepper = fullIndex >= 0 && <div className="dialog-stepper" role="group" aria-label="Browse the results">
+    <button className="quiet-button" onClick={() => step(-1)} disabled={fullIndex <= 0} aria-label="Previous element" aria-keyshortcuts="ArrowLeft">‹</button>
+    <span aria-live="polite">{fullIndex + 1} of {results.length}</span>
+    <button className="quiet-button" onClick={() => step(1)} disabled={fullIndex >= results.length - 1} aria-label="Next element" aria-keyshortcuts="ArrowRight">›</button>
+  </div>;
 
   return <>
     <div className="library-heading"><div><div className="eyebrow">THE GOOD STUFF</div><h1>Small details.<br className="mobile-break" /> Big possibilities<span className="lime">.</span></h1><p>Motion, interactions, and a little unexpected delight. Find your next signature detail.</p></div><span className="collection-stamp"><span>✳</span> A collection<br/>for the curious.</span></div>
-    <div className="library-toolbar"><label className="search-field"><span>⌕</span><input ref={searchRef} aria-label="Search curated elements" placeholder="Find your next idea…" value={query} onChange={e => setQuery(e.target.value)}/><kbd>/</kbd></label><button className="quiet-button" onClick={() => setPaused(!paused)}>{paused ? "▶ Play previews" : "Ⅱ Pause previews"}</button><button className="quiet-button" onClick={() => setRegistryOpen(true)}>Registry detail ↗</button></div>
-    <details className="library-filters" open={filtersOpen}><summary>Filter the library <span>{category} · {[...REGISTRY_SOURCES, ...ENGINE_SOURCES].find(s => s.id === source)?.label ?? (source === ORIGINALS ? "Playground originals" : "Every source")}</span></summary>
-      <fieldset><legend>01 · Element type</legend><div className="filter-row">{categories.map(c => <button key={c} aria-pressed={category === c} className={category === c ? "active" : ""} onClick={() => setCategory(c)}>{c}<span>{c === "All elements" ? items.length : items.filter(i => i.category === c).length}</span></button>)}</div></fieldset>
-      <fieldset><legend>02 · Source / runtime</legend><div className="filter-row"><button aria-pressed={!source} className={!source ? "active" : ""} onClick={() => setSource(null)}>Every source</button><button aria-pressed={source === ORIGINALS} className={source === ORIGINALS ? "active" : ""} onClick={() => setSource(ORIGINALS)}>Playground originals<span>{ELEMENTS.filter(e => !engineFor(e.id)).length}</span></button>{[...REGISTRY_SOURCES, ...ENGINE_SOURCES].map(s => <button key={s.id} aria-pressed={source === s.id} className={source === s.id ? "active" : ""} onClick={() => setSource(s.id)}>{s.label}<span>{registry.elements.filter(e => e.source === s.id).length + ELEMENTS.filter(e => engineFor(e.id)?.id === s.id).length}</span></button>)}</div></fieldset>
-      <fieldset><legend>03 · Collection</legend><div className="filter-row">{["All collections", "Hero effects", "Subtle interactions", "CSS-only originals", "Text & feedback originals"].map(label => <button key={label} aria-pressed={collection === label} className={collection === label ? "active" : ""} onClick={() => setCollection(label)}>{label}</button>)}</div></fieldset>
-      <div className="filter-actions">{!exploring && <><button className="quiet-button" aria-pressed={onlySelected} onClick={() => setOnlySelected(!onlySelected)}>Selected only · {totalSelected}</button><button className="quiet-button" aria-pressed={compact} onClick={() => setCompact(!compact)}>{compact ? "Back to library" : "Compact selected previews"}</button></>}<button className="quiet-button" onClick={() => { setQuery(""); setSource(null); setCategory("All elements"); setCollection("All collections"); setOnlySelected(false); setCompact(false); }}>Reset all filters</button></div>
-    </details>
+    {/* Sticky, so narrowing the grid never means scrolling back to the top to do it. */}
+    <div className="library-controls" ref={controls}>
+      <div className="library-toolbar"><label className="search-field"><span>⌕</span><input ref={searchRef} aria-label="Search curated elements" placeholder="Find your next idea…" value={query} onChange={e => setQuery(e.target.value)}/><kbd>/</kbd></label><button className="quiet-button" onClick={() => setPaused(!paused)}>{paused ? "▶ Play previews" : "Ⅱ Pause previews"}</button><button className="quiet-button" onClick={() => setRegistryOpen(true)}>Registry detail ↗</button></div>
+      <div className="library-filterbar" role="group" aria-label="Filter the library">
+        <label><span>Type</span><select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c} value={c}>{c} · {typeCount(c)}</option>)}</select></label>
+        <label><span>Source</span><select value={source ?? ""} onChange={e => setSource(e.target.value || null)}>
+          <option value="">Every source</option>
+          <option value={ORIGINALS}>Playground originals · {sourceCount(ORIGINALS)}</option>
+          <optgroup label="Registries">{REGISTRY_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label} · {sourceCount(s.id)}</option>)}</optgroup>
+          <optgroup label="Engines">{ENGINE_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label} · {sourceCount(s.id)}</option>)}</optgroup>
+        </select></label>
+        <label><span>Collection</span><select value={collection} onChange={e => setCollection(e.target.value)}>{COLLECTIONS.map(label => <option key={label} value={label}>{label}</option>)}</select></label>
+        {!exploring && <><button className="quiet-button" aria-pressed={onlySelected} onClick={() => setOnlySelected(!onlySelected)}>Selected only · {totalSelected}</button><button className="quiet-button" aria-pressed={compact} onClick={() => setCompact(!compact)}>{compact ? "Back to library" : "Compact selected previews"}</button></>}
+      </div>
+      {activeFilters.length > 0 && <div className="active-filters" aria-label="Active filters">
+        {activeFilters.map(filter => <button key={filter.label} className="filter-chip" onClick={filter.clear} aria-label={`Remove filter: ${filter.label}`}>{filter.label}<span aria-hidden="true">×</span></button>)}
+        <button className="quiet-button" onClick={resetFilters}>Reset all filters</button>
+      </div>}
+    </div>
     {compact && !results.length && <p>Select elements in the library to view them together here. Clear any source or collection filters to show more selections.</p>}
-    <div className="gallery-meta" aria-live="polite"><span>{results.length} {results.length === 1 ? "element" : "elements"} to explore{registryState === "loading" && " · loading the registries…"}</span><span>LIVE PREVIEWS <i/> HOVER. SCROLL. PLAY.</span></div>
+    <div className="gallery-meta" aria-live="polite"><span>{results.length} {results.length === 1 ? "element" : "elements"} to explore{registryState === "loading" && " · loading the registries…"}{hiddenUtilities > 0 && <> · <button className="link-button" onClick={() => setUtilities(true)}>{hiddenUtilities} {hiddenUtilities === 1 ? "hook or utility" : "hooks & utilities"} hidden — show</button></>}</span><span>LIVE PREVIEWS <i/> HOVER. SCROLL. PLAY.</span></div>
+    <p id="element-grid-keys" className="sr-only">Arrow keys move between elements, Home and End jump to the first and last, Enter opens one full screen and Space adds it to the project.</p>
 
     {cardWindow.start > 0 && <>
       {rowHeight > 0 && <div ref={farTopSentinel} className="grid-edge-sentinel" aria-hidden="true" />}
       <div className="grid-spacer" style={{ height: rowsAbove * rowHeight }} aria-hidden="true" />
       <div ref={topSentinel} className="grid-edge-sentinel" aria-hidden="true" />
     </>}
-    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid}>{shown.map((item) => {
+    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid} role="feed" aria-label="Elements" aria-busy={registryState === "loading"} onKeyDown={onGridKey}>{shown.map((item, offset) => {
+      const index = cardWindow.start + offset;
       const chosen = isSelected(item);
       const note = item.registry ? picked.find(s => s.id === item.id) : selected.find(s => s.id === item.id);
-      return <article className={`element-card ${chosen ? "is-selected" : ""}`} key={item.id} data-element-id={item.id}>
+      return <article
+        className={`element-card ${chosen ? "is-selected" : ""}`}
+        key={item.id}
+        data-element-id={item.id}
+        data-index={index}
+        tabIndex={index === tabStop ? 0 : -1}
+        aria-label={`${item.title}${chosen ? ", added" : ""}`}
+        aria-describedby="element-grid-keys"
+        aria-posinset={index + 1}
+        aria-setsize={results.length}
+        onFocus={() => { if (focusIndex !== index) setFocusIndex(index); }}
+      >
         <div className="element-canvas">
           <span className="canvas-tag">{item.tag ?? sourceById(item.registry!.source)?.label}</span>
           {item.preview
             ? <OriginalPreview id={item.id} title={item.title} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onResume={() => setPaused(false)}/>
-            : <RegistryPreview element={{...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant}} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => setExpanded({...item.registry!, variant: picked.find(s => s.id === item.id)?.variant ?? item.registry!.variant})}/>}
-          {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => setInspecting(item.id)}>↗</button>}
+            : <RegistryPreview element={withVariant(item.registry!)} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => openFull(item.id)}/>}
+          {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => openFull(item.id)}>↗</button>}
         </div>
         <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category}</span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>
         {item.registry
@@ -336,27 +587,27 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       {rowHeight > 0 && <div ref={farSentinel} className="grid-edge-sentinel" aria-hidden="true" />}
     </>}
 
-    {!results.length && <div className="empty-state"><h2>No elements here yet.</h2><p>{registry.elements.length === 0 ? "The registry index hasn't been fetched yet. Open Registry detail to pull it in." : "Try another search or add something to your collection."}</p><button className="quiet-button" onClick={() => { setQuery(""); setCategory("All elements"); setSource(null); setOnlySelected(false); setCollection("All collections"); setCompact(false); }}>Reset filters</button></div>}
+    {!results.length && <div className="empty-state"><h2>No elements here yet.</h2><p>{registry.elements.length === 0 ? "The registry index hasn't been fetched yet. Open Registry detail to pull it in." : "Try another search or add something to your collection."}</p><button className="quiet-button" onClick={resetFilters}>Reset filters</button></div>}
     <div className="library-footer"><span>Made to be explored. Built to be yours.</span><span>✳ DESIGN PLAYGROUND</span></div>
     {registryOpen && <ElementsBrowser readOnly={exploring} onClose={() => setRegistryOpen(false)}/>}
-    {expanded && <div className="studio-overlay" onClick={() => setExpanded(null)}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={expanded.title} onClick={e => e.stopPropagation()}>
+    {expanded && <div className="studio-overlay" onClick={closeFull}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={expanded.title} onClick={e => e.stopPropagation()}>
       <header>
         <div>
           <h2>{expanded.title}</h2>
           <p>{describeElement(expanded)}</p>
           <p className="demo-origin">Source: {sourceById(expanded.source)?.label ?? expanded.source} · {expanded.referenceOnly ? "reference only" : expanded.engineDependency.length ? expanded.engineDependency.join(" + ") : "no engine"}</p>
         </div>
-        <button autoFocus className="quiet-button" onClick={() => setExpanded(null)}>Close ×</button>
+        <div className="dialog-actions">{stepper}<button autoFocus className="quiet-button" onClick={closeFull}>Close ×</button></div>
       </header>
       {/* The same compiled document the card shows, at a size where the component can
           actually lay itself out — several only make sense above a card's height. */}
-      <iframe title={`${expanded.title} expanded preview`} sandbox="allow-scripts" src={previewSrc(expanded)}/>
+      <iframe key={expanded.id} title={`${expanded.title} expanded preview`} sandbox="allow-scripts" src={previewSrc(expanded)}/>
       <footer>
         <a className="quiet-button" href={sourceById(expanded.source)?.homepage ?? "#"} target="_blank" rel="noreferrer noopener">Open {sourceById(expanded.source)?.label} ↗</a>
-        <button className="primary-button" onClick={() => { toggle({ id: expanded.id, title: expanded.title, description: expanded.description, category: browseCategory(expanded), preview: false, registry: expanded }); setExpanded(null); }}>{picked.some(s => s.id === expanded.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button>
+        <button className="primary-button" onClick={() => toggle({ id: expanded.id, title: expanded.title, description: expanded.description, category: browseCategory(expanded), preview: false, registry: expanded })}>{picked.some(s => s.id === expanded.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button>
       </footer>
     </div></div>}
-    {active && <div className="studio-overlay" onClick={() => setInspecting(null)}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={active.title} onClick={e => e.stopPropagation()}><header><div><h2>{active.title}</h2><p>{active.description}</p><p className="demo-origin">Source: {elementOrigin(active.id).name} · {elementOrigin(active.id).runtime}</p></div><button autoFocus className="quiet-button" onClick={() => setInspecting(null)}>Close ×</button></header><iframe key={replay} title={`${active.title} expanded preview`} sandbox="allow-scripts" srcDoc={elementDocument(active.id)}/><footer><button className="quiet-button" onClick={() => setReplay(replay + 1)}>↻ Replay</button><button className="primary-button" onClick={() => toggle({ id: active.id, title: active.title, description: active.description, category: active.category, preview: true })}>{selected.some(s => s.id === active.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button></footer></div></div>}
+    {active && <div className="studio-overlay" onClick={closeFull}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={active.title} onClick={e => e.stopPropagation()}><header><div><h2>{active.title}</h2><p>{active.description}</p><p className="demo-origin">Source: {elementOrigin(active.id).name} · {elementOrigin(active.id).runtime}</p></div><div className="dialog-actions">{stepper}<button autoFocus className="quiet-button" onClick={closeFull}>Close ×</button></div></header><iframe key={`${active.id}:${replay}`} title={`${active.title} expanded preview`} sandbox="allow-scripts" srcDoc={elementDocument(active.id)}/><footer><button className="quiet-button" onClick={() => setReplay(replay + 1)}>↻ Replay</button><button className="primary-button" onClick={() => toggle({ id: active.id, title: active.title, description: active.description, category: active.category, preview: true })}>{selected.some(s => s.id === active.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button></footer></div></div>}
   </>;
 }
 

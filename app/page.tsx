@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { ElementLibrary } from "@/components/ElementLibrary";
+import { hasLibraryView } from "@/elements/library-url";
 import { ProjectPicker } from "@/components/ProjectPicker";
 import { CompositionPanel, SectionOrder } from "@/components/CompositionPanel";
 import { TemplateGallery } from "@/components/TemplateGallery";
@@ -46,6 +47,8 @@ export default function Playground() {
   const setSection = useProjectStore(s => s.setSection);
   useRestoredPreferences();
   useKeyboardShortcuts();
+  // A link to a library view (filters, an open element) opens the library itself.
+  useEffect(() => { if (hasLibraryView(location.search)) setScreen("explore"); }, []);
   // The window no longer scrolls — main does — so resetting scroll has to target it,
   // otherwise moving between steps leaves you halfway down the previous one.
   const mainRef = useRef<HTMLElement>(null);
