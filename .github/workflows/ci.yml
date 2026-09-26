@@ -69,9 +69,11 @@ jobs:
         with:
           name: next-build
 
+      # DP_BRAND_ALLOW_ADDRESSES lets the brand reader fetch the fixture site that
+      # e2e-brand-url serves on 127.0.0.1 — that address only; see brand/safe-fetch.ts.
       - name: Start server
         run: |
-          npx next start -p 3100 &
+          DP_BRAND_ALLOW_ADDRESSES=127.0.0.1 npx next start -p 3100 &
           for i in $(seq 1 30); do
             curl -sf http://localhost:3100/ > /dev/null && exit 0
             sleep 1
@@ -107,6 +109,12 @@ jobs:
 
       - name: Run font upload test
         run: npm run e2e:fonts
+        env:
+          BASE_URL: http://localhost:3100
+          E2E_OUTPUT_DIR: ./e2e-output
+
+      - name: Run brand-from-website test
+        run: npm run e2e:brand-url
         env:
           BASE_URL: http://localhost:3100
           E2E_OUTPUT_DIR: ./e2e-output

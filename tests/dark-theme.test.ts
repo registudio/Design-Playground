@@ -8,10 +8,14 @@ import { normalize } from "@/color/oklch";
 
 describe("the dark theme", () => {
   it("regenerates exactly what the palette suggestion produces", () => {
+    const primaries = new Set<string>();
     for (const hex of [{ l: 0.55, c: 0.2, h: 260 }, { l: 0.8, c: 0.15, h: 90 }, { l: 0.3, c: 0.1, h: 20 }]) {
-      const palette = suggestPalette({ detected: [{ color: normalize(hex), weight: 1 }] as never });
+      const palette = suggestPalette({ detected: [{ color: normalize(hex), weight: 1, role: "dominant", label: "brand" }] });
       expect(darkThemeFor(palette.scales)).toEqual(palette.dark!.semantic);
+      primaries.add(JSON.stringify(palette.scales.brand![500]));
     }
+    // Three different brands, so three different palettes were actually compared.
+    expect(primaries.size).toBe(3);
   });
 
   it("keeps body and muted text legible on the dark surfaces", () => {

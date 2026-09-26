@@ -82,6 +82,12 @@ export function findFont(family: string): CatalogueEntry | undefined {
   return ALL_FONTS.find((f) => f.family === family);
 }
 
+/** As findFont, ignoring case and quotes — for names read off someone else's CSS. */
+export function findFontLoose(family: string): CatalogueEntry | undefined {
+  const wanted = family.replace(/["']/g, "").trim().toLowerCase();
+  return ALL_FONTS.find((f) => f.family.toLowerCase() === wanted);
+}
+
 /**
  * Curated display/body pairings (§10.3).
  *
