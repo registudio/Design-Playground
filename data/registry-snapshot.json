@@ -1,41 +1,41 @@
 {
   "schema": "dp-registry-index/v1",
-  "fetchedAt": "2026-09-22T01:05:32.415Z",
+  "fetchedAt": "2026-09-28T11:42:34.705Z",
   "sources": [
     {
       "id": "bklit",
       "ok": true,
       "itemCount": 56,
       "skipped": 0,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui",
       "ok": true,
       "itemCount": 51,
       "skipped": 0,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs",
       "ok": true,
-      "itemCount": 69,
+      "itemCount": 68,
       "skipped": 0,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry",
       "ok": true,
-      "itemCount": 55,
+      "itemCount": 56,
       "skipped": 0,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits",
       "ok": true,
-      "itemCount": 205,
+      "itemCount": 211,
       "skipped": 0,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     }
   ],
   "elements": [
@@ -68,7 +68,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:area-chart-example",
@@ -94,7 +94,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:background",
@@ -116,7 +116,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:bar-chart",
@@ -144,7 +144,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:bar-chart-example",
@@ -170,7 +170,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:bar-depth",
@@ -191,7 +191,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:candlestick-chart",
@@ -221,7 +221,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:candlestick-chart-example",
@@ -247,7 +247,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:chart-animation",
@@ -266,7 +266,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:chart-context",
@@ -292,7 +292,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:chart-series",
@@ -317,7 +317,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:chart-stat-flow",
@@ -339,7 +339,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:chart-tooltip",
@@ -362,7 +362,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:chart-utils",
@@ -377,7 +377,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:choropleth-chart",
@@ -407,7 +407,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:choropleth-chart-example",
@@ -428,7 +428,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:composed-chart",
@@ -461,7 +461,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:composed-chart-example",
@@ -487,7 +487,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:funnel-chart",
@@ -510,7 +510,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:funnel-chart-example",
@@ -532,7 +532,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:gauge-chart",
@@ -557,7 +557,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:gauge-chart-example",
@@ -579,7 +579,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:grid",
@@ -598,7 +598,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:heatmap-chart",
@@ -630,7 +630,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:heatmap-chart-example",
@@ -653,7 +653,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:legend",
@@ -674,7 +674,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:line-chart",
@@ -704,7 +704,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:line-chart-example",
@@ -730,7 +730,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:live-line-chart",
@@ -759,7 +759,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:live-line-chart-example",
@@ -783,7 +783,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:markers",
@@ -802,7 +802,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:pie-chart",
@@ -829,7 +829,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:pie-chart-example",
@@ -851,7 +851,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:profit-loss-line",
@@ -876,7 +876,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:projection-line",
@@ -899,7 +899,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:radar-chart",
@@ -926,7 +926,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:radar-chart-example",
@@ -948,7 +948,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:reference-area",
@@ -970,7 +970,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:ring-chart",
@@ -996,7 +996,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:ring-chart-example",
@@ -1018,7 +1018,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:sankey-chart",
@@ -1048,7 +1048,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:sankey-chart-example",
@@ -1071,7 +1071,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:scatter-chart",
@@ -1101,7 +1101,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:scatter-chart-example",
@@ -1128,7 +1128,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:shimmering-text",
@@ -1149,7 +1149,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:stat-card-area-01",
@@ -1174,7 +1174,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:stat-card-area-01-example",
@@ -1196,7 +1196,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:stat-card-choropleth-01",
@@ -1222,7 +1222,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:stat-card-choropleth-01-example",
@@ -1245,7 +1245,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:stat-card-line-01",
@@ -1269,7 +1269,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:stat-card-line-01-example",
@@ -1290,7 +1290,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:sunburst-chart",
@@ -1312,7 +1312,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:sunburst-chart-example",
@@ -1333,7 +1333,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:utils",
@@ -1351,7 +1351,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:x-axis",
@@ -1369,7 +1369,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "bklit:y-axis",
@@ -1387,7 +1387,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:animated-gradient",
@@ -1402,7 +1402,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:annotated-text",
@@ -1417,7 +1417,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:ascii-effect",
@@ -1432,7 +1432,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:aurora-flow",
@@ -1447,7 +1447,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:case-study-flip-stack",
@@ -1462,7 +1462,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:circuit-board",
@@ -1477,7 +1477,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:closing-plasma",
@@ -1492,7 +1492,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:collection-surfer",
@@ -1507,7 +1507,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:cursor-driven-particle-typography",
@@ -1522,7 +1522,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:dither-gradient",
@@ -1537,7 +1537,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:dither-prism-hero",
@@ -1552,7 +1552,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:dithered-logo",
@@ -1567,7 +1567,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:eye-tracking",
@@ -1582,7 +1582,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:fisheye-infinite-grid",
@@ -1597,7 +1597,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:flight-status-card",
@@ -1612,7 +1612,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:flipping-word-swap",
@@ -1627,7 +1627,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:github-calendar",
@@ -1642,7 +1642,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:gradient-hero-01",
@@ -1657,7 +1657,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:grain-gradient",
@@ -1672,7 +1672,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:hero-geometric",
@@ -1687,7 +1687,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:hover-transition",
@@ -1702,7 +1702,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:image-ripple-effect",
@@ -1717,7 +1717,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:image-trail",
@@ -1732,7 +1732,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:infinite-image-field",
@@ -1747,7 +1747,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:kinetic-text-reveal",
@@ -1762,7 +1762,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:layered-stack",
@@ -1777,7 +1777,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:letter-cascade",
@@ -1792,7 +1792,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:liquid-chrome",
@@ -1807,7 +1807,22 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "componentry:liquid-glass-carousel",
+      "name": "liquid-glass-carousel",
+      "title": "liquid-glass-carousel",
+      "description": "",
+      "source": "componentry",
+      "category": "signature-polish",
+      "installCommand": "npx shadcn@latest add @componentry/liquid-glass-carousel",
+      "npmDependencies": [],
+      "registryDependencies": [],
+      "availableVariants": [],
+      "engineDependency": [],
+      "referenceOnly": true,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:mac-keyboard",
@@ -1822,7 +1837,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:magnet-lines",
@@ -1837,7 +1852,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:magnetic-dock",
@@ -1852,7 +1867,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:matrix-rain",
@@ -1867,7 +1882,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:music-player",
@@ -1882,7 +1897,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:newsletter-bookshelf",
@@ -1897,7 +1912,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:orbit-card-stack",
@@ -1912,7 +1927,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:pixel-canvas",
@@ -1927,7 +1942,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:pixel-image-trail",
@@ -1942,7 +1957,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:pricing-01",
@@ -1957,7 +1972,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:pricing-02",
@@ -1972,7 +1987,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:prism-gradient",
@@ -1987,7 +2002,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:ripple-transition",
@@ -2002,7 +2017,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:scroll-based-velocity",
@@ -2017,7 +2032,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:scroll-choreography",
@@ -2032,7 +2047,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:scroll-split-card",
@@ -2047,7 +2062,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:scroll-tilted-grid",
@@ -2062,7 +2077,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:signature",
@@ -2077,7 +2092,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:silk-aurora",
@@ -2092,7 +2107,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:spectral-ribbon",
@@ -2107,7 +2122,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:spiral-3d-slider",
@@ -2122,7 +2137,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:split-flap-display",
@@ -2137,7 +2152,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:sticky-scroll-cards",
@@ -2152,7 +2167,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:text-morph",
@@ -2167,7 +2182,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:text-repel",
@@ -2182,7 +2197,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:webgl-liquid",
@@ -2197,7 +2212,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "componentry:wheel-carousel",
@@ -2212,7 +2227,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": true,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:action-search-bar",
@@ -2234,7 +2249,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:ai-input-search",
@@ -2255,7 +2270,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:ai-loading",
@@ -2274,7 +2289,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:ai-prompt",
@@ -2298,7 +2313,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:ai-text-loading",
@@ -2317,7 +2332,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:ai-voice",
@@ -2337,7 +2352,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:apple-activity-card",
@@ -2356,7 +2371,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:attract-button",
@@ -2378,7 +2393,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:avatar-picker",
@@ -2402,7 +2417,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:background-paths",
@@ -2421,7 +2436,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:beams-background",
@@ -2440,7 +2455,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:bento-grid",
@@ -2460,7 +2475,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:card-flip",
@@ -2477,7 +2492,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:card-stack",
@@ -2496,7 +2511,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:carousel-cards",
@@ -2517,7 +2532,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:command-button",
@@ -2536,7 +2551,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:currency-transfer",
@@ -2559,7 +2574,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:dynamic-text",
@@ -2578,7 +2593,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:file-upload",
@@ -2598,7 +2613,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:flow-field",
@@ -2617,7 +2632,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:glitch-text",
@@ -2636,7 +2651,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:gradient-button",
@@ -2653,7 +2668,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:hold-button",
@@ -2675,7 +2690,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:liquid-glass-card",
@@ -2695,7 +2710,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:loader",
@@ -2714,7 +2729,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:matrix-text",
@@ -2733,7 +2748,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:morphic-navbar",
@@ -2750,7 +2765,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:mouse-effect-card",
@@ -2772,7 +2787,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:particle-button",
@@ -2794,7 +2809,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:profile-dropdown",
@@ -2813,7 +2828,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:scroll-text",
@@ -2832,7 +2847,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:shape-hero",
@@ -2851,7 +2866,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:shimmer-text",
@@ -2870,7 +2885,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:sliced-text",
@@ -2889,7 +2904,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:slide-text-button",
@@ -2910,7 +2925,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:smooth-drawer",
@@ -2932,7 +2947,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:smooth-tab",
@@ -2952,7 +2967,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:social-button",
@@ -2974,7 +2989,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:spotlight-cards",
@@ -2994,7 +3009,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:switch-button",
@@ -3013,7 +3028,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:swoosh-text",
@@ -3032,7 +3047,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:team-selector",
@@ -3052,7 +3067,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:toolbar",
@@ -3072,7 +3087,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:tweet-card",
@@ -3089,7 +3104,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:type-writer",
@@ -3108,7 +3123,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:use-auto-resize-textarea",
@@ -3123,7 +3138,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:use-click-outside",
@@ -3138,7 +3153,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:use-copy-to-clipboard",
@@ -3153,7 +3168,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:use-mobile",
@@ -3168,7 +3183,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:utils",
@@ -3186,7 +3201,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "kokonutui:v0-button",
@@ -3203,7 +3218,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:AccordionGallery",
@@ -3243,7 +3258,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:AcidSquares",
@@ -3281,7 +3296,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:AeroShards",
@@ -3319,7 +3334,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:AnimatedContent",
@@ -3359,7 +3374,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:AnimatedList",
@@ -3399,7 +3414,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Antigravity",
@@ -3438,7 +3453,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ASCIIText",
@@ -3476,7 +3491,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Aurora",
@@ -3514,7 +3529,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Balatro",
@@ -3552,7 +3567,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Ballpit",
@@ -3593,7 +3608,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Beams",
@@ -3633,7 +3648,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BellToggle",
@@ -3675,7 +3690,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BlobCursor",
@@ -3715,7 +3730,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BlurText",
@@ -3755,7 +3770,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BorderGlow",
@@ -3791,7 +3806,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BounceCards",
@@ -3831,7 +3846,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BranchedMenu",
@@ -3870,7 +3885,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:BubbleMenu",
@@ -3910,7 +3925,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CallChip",
@@ -3949,7 +3964,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CardNav",
@@ -3990,7 +4005,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CardSwap",
@@ -4030,7 +4045,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Carousel",
@@ -4071,7 +4086,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ChromaGrid",
@@ -4111,7 +4126,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CircularGallery",
@@ -4149,7 +4164,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CircularText",
@@ -4189,7 +4204,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ClickSpark",
@@ -4225,7 +4240,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CodeSlots",
@@ -4267,7 +4282,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ColorBends",
@@ -4305,7 +4320,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CometDial",
@@ -4345,7 +4360,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Counter",
@@ -4385,7 +4400,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CountUp",
@@ -4425,7 +4440,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Crosshair",
@@ -4465,7 +4480,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CRTWarp",
@@ -4503,7 +4518,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Cubes",
@@ -4543,7 +4558,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CursorGrid",
@@ -4579,7 +4594,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CurvedInput",
@@ -4615,7 +4630,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:CurvedLoop",
@@ -4651,7 +4666,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DarkVeil",
@@ -4689,7 +4704,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DecayCard",
@@ -4729,7 +4744,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DecryptedText",
@@ -4769,7 +4784,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DepthCarousel",
@@ -4809,7 +4824,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DepthText",
@@ -4845,7 +4860,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Dither",
@@ -4886,7 +4901,45 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "react-bits:DitherVeil",
+      "name": "DitherVeil",
+      "title": "DitherVeil",
+      "description": "A photo printed as a 1-bit dither that the cursor burns through to full colour, leaving a trail that knits back cell by cell.",
+      "source": "react-bits",
+      "category": "micro-interactions",
+      "installCommand": "npx shadcn@latest add @react-bits/DitherVeil-TS-TW",
+      "npmDependencies": [
+        "ogl@^1.0.11"
+      ],
+      "registryDependencies": [],
+      "variant": {
+        "language": "TS",
+        "styling": "TW"
+      },
+      "availableVariants": [
+        {
+          "language": "TS",
+          "styling": "TW"
+        },
+        {
+          "language": "TS",
+          "styling": "CSS"
+        },
+        {
+          "language": "JS",
+          "styling": "TW"
+        },
+        {
+          "language": "JS",
+          "styling": "CSS"
+        }
+      ],
+      "engineDependency": [],
+      "referenceOnly": false,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Dock",
@@ -4926,7 +4979,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DodgeField",
@@ -4966,7 +5019,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DomeGallery",
@@ -5004,7 +5057,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DotField",
@@ -5040,7 +5093,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DotGrid",
@@ -5080,7 +5133,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:DriftWall",
@@ -5116,7 +5169,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:EchoText",
@@ -5152,7 +5205,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ElasticMesh",
@@ -5190,7 +5243,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ElasticSlider",
@@ -5230,7 +5283,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ElectricBorder",
@@ -5266,7 +5319,45 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "react-bits:ElectricLogo",
+      "name": "ElectricLogo",
+      "title": "ElectricLogo",
+      "description": "Turns any SVG or PNG into a living lightning outline, with flowing strands, arcs that leap off the edges and a charge that follows the cursor.",
+      "source": "react-bits",
+      "category": "micro-interactions",
+      "installCommand": "npx shadcn@latest add @react-bits/ElectricLogo-TS-TW",
+      "npmDependencies": [
+        "ogl@^1.0.11"
+      ],
+      "registryDependencies": [],
+      "variant": {
+        "language": "TS",
+        "styling": "TW"
+      },
+      "availableVariants": [
+        {
+          "language": "TS",
+          "styling": "TW"
+        },
+        {
+          "language": "TS",
+          "styling": "CSS"
+        },
+        {
+          "language": "JS",
+          "styling": "TW"
+        },
+        {
+          "language": "JS",
+          "styling": "CSS"
+        }
+      ],
+      "engineDependency": [],
+      "referenceOnly": false,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:EvilEye",
@@ -5304,7 +5395,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FadeContent",
@@ -5344,7 +5435,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FallingText",
@@ -5382,7 +5473,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FaultyTerminal",
@@ -5420,7 +5511,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Ferrofluid",
@@ -5458,7 +5549,45 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "react-bits:FlexCarousel",
+      "name": "FlexCarousel",
+      "title": "FlexCarousel",
+      "description": "An infinite image row that flows through invisible liquid glass at its edges, with four bend presets, five entrances, a speed squeeze and click to focus.",
+      "source": "react-bits",
+      "category": "micro-interactions",
+      "installCommand": "npx shadcn@latest add @react-bits/FlexCarousel-TS-TW",
+      "npmDependencies": [
+        "ogl@^1.0.11"
+      ],
+      "registryDependencies": [],
+      "variant": {
+        "language": "TS",
+        "styling": "TW"
+      },
+      "availableVariants": [
+        {
+          "language": "TS",
+          "styling": "TW"
+        },
+        {
+          "language": "TS",
+          "styling": "CSS"
+        },
+        {
+          "language": "JS",
+          "styling": "TW"
+        },
+        {
+          "language": "JS",
+          "styling": "CSS"
+        }
+      ],
+      "engineDependency": [],
+      "referenceOnly": false,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FlipCard",
@@ -5498,7 +5627,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FloatingLines",
@@ -5536,7 +5665,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FlowingMenu",
@@ -5576,7 +5705,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FluidGlass",
@@ -5617,7 +5746,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FlyingPosters",
@@ -5655,7 +5784,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Folder",
@@ -5691,7 +5820,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FolderFloat",
@@ -5729,7 +5858,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FoldText",
@@ -5769,7 +5898,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FuseButton",
@@ -5808,7 +5937,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:FuzzyText",
@@ -5844,7 +5973,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Galaxy",
@@ -5882,7 +6011,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GhostCursor",
@@ -5920,7 +6049,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GhostFibers",
@@ -5958,7 +6087,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GlareHover",
@@ -5994,7 +6123,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GlassIcons",
@@ -6030,7 +6159,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GlassSurface",
@@ -6066,7 +6195,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GlideSelect",
@@ -6105,7 +6234,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GlitchText",
@@ -6141,7 +6270,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GlowCursor",
@@ -6179,7 +6308,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GooeyNav",
@@ -6215,7 +6344,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GradientBlinds",
@@ -6253,7 +6382,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GradientText",
@@ -6293,7 +6422,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GradientWaves",
@@ -6331,7 +6460,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GradualBlur",
@@ -6367,7 +6496,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Grainient",
@@ -6405,7 +6534,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GridDistortion",
@@ -6443,7 +6572,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GridMotion",
@@ -6483,7 +6612,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:GridScan",
@@ -6523,7 +6652,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:HalftoneReveal",
@@ -6561,7 +6690,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:HoldButton",
@@ -6597,7 +6726,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Hyperspeed",
@@ -6636,7 +6765,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ImageTrail",
@@ -6676,7 +6805,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:InfiniteMenu",
@@ -6714,7 +6843,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:InfiniteSpiral",
@@ -6750,7 +6879,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Iridescence",
@@ -6788,7 +6917,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:JellyRadio",
@@ -6828,7 +6957,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Lanyard",
@@ -6864,7 +6993,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LaserFlow",
@@ -6902,7 +7031,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LatticeLoader",
@@ -6938,7 +7067,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LetterGlitch",
@@ -6974,7 +7103,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Lightfall",
@@ -7012,7 +7141,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Lightning",
@@ -7048,7 +7177,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LightPillar",
@@ -7086,7 +7215,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LightRays",
@@ -7124,7 +7253,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LightTunnel",
@@ -7162,7 +7291,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LineSidebar",
@@ -7198,7 +7327,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LineWaves",
@@ -7236,7 +7365,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LiquidChrome",
@@ -7274,7 +7403,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LiquidEther",
@@ -7312,7 +7441,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:LogoLoop",
@@ -7348,7 +7477,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MagicBento",
@@ -7388,7 +7517,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MagicRings",
@@ -7426,7 +7555,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Magnet",
@@ -7462,7 +7591,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MagnetLines",
@@ -7498,7 +7627,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MaskedHeading",
@@ -7538,7 +7667,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Masonry",
@@ -7578,7 +7707,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MetaBalls",
@@ -7616,7 +7745,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MetallicPaint",
@@ -7652,7 +7781,45 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "react-bits:MicroSlats",
+      "name": "MicroSlats",
+      "title": "MicroSlats",
+      "description": "A wall of tiny slats that becomes a rolling sea in perspective, with glinting crests, four presets, a real fluid the cursor stirs and an intro that rolls in from the horizon.",
+      "source": "react-bits",
+      "category": "micro-interactions",
+      "installCommand": "npx shadcn@latest add @react-bits/MicroSlats-TS-TW",
+      "npmDependencies": [
+        "ogl@^1.0.11"
+      ],
+      "registryDependencies": [],
+      "variant": {
+        "language": "TS",
+        "styling": "TW"
+      },
+      "availableVariants": [
+        {
+          "language": "TS",
+          "styling": "TW"
+        },
+        {
+          "language": "TS",
+          "styling": "CSS"
+        },
+        {
+          "language": "JS",
+          "styling": "TW"
+        },
+        {
+          "language": "JS",
+          "styling": "CSS"
+        }
+      ],
+      "engineDependency": [],
+      "referenceOnly": false,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ModelViewer",
@@ -7692,7 +7859,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MoltenMetal",
@@ -7730,7 +7897,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:MorphSlider",
@@ -7771,7 +7938,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Noise",
@@ -7807,7 +7974,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:OptionWheel",
@@ -7843,7 +8010,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Orb",
@@ -7881,7 +8048,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:OrbitImages",
@@ -7921,7 +8088,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PaperCrumple",
@@ -7959,7 +8126,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Particles",
@@ -7997,7 +8164,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ParticleText",
@@ -8033,7 +8200,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PeekRating",
@@ -8072,7 +8239,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PillNav",
@@ -8113,7 +8280,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PixelBlast",
@@ -8152,7 +8319,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PixelCard",
@@ -8188,7 +8355,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PixelSnow",
@@ -8226,7 +8393,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PixelSwap",
@@ -8262,7 +8429,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PixelTrail",
@@ -8302,7 +8469,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PixelTransition",
@@ -8342,7 +8509,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Plasma",
@@ -8380,7 +8547,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PlasmaWave",
@@ -8418,7 +8585,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Prism",
@@ -8456,7 +8623,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PrismaticBurst",
@@ -8494,7 +8661,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ProfileCard",
@@ -8530,7 +8697,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PromptBar",
@@ -8572,7 +8739,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:PulseHeart",
@@ -8610,7 +8777,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Radar",
@@ -8648,7 +8815,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:RefineFrame",
@@ -8687,7 +8854,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ReflectiveCard",
@@ -8725,7 +8892,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Ribbons",
@@ -8763,7 +8930,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:RippleDistortion",
@@ -8801,7 +8968,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:RippleGrid",
@@ -8839,7 +9006,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:RotatingText",
@@ -8879,7 +9046,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:RubberSegment",
@@ -8919,7 +9086,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Scanner",
@@ -8957,7 +9124,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrambledText",
@@ -8997,7 +9164,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrollExpand",
@@ -9033,7 +9200,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrollFloat",
@@ -9073,7 +9240,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrollReveal",
@@ -9113,7 +9280,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrollStack",
@@ -9151,7 +9318,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrollVelocity",
@@ -9191,7 +9358,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ScrubField",
@@ -9231,7 +9398,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ShapeBlur",
@@ -9269,7 +9436,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ShapeGrid",
@@ -9305,7 +9472,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ShapeWaves",
@@ -9343,7 +9510,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ShinyText",
@@ -9383,7 +9550,45 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "react-bits:Shredder",
+      "name": "Shredder",
+      "title": "Shredder",
+      "description": "A list with a paper shredder at the bottom. Drag a row into the slit and the rollers tug it in, pull it through and cut it into strips that curl out underneath, tumble away and fade out. The rest of the list settles down on a spring and the shredded item is handed to you to delete.",
+      "source": "react-bits",
+      "category": "micro-interactions",
+      "installCommand": "npx shadcn@latest add @react-bits/Shredder-TS-TW",
+      "npmDependencies": [
+        "react-dom@^19.0.0"
+      ],
+      "registryDependencies": [],
+      "variant": {
+        "language": "TS",
+        "styling": "TW"
+      },
+      "availableVariants": [
+        {
+          "language": "TS",
+          "styling": "TW"
+        },
+        {
+          "language": "TS",
+          "styling": "CSS"
+        },
+        {
+          "language": "JS",
+          "styling": "TW"
+        },
+        {
+          "language": "JS",
+          "styling": "CSS"
+        }
+      ],
+      "engineDependency": [],
+      "referenceOnly": false,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Shuffle",
@@ -9424,7 +9629,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SideRays",
@@ -9462,7 +9667,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Silk",
@@ -9501,7 +9706,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SlicedWaves",
@@ -9539,7 +9744,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SlideCommit",
@@ -9581,7 +9786,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SlingButton",
@@ -9623,7 +9828,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SloshGauge",
@@ -9659,7 +9864,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SoftAurora",
@@ -9697,7 +9902,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SpecularButton",
@@ -9735,7 +9940,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SplashCursor",
@@ -9771,7 +9976,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SplitFlapText",
@@ -9807,7 +10012,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SplitText",
@@ -9848,7 +10053,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SpotlightCard",
@@ -9884,7 +10089,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SpringCheck",
@@ -9925,7 +10130,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SquishSwitch",
@@ -9965,7 +10170,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Stack",
@@ -10005,7 +10210,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:StaggeredMenu",
@@ -10045,7 +10250,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:StarBorder",
@@ -10081,7 +10286,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:StatusMark",
@@ -10121,7 +10326,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Stepper",
@@ -10161,7 +10366,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:StickerPeel",
@@ -10201,7 +10406,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Strands",
@@ -10239,7 +10444,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:StrokeText",
@@ -10279,7 +10484,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SwarmCursor",
@@ -10317,7 +10522,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SwipeRow",
@@ -10359,7 +10564,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:SwipeToast",
@@ -10401,7 +10606,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TargetCursor",
@@ -10442,7 +10647,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TearTicket",
@@ -10482,7 +10687,43 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
+    },
+    {
+      "id": "react-bits:TechText",
+      "name": "TechText",
+      "title": "TechText",
+      "description": "A wordmark whose letters turn into dashed vector paths under the cursor. Grab any letter to drag it off the baseline and it springs back home.",
+      "source": "react-bits",
+      "category": "micro-interactions",
+      "installCommand": "npx shadcn@latest add @react-bits/TechText-TS-TW",
+      "npmDependencies": [],
+      "registryDependencies": [],
+      "variant": {
+        "language": "TS",
+        "styling": "TW"
+      },
+      "availableVariants": [
+        {
+          "language": "TS",
+          "styling": "TW"
+        },
+        {
+          "language": "TS",
+          "styling": "CSS"
+        },
+        {
+          "language": "JS",
+          "styling": "TW"
+        },
+        {
+          "language": "JS",
+          "styling": "CSS"
+        }
+      ],
+      "engineDependency": [],
+      "referenceOnly": false,
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TextCursor",
@@ -10522,7 +10763,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TextLoop",
@@ -10562,7 +10803,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TextPressure",
@@ -10598,7 +10839,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TextType",
@@ -10638,7 +10879,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:ThoughtLine",
@@ -10680,7 +10921,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Threads",
@@ -10718,7 +10959,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TiltedCard",
@@ -10758,7 +10999,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Topography",
@@ -10796,7 +11037,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:TrueFocus",
@@ -10836,7 +11077,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:VariableProximity",
@@ -10876,7 +11117,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:VoicePill",
@@ -10915,7 +11156,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:WakeSlider",
@@ -10955,7 +11196,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:WarmTooltip",
@@ -10996,7 +11237,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:WarpText",
@@ -11034,7 +11275,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:Waves",
@@ -11070,7 +11311,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "react-bits:WebThreads",
@@ -11108,7 +11349,7 @@
       ],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:accordion",
@@ -11131,28 +11372,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
-    },
-    {
-      "id": "soralabs:arrow-roll-button",
-      "name": "arrow-roll-button",
-      "title": "Arrow Roll Button",
-      "description": "A bespoke studio CTA button with rolling text-shadow and dual-arrow sliding transitions on hover.",
-      "source": "soralabs",
-      "category": "text-scroll-effects",
-      "installCommand": "npx shadcn@latest add @soralabs/arrow-roll-button",
-      "npmDependencies": [
-        "motion"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "availableVariants": [],
-      "engineDependency": [
-        "motion"
-      ],
-      "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-accordion",
@@ -11177,7 +11397,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-alert-dialog",
@@ -11202,7 +11422,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-button",
@@ -11225,7 +11445,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-checkbox",
@@ -11248,7 +11468,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-context-menu",
@@ -11272,7 +11492,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-dialog",
@@ -11297,7 +11517,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-dropdown-menu",
@@ -11321,7 +11541,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-input",
@@ -11342,7 +11562,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-switch",
@@ -11366,7 +11586,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:base-tooltip",
@@ -11389,7 +11609,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:cursor-bubble",
@@ -11411,7 +11631,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:cursor-trail-reveal",
@@ -11430,7 +11650,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:dia-text-reveal",
@@ -11451,7 +11671,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:draw-underline-link",
@@ -11473,7 +11693,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:dual-wipe-reveal",
@@ -11494,7 +11714,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:expandable-tabs",
@@ -11517,7 +11737,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:fog-text-reveal",
@@ -11538,7 +11758,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:hero-carousel",
@@ -11556,7 +11776,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:highlight",
@@ -11577,7 +11797,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:hooks-use-auto-height",
@@ -11592,7 +11812,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:hooks-use-controlled-state",
@@ -11607,7 +11827,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:hooks-use-prefers-reduced-motion",
@@ -11622,7 +11842,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:icons-arrow-right",
@@ -11639,7 +11859,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:icons-bell",
@@ -11658,7 +11878,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:icons-chevrons",
@@ -11677,7 +11897,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:icons-copy",
@@ -11696,7 +11916,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:index",
@@ -11717,7 +11937,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:infinite-scrolling-images",
@@ -11738,7 +11958,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:inline-testimonials",
@@ -11759,7 +11979,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:lib-scroll-trigger-utils",
@@ -11774,7 +11994,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:logo-carousel-swapper",
@@ -11796,7 +12016,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:magnetic-cards",
@@ -11818,7 +12038,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:number-flow",
@@ -11839,7 +12059,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:particle-hover-button",
@@ -11860,7 +12080,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:pixel-image-loader",
@@ -11877,7 +12097,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:progressive-blur",
@@ -11895,7 +12115,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-accordion",
@@ -11920,7 +12140,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-alert-dialog",
@@ -11945,7 +12165,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-button",
@@ -11968,7 +12188,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-checkbox",
@@ -11991,7 +12211,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-context-menu",
@@ -12015,7 +12235,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-dialog",
@@ -12040,7 +12260,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-dropdown-menu",
@@ -12064,7 +12284,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-input",
@@ -12085,7 +12305,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-switch",
@@ -12109,7 +12329,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:radix-tooltip",
@@ -12132,7 +12352,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:rolling-text",
@@ -12153,7 +12373,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:scroll-chapters",
@@ -12175,7 +12395,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:scroll-gallery",
@@ -12198,7 +12418,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:skeleton",
@@ -12215,7 +12435,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:skeleton-shimmer",
@@ -12236,7 +12456,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:sliding-chip-button",
@@ -12258,7 +12478,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:stagger-button",
@@ -12277,7 +12497,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:sticky-scroll-cards",
@@ -12299,7 +12519,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-cursor-loop",
@@ -12318,7 +12538,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-effect",
@@ -12339,7 +12559,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-loop",
@@ -12360,7 +12580,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-morph",
@@ -12381,7 +12601,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-reveal-block",
@@ -12404,7 +12624,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-reveal-box",
@@ -12426,7 +12646,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-reveal-mask",
@@ -12447,7 +12667,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-roll",
@@ -12468,7 +12688,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:text-scramble",
@@ -12487,7 +12707,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:tilt-card",
@@ -12508,7 +12728,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:tilt-slide-transition",
@@ -12529,7 +12749,7 @@
         "gsap"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:typer",
@@ -12546,7 +12766,7 @@
       "availableVariants": [],
       "engineDependency": [],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     },
     {
       "id": "soralabs:video-player",
@@ -12567,7 +12787,7 @@
         "motion"
       ],
       "referenceOnly": false,
-      "lastVerified": "2026-09-22T01:05:32.415Z"
+      "lastVerified": "2026-09-28T11:42:34.705Z"
     }
   ]
 }
