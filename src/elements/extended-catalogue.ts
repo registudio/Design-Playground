@@ -14,10 +14,29 @@ import { SHADER_ELEMENTS } from "./shader-elements";
 export const ENGINE_SOURCES = [
   { id: "motion", label: "Motion.dev", url: "https://motion.dev/docs", runtime: "Motion.dev" },
   { id: "lenis", label: "Lenis", url: "https://github.com/darkroomengineering/lenis", runtime: "Lenis" },
-  { id: "vanta", label: "Vanta", url: "https://www.vantajs.com/", runtime: "Vanta" },
+  { id: "vanta", label: "Vanta", url: "https://www.vantajs.com/", runtime: "Vanta", split: true },
   { id: "shader", label: "ShaderGradient", url: "https://shadergradient.co/", runtime: "WebGL" },
 ] as const;
 export function engineFor(id: string) { return ENGINE_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
+
+/**
+ * The files under /engine-demos/ an element's document loads, in order.
+ *
+ * Most engines build one bundle shared by all their demos. Vanta is built split — a
+ * trimmed `vanta-three.js` every Vanta card shares, then one small file per effect —
+ * see scripts/build-engine-demos.mjs. Must agree with `ENGINE_DEMO_LIST` in
+ * scripts/engine-demos.mjs, which a test holds it to.
+ */
+export function engineBundles(id: string): string[] {
+  const engine = engineFor(id);
+  if (!engine) return [];
+  return "split" in engine && engine.split ? [`${engine.id}-three`, id] : [engine.id];
+}
+
+/** The engine a bundle file belongs to: `vanta-three` and `vanta-net` are both Vanta. */
+export function engineOfBundle(bundle: string) {
+  return ENGINE_SOURCES.find(s => bundle === s.id || bundle.startsWith(`${s.id}-`));
+}
 
 /**
  * Libraries whose components are rebuilt here rather than installed.

@@ -78,12 +78,12 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
       if (!elementsOnly) {
         const response = await fetch("/api/preview-css");
         if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
-        const assetUrls = Object.fromEntries(project.assets.images.map(image => [image.file, `design/assets/${image.file}`]));
+        const assetUrls = Object.fromEntries([...project.assets.images, ...project.assets.fonts].map(entry => [entry.file, `design/assets/${entry.file}`]));
         result.files.push({ path: "preview.html", content: buildStaticPage(project, await response.text(), assetUrls) });
       }
-      // Engine runtimes are embedded either way: an element that needs one is not
-      // standalone without it.
-      await embedEngineAssets(result.files);
+      // Engine runtimes ship either way — an element that needs one is not standalone
+      // without it — once each, in elements/engines/, shared by every file using them.
+      await embedEngineAssets(result.files, "shared");
       await deliver(result.files);
       setStatus(elementsOnly ? `${result.files.length} element files ready.` : "Your design handoff is ready.");
     } catch (cause) { setStatus(cause instanceof Error ? cause.message : "Export failed. Please try again."); }

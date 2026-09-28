@@ -1,51 +1,26 @@
-import { mkdirSync } from "node:fs";
-import { chromium } from "playwright";
+import { createProject, goStep, launch, OUT, tally } from "./lib/studio.mjs";
 
 /**
- * Safety-net and learnability smoke test (§Wave G).
- *
- * The three things here all concern trust rather than capability: that destroying
- * something takes a deliberate second click, that a failed save says so instead of
- * pretending, and that the help panel explaining the app's non-obvious affordances is
- * reachable. See e2e-smoke.mjs for the portability conventions.
+ * Things that must not go wrong quietly: help opens and closes from the keyboard without
+ * stealing keystrokes from fields; deleting a snapshot or a saved template takes two
+ * clicks; a failed save says so instead of hanging on "Saving…".
  */
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:3100";
-const OUT = process.env.E2E_OUTPUT_DIR ?? "./e2e-output";
-mkdirSync(OUT, { recursive: true });
-
-let failures = 0;
-const ok = (label, cond) => { console.log(cond ? `PASS: ${label}` : `FAIL: ${label}`); if (!cond) failures++; };
-
-const browser = await chromium.launch({
-  ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}),
-});
-const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
-const errors = [];
-page.on("pageerror", (e) => errors.push(e.message));
-page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
-
-await page.goto(BASE_URL, { waitUntil: "networkidle" });
-
-// The app opens on a welcome screen since the studio shell landed; the project
-// directory is one click in. Harmless if a previous project auto-reopens instead.
-const welcome = page.getByRole("button", { name: "+ New project" });
-if (await welcome.count()) await welcome.first().click();
-await page.getByPlaceholder("Project name").fill("Safety Verify");
-await page.getByRole("button", { name: "New project", exact: true }).click();
-await page.waitForTimeout(700);
+const { ok, finish } = tally();
+const { browser, page, pageErrors } = await launch({ width: 1600, height: 1000 });
+await createProject(page, "Safety Verify");
+const help = () => page.getByRole("dialog", { name: /shortcuts/i });
 
 // ------------------------------------------------------------------ help overlay
-await page.getByRole("button", { name: "Shortcuts and tips" }).click();
+await page.locator(".sidebar-help").click();
 await page.waitForTimeout(300);
-ok("Help opens from its visible button", await page.getByRole("dialog", { name: /shortcuts/i }).isVisible());
-ok("Help explains the reset dot", await page.getByText(/dot beside a control/i).isVisible());
+ok("help opens from its visible button", await help().isVisible());
+ok("help explains the reset dot", await page.getByText(/dot beside a control/i).isVisible());
 await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
-ok("Escape closes help", (await page.getByRole("dialog", { name: /shortcuts/i }).count()) === 0);
-
+ok("Escape closes help", (await help().count()) === 0);
 await page.keyboard.press("?");
 await page.waitForTimeout(300);
-ok("'?' opens help", await page.getByRole("dialog", { name: /shortcuts/i }).isVisible());
+ok("'?' opens help", await help().isVisible());
 await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
 
@@ -55,51 +30,41 @@ const snapshotInput = page.getByPlaceholder("Snapshot name…");
 await snapshotInput.fill("Before?");
 await page.waitForTimeout(200);
 ok("'?' typed into a field stays in the field", (await snapshotInput.inputValue()) === "Before?");
-ok("...and does not open help", (await page.getByRole("dialog", { name: /shortcuts/i }).count()) === 0);
+ok("…and does not open help", (await help().count()) === 0);
 
 // ------------------------------------------------------ snapshot delete confirmation
 await snapshotInput.press("Enter");
 await page.waitForTimeout(500);
-const snapshotRow = page.locator("div").filter({ hasText: /^Before\?$/ }).last();
-ok("Snapshot was created", await page.getByText("Before?", { exact: true }).isVisible());
-
-// The button's accessible name is set explicitly (there can be several snapshots, each
-// with a visibly identical "Delete"/"Sure?" label — a screen reader needs the name to
-// say which one), so it's queried by that name rather than the shared visible text.
-const deleteSnapshot = page.getByRole("button", { name: /Delete snapshot "Before\?"/ });
-await deleteSnapshot.click();
+ok("the snapshot was created", await page.getByText("Before?", { exact: true }).isVisible());
+await page.getByRole("button", { name: /Delete snapshot "Before\?"/ }).click();
 await page.waitForTimeout(300);
-ok("One click on delete only arms it", await page.getByText("Before?", { exact: true }).isVisible());
-const confirmSnapshotDelete = page.getByRole("button", { name: /Click again to delete snapshot "Before\?"/ });
-ok("Armed delete asks for confirmation", await confirmSnapshotDelete.isVisible());
-await confirmSnapshotDelete.click();
+ok("one click on delete only arms it", await page.getByText("Before?", { exact: true }).isVisible());
+const confirm = page.getByRole("button", { name: /Click again to delete snapshot "Before\?"/ });
+ok("the armed delete asks for confirmation", await confirm.isVisible());
+await confirm.click();
 await page.waitForTimeout(500);
-ok("Second click deletes the snapshot", (await page.getByText("Before?", { exact: true }).count()) === 0);
-void snapshotRow;
-
-// ------------------------------------------------------- custom preset confirmation
+ok("a second click deletes the snapshot", (await page.getByText("Before?", { exact: true }).count()) === 0);
 await page.keyboard.press("Escape");
+
+// ------------------------------------------------------- saved template confirmation
+await goStep(page, "Templates");
+await page.locator(".advanced-presets summary").click();
 await page.getByRole("button", { name: "Save current as preset", exact: true }).click();
 const presetInput = page.getByPlaceholder("Preset name…");
 await presetInput.fill("Delete Me Preset");
 await presetInput.press("Enter");
 await page.waitForTimeout(600);
-ok("Custom preset was saved", await page.getByText("Delete Me Preset", { exact: true }).isVisible());
-
-// Same explicit-accessible-name reasoning as the snapshot delete above.
-const presetDelete = page.getByRole("button", { name: /Delete preset "Delete Me Preset"/ });
-await presetDelete.click();
+ok("the template was saved", await page.getByText("Delete Me Preset", { exact: true }).first().isVisible());
+await page.getByRole("button", { name: /Delete preset "Delete Me Preset"/ }).click();
 await page.waitForTimeout(300);
-ok("One click only arms the preset delete", await page.getByText("Delete Me Preset", { exact: true }).isVisible());
+ok("one click only arms the delete", await page.getByText("Delete Me Preset", { exact: true }).first().isVisible());
 await page.getByRole("button", { name: /Click again to delete preset "Delete Me Preset"/ }).click();
 await page.waitForTimeout(600);
-ok("Second click deletes the preset", (await page.getByText("Delete Me Preset", { exact: true }).count()) === 0);
+ok("a second click deletes it", (await page.getByText("Delete Me Preset", { exact: true }).count()) === 0);
 
 // --------------------------------------------------------------- save failure shown
-ok("Header reports the project as saved", await page.getByText("Saved", { exact: true }).isVisible());
-
+ok("the header reports the project as saved", await page.getByText("All changes saved").isVisible());
 // Break writes the way a private window or a full quota would, then make an edit.
-// Patched on the prototype so it applies to the connection the app already holds.
 await page.evaluate(() => {
   const original = IDBDatabase.prototype.transaction;
   IDBDatabase.prototype.transaction = function (names, mode, ...rest) {
@@ -107,18 +72,12 @@ await page.evaluate(() => {
     return original.call(this, names, mode, ...rest);
   };
 });
-await page.waitForTimeout(400);
-await page.getByRole("button", { name: "Components", exact: true }).click();
-await page.getByRole("button", { name: "ghost", exact: true }).first().click();
+await page.waitForTimeout(300);
+await goStep(page, "Templates");
+await page.locator(".template-card").filter({ hasText: "Swiss" }).first().click();
 await page.waitForTimeout(1500);
+ok("a failed save is reported instead of hanging on 'Saving…'", (await page.getByText("Not saved").count()) > 0);
 
-const notSaved = page.getByText("Not saved", { exact: false });
-ok("A failed save is reported instead of hanging on 'Saving…'", (await notSaved.count()) > 0);
-
-await page.screenshot({ path: `${OUT}/10-safety.png` });
-ok(`No page errors (${errors.length})`, errors.length === 0);
-if (errors.length) console.log(errors.join("\n"));
-
-await browser.close();
-console.log(`\n${failures === 0 ? "ALL PASSED" : `${failures} FAILURE(S)`}`);
-process.exit(failures === 0 ? 0 : 1);
+await page.screenshot({ path: `${OUT}/safety.png` });
+ok(`no page errors (${pageErrors.length})`, pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
+await finish(browser);

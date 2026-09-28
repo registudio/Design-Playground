@@ -72,8 +72,9 @@ const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } 
 const pageErrors = [];
 page.on("pageerror", (error) => pageErrors.push(error.message));
 
-await page.goto(BASE, { waitUntil: "networkidle" });
-await page.getByRole("button", { name: "Explore", exact: true }).click();
+// Hooks and utilities are hidden from the grid by default; this check covers every
+// element, so it asks for them. A library link opens the library directly.
+await page.goto(new URL("/?utilities=1", BASE).href, { waitUntil: "networkidle" });
 // The registry index arrives after the originals; wait until the count stops moving.
 let total = 0;
 for (let stable = 0, last = -1; stable < 4; ) {

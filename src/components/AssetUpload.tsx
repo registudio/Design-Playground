@@ -25,16 +25,19 @@ import { useFileDrop } from "@/hooks/use-file-drop";
 
 const ACCEPTED = "image/svg+xml,image/png,image/jpeg,image/webp";
 
-export function AssetUpload() {
+/**
+ * The logo pipeline: store the file, analyse its colours, record it as the primary logo
+ * and propose a palette. Shared by the upload button here and by reading a logo off the
+ * client's website (BrandFromUrl), so both arrive through exactly the same analysis.
+ */
+export function useLogoUpload() {
   const project = useProjectStore((s) => s.project);
   const edit = useProjectStore((s) => s.edit);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  if (!project) return null;
 
   const handleFile = async (file: File) => {
+    if (!project) return;
     setBusy(true);
     setError(null);
     try {
@@ -87,6 +90,17 @@ export function AssetUpload() {
       setBusy(false);
     }
   };
+
+  return { handleFile, busy, error, setError };
+}
+
+export function AssetUpload() {
+  const project = useProjectStore((s) => s.project);
+  const edit = useProjectStore((s) => s.edit);
+  const { handleFile, busy, error, setError } = useLogoUpload();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  if (!project) return null;
 
   const detected = project.analysis?.colors ?? [];
 

@@ -13,6 +13,8 @@ export interface EngineDemo {
   root: string;
   /** Runs with `root` already bound; `return` is an early exit. */
   source: string;
+  /** Imports only this demo needs. Used by engines built split. */
+  imports?: string;
 }
 
 export interface EngineBundle {
@@ -20,7 +22,11 @@ export interface EngineBundle {
   demos: EngineDemo[];
   /** Shared setup spliced above each demo of this engine. */
   helpers?: string;
+  /** One bundle per demo, named after the demo, instead of one for the engine. */
+  split?: boolean;
+  /** Build `<engine>-three.js` with only the Three.js exports the demos reference, bound as `THREE`. */
+  threeSubset?: boolean;
 }
 
 export declare const ENGINES: Record<string, EngineBundle>;
-export declare const ENGINE_DEMO_LIST: { id: string; engine: string; root: string }[];
+export declare const ENGINE_DEMO_LIST: { id: string; engine: string; root: string; bundles: string[] }[];

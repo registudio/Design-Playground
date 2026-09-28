@@ -6,6 +6,7 @@ import { SamplePage } from "@/preview/surfaces/SamplePage";
 import { escapeHtml } from "./htmlUtil";
 import { getAsset } from "@/store/persistence";
 import { embedEngineAssets } from "./engine-assets";
+import type { ExportFile } from "./bundle";
 
 /**
  * A shareable, standalone Sample Page (§Wave D Features-3): a frozen HTML bundle a
@@ -20,7 +21,9 @@ import { embedEngineAssets } from "./engine-assets";
  * stylesheet the live preview uses, so it can never drift from what was approved.
  */
 export function buildStaticPage(project: DesignProject, previewCss: string, assetUrls: Record<string, string> = {}): string {
-  const tokensCss = generateCss(project.tokens, { tailwindTheme: false });
+  // Uploaded faces load from wherever the page's other assets do: the ZIP's asset
+  // folder, or data URLs in the single-file download.
+  const tokensCss = generateCss(project.tokens, { tailwindTheme: false, fontUrl: (file) => assetUrls[file] ?? null });
 
   const fontEntries = [
     project.tokens.typography.display.family,
@@ -57,7 +60,7 @@ export async function downloadStaticPage(project: DesignProject): Promise<void> 
   if (!response.ok) throw new Error("Could not prepare the preview stylesheet.");
   const previewCss = await response.text();
   const assetUrls: Record<string, string> = {};
-  await Promise.all(project.assets.images.map(async entry => {
+  await Promise.all([...project.assets.images, ...project.assets.fonts].map(async entry => {
     const blob = await getAsset(entry.hash);
     if (!blob) return;
     assetUrls[entry.file] = await new Promise<string>((resolve, reject) => {
@@ -67,9 +70,12 @@ export async function downloadStaticPage(project: DesignProject): Promise<void> 
       reader.readAsDataURL(blob);
     });
   }));
-  const files = [{ path: "preview.html", content: buildStaticPage(project, previewCss, assetUrls) }];
-  await embedEngineAssets(files);
-  const html = files[0].content + (files[1] ? `<!-- Engine licenses\n${files[1].content.replaceAll("--", "—")} -->` : "");
+  const files: ExportFile[] = [{ path: "preview.html", content: buildStaticPage(project, previewCss, assetUrls) }];
+  // One file, so there is no folder to share a runtime from: embed it.
+  await embedEngineAssets(files, "inline");
+  const text = (path: string) => { const file = files.find(f => f.path === path); return typeof file?.content === "string" ? file.content : ""; };
+  const licences = text("elements/ENGINE-LICENSES.txt");
+  const html = text("preview.html") + (licences ? `<!-- Engine licenses\n${licences.replaceAll("--", "—")} -->` : "");
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

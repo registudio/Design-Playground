@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { generateCss } from "@/export/css";
 import {
-  DEVICE_WIDTHS, isPreviewMessage, PREVIEW_ORIGIN_MARKER, type HostMessage,
+  DEVICE_WIDTHS, isPreviewMessage, PREVIEW_ORIGIN_MARKER, type ContrastSummary, type HostMessage,
 } from "@/preview/bridge";
 
 /**
@@ -18,11 +18,25 @@ import {
  * The frame is rendered at its true device width and scaled down to fit, so media
  * queries evaluate against the real width rather than a scaled-down lie.
  */
-export function PreviewFrame() {
+export function PreviewFrame({
+  contrastLens = false,
+  onContrast,
+  themeOverride,
+  label,
+}: {
+  /** Outline text that fails WCAG AA against what is behind it, in the page itself. */
+  contrastLens?: boolean;
+  onContrast?: (summary: ContrastSummary | null) => void;
+  /** Pins this frame to one theme, for the side-by-side light and dark view. */
+  themeOverride?: "light" | "dark";
+  /** Shown above the frame when two are side by side. */
+  label?: string;
+} = {}) {
   const project = useProjectStore((s) => s.project);
   const mode = useProjectStore((s) => s.previewMode);
   const device = useProjectStore((s) => s.device);
-  const theme = useProjectStore((s) => s.theme);
+  const storeTheme = useProjectStore((s) => s.theme);
+  const theme = themeOverride ?? storeTheme;
   const advanced = useProjectStore((s) => s.advanced);
   const edit = useProjectStore((s) => s.edit);
 
@@ -42,6 +56,7 @@ export function PreviewFrame() {
       if (event.origin !== window.location.origin) return;
       if (!isPreviewMessage(event.data)) return;
       if (event.data.type === "ready") setReady(true);
+      if (event.data.type === "contrast") contrastRef.current?.(event.data.payload);
       if (event.data.type === "setComponent") {
         const { field, value } = event.data.payload;
         // Same pattern as ComponentsPanel's own set() helper, so a click in the
@@ -56,6 +71,15 @@ export function PreviewFrame() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [edit]);
+
+  const contrastRef = useRef(onContrast);
+  contrastRef.current = onContrast;
+  // After the state message below on first connect, so the lens scans a rendered page.
+  useEffect(() => {
+    if (!ready) return;
+    post({ marker: PREVIEW_ORIGIN_MARKER, type: "contrastLens", payload: { on: contrastLens } });
+    if (!contrastLens) contrastRef.current?.(null);
+  }, [ready, contrastLens]);
 
   // Full state on connect and whenever anything structural changes.
   useEffect(() => {
@@ -73,7 +97,8 @@ export function PreviewFrame() {
     post({
       marker: PREVIEW_ORIGIN_MARKER,
       type: "tokens",
-      payload: { css: generateCss(project.tokens, { tailwindTheme: false }) },
+      // Uploaded faces are registered inside the frame from stored bytes; no URL here.
+      payload: { css: generateCss(project.tokens, { tailwindTheme: false, fontUrl: () => null }) },
     });
   }, [ready, project?.tokens]);
 
@@ -97,7 +122,8 @@ export function PreviewFrame() {
   const frameHeight = scale > 0 ? available.height / scale : available.height;
 
   return (
-    <div ref={containerRef} className="min-h-0 flex-1 overflow-hidden p-6">
+    <div ref={containerRef} className="relative min-h-0 min-w-0 flex-1 overflow-hidden p-6">
+      {label && <span className="preview-frame-label">{label}</span>}
       <div
         className="mx-auto overflow-hidden rounded-lg border border-chrome-border shadow-sm"
         style={{ width: width * scale, height: available.height }}

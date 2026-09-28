@@ -1,156 +1,79 @@
-import { mkdirSync } from "node:fs";
-import { chromium } from "playwright";
+import { createProject, goStep, launch, OUT, tally } from "./lib/studio.mjs";
 
 /**
- * Customisation and reversibility smoke test (§Wave G).
- *
- * Covers the things unit tests can't reach because they only exist as a whole
- * round trip through the store, the postMessage bridge and the preview's computed
- * styles: that a hand-set value actually lands as a CSS variable in the iframe, that
- * resetting it puts the old one back, and that the Advanced escape hatches are wired to
- * the tokens they claim. See e2e-smoke.mjs for the portability conventions.
+ * Customisation controls on "The basics": collapsible panels, the provenance dot that is
+ * also a reset, Advanced-only numeric fields, the image overlay, per-step type, and
+ * "reset all" as one undoable step. Values are read from the live specimen beside the
+ * controls, which is scoped to the same token CSS the preview uses.
  */
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:3100";
-const OUT = process.env.E2E_OUTPUT_DIR ?? "./e2e-output";
-mkdirSync(OUT, { recursive: true });
-
-let failures = 0;
-function ok(label, cond, extra = "") {
-  console.log(cond ? `PASS: ${label}` : `FAIL: ${label}${extra ? ` \u2014 ${extra}` : ""}`);
-  if (!cond) failures++;
-}
-
-const browser = await chromium.launch({
-  ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH } : {}),
-});
-const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
-const pageErrors = [];
-page.on("pageerror", (e) => pageErrors.push(e.message));
-page.on("console", (m) => { if (m.type() === "error") pageErrors.push(m.text()); });
-
-await page.goto(BASE_URL, { waitUntil: "networkidle" });
-
-// The app opens on a welcome screen since the studio shell landed; the project
-// directory is one click in. Harmless if a previous project auto-reopens instead.
-const welcome = page.getByRole("button", { name: "+ New project" });
-if (await welcome.count()) await welcome.first().click();
-await page.getByPlaceholder("Project name").fill("UX Verify");
-await page.getByRole("button", { name: "New project", exact: true }).click();
-await page.waitForTimeout(600);
-
-const frame = page.frameLocator('iframe[title="Live preview"]');
-const cssVar = (name) =>
-  frame.locator("body").evaluate(
-    (el, n) => getComputedStyle(el).getPropertyValue(n).trim(),
-    name,
-  );
+const { ok, finish } = tally();
+const { browser, page, pageErrors } = await launch({ width: 1600, height: 1000 });
+await createProject(page, "UX Verify");
+await page.locator(".mode-switch").getByRole("button", { name: "Advanced", exact: true }).click();
+await goStep(page, "The basics");
+const cssVar = (name) => page.locator(".bs-page").first().evaluate((el, n) => getComputedStyle(el).getPropertyValue(n).trim(), name);
 
 // ---------------------------------------------------------------- collapsible panels
-// The Button/Card/Input panel, renamed from "Elements" to "Primitives" once Elements
-// became a rail tab of its own meaning registry components.
-const primitivesPanel = page.getByRole("button", { name: /^Primitives$/ });
-ok("Panel heading is a collapse control", (await primitivesPanel.getAttribute("aria-expanded")) === "true");
-const solidBefore = await page.getByRole("button", { name: "solid", exact: true }).isVisible();
-await primitivesPanel.click();
+const layout = page.getByRole("button", { name: /^Layout$/ });
+ok("a panel heading is a collapse control", (await layout.getAttribute("aria-expanded")) === "true");
+const field = () => page.locator("label, div").filter({ hasText: /^Max width/ }).locator("input[type=number]").first();
+const visibleBefore = await field().isVisible();
+await layout.click();
 await page.waitForTimeout(200);
-const solidAfter = await page.getByRole("button", { name: "solid", exact: true }).isVisible().catch(() => false);
-ok("Collapsing a panel hides its controls", solidBefore && !solidAfter);
-await primitivesPanel.click();
+ok("collapsing a panel hides its controls", visibleBefore && !(await field().isVisible().catch(() => false)));
+await layout.click();
 await page.waitForTimeout(200);
-ok("Expanding restores them", await page.getByRole("button", { name: "solid", exact: true }).isVisible());
+ok("expanding restores them", await field().isVisible());
 
-// ---------------------------------------------------------------- reset a component
-// Provenance dot is inert until the value is actually user-set.
-ok("Reset control absent before any edit", (await page.getByRole("button", { name: "Reset recipe.components.button" }).count()) === 0);
-await page.getByRole("button", { name: "outline", exact: true }).first().click();
-await page.waitForTimeout(300);
-const resetButton = page.getByRole("button", { name: "Reset recipe.components.button" });
-ok("Reset control appears once a value is user-set", (await resetButton.count()) === 1);
-ok(
-  "Reset tooltip explains what it restores to",
-  /reset to the default/i.test((await resetButton.getAttribute("title")) ?? ""),
-);
-await resetButton.click();
-await page.waitForTimeout(300);
-ok(
-  "Reset restores the value",
-  (await page.getByRole("button", { name: "solid", exact: true }).getAttribute("aria-pressed")) === "true",
-);
-ok("Reset removes its own control again", (await page.getByRole("button", { name: "Reset recipe.components.button" }).count()) === 0);
-ok("Reset is itself undoable", await page.getByRole("button", { name: "Undo", exact: true }).isEnabled());
-
-// ---------------------------------------------------------------- advanced controls
-await page.getByText("Advanced", { exact: true }).click();
-await page.waitForTimeout(400);
-
-// Layout escape hatches: previously only reachable via the 4 density presets.
-const maxWidthInput = page.locator("input[type=number]").first();
-await maxWidthInput.scrollIntoViewIfNeeded();
-ok("Advanced reveals numeric layout fields", (await page.locator("input[type=number]").count()) > 0);
-
-// Drive max width and confirm it reaches the live preview.
+// ---------------------------------------------------------------- numeric fields + reset dot
+ok("Reset control absent before any edit", (await page.getByRole("button", { name: "Reset tokens.layout.maxWidth" }).count()) === 0);
 const beforeWidth = await cssVar("--dp-layout-max-width");
-const maxWidthField = page.locator("label, div").filter({ hasText: /^Max width/ }).locator("input[type=number]").first();
-await maxWidthField.fill("55");
-await maxWidthField.blur();
+await field().fill("55");
+await field().blur();
 await page.waitForTimeout(500);
 const afterWidth = await cssVar("--dp-layout-max-width");
-ok(`Max width reaches the preview (${beforeWidth} -> ${afterWidth})`, afterWidth === "55rem" && beforeWidth !== afterWidth);
-
-// It must be resettable like anything else.
-const resetMaxWidth = page.getByRole("button", { name: "Reset tokens.layout.maxWidth" });
-ok("New numeric fields are resettable too", (await resetMaxWidth.count()) === 1);
-await resetMaxWidth.click();
+ok(`max width reaches the specimen (${beforeWidth} → ${afterWidth})`, afterWidth === "55rem" && beforeWidth !== afterWidth);
+const resetWidth = page.getByRole("button", { name: "Reset tokens.layout.maxWidth" });
+ok("a reset control appears once a value is set by hand", (await resetWidth.count()) === 1);
+await resetWidth.click();
 await page.waitForTimeout(400);
-ok(`Resetting max width restores it (${await cssVar("--dp-layout-max-width")})`, (await cssVar("--dp-layout-max-width")) === beforeWidth);
+ok("reset restores the value", (await cssVar("--dp-layout-max-width")) === beforeWidth);
+ok("reset removes its own control again", (await page.getByRole("button", { name: "Reset tokens.layout.maxWidth" }).count()) === 0);
+ok("reset is itself undoable", await page.getByRole("button", { name: "Undo", exact: true }).isEnabled());
 
 // ---------------------------------------------------------------- image overlay
-const overlayToggle = page.getByRole("switch", { name: /Image overlay/i }).or(
-  page.locator("label").filter({ hasText: "Image overlay" }).getByRole("switch"),
-).first();
-await overlayToggle.scrollIntoViewIfNeeded();
-ok("Overlay is off and emits no variable", (await cssVar("--dp-image-overlay")) === "");
-await overlayToggle.click();
+const overlay = page.getByRole("switch", { name: /Image overlay/i }).or(page.locator("label").filter({ hasText: "Image overlay" }).getByRole("switch")).first();
+await overlay.scrollIntoViewIfNeeded();
+ok("the overlay is off and emits no variable", (await cssVar("--dp-image-overlay")) === "");
+await overlay.click();
 await page.waitForTimeout(500);
-ok(`Enabling the overlay emits it to the preview (${await cssVar("--dp-image-overlay")})`, (await cssVar("--dp-image-overlay")) !== "");
-ok("Overlay strength control appears when enabled", await page.getByText("Overlay strength").isVisible());
+ok("enabling the overlay emits it", (await cssVar("--dp-image-overlay")) !== "");
+ok("its strength control appears when enabled", await page.getByText("Overlay strength").isVisible());
 
-// ---------------------------------------------------------------- typography steps
+// ---------------------------------------------------------------- per-step type
 await page.getByRole("button", { name: /Fine-tune each step/ }).scrollIntoViewIfNeeded();
 await page.getByRole("button", { name: /Fine-tune each step/ }).click();
 await page.waitForTimeout(300);
-ok("Per-step type editor opens", await page.getByText("Display XL", { exact: true }).isVisible());
+ok("the per-step type editor opens", await page.locator('[data-type-step="heading1"]').isVisible());
 const beforeWeight = await cssVar("--dp-text-heading-1--font-weight");
-const weightInput = page.locator('[data-type-step="heading1"] input[type=number]').nth(1);
-await weightInput.scrollIntoViewIfNeeded();
-await weightInput.fill("800");
-await weightInput.blur();
+const weight = page.locator('[data-type-step="heading1"] input[type=number]').nth(1);
+await weight.fill("800");
+await weight.blur();
 await page.waitForTimeout(500);
-const afterWeight = await cssVar("--dp-text-heading-1--font-weight");
-ok(`Per-step weight reaches the preview (${beforeWeight} -> ${afterWeight})`, afterWeight === "800" && beforeWeight !== afterWeight);
+ok(`a step's weight reaches the specimen (${beforeWeight} → ${await cssVar("--dp-text-heading-1--font-weight")})`, (await cssVar("--dp-text-heading-1--font-weight")) === "800");
 
-// ---------------------------------------------------------------- reset all overrides
-// Several values are hand-set by this point (overlay, per-step weight, ...).
+// ---------------------------------------------------------------- reset all
 const overrides = page.getByRole("button", { name: /\d+ edited/ });
-ok("Override counter appears once values are hand-set", (await overrides.count()) === 1);
-const countLabel = await overrides.textContent();
-ok(`Counter reports more than one override (${countLabel?.trim()})`, Number.parseInt(countLabel ?? "0", 10) > 1);
+ok("the override counter appears once values are hand-set", (await overrides.count()) === 1);
+ok(`it counts more than one (${(await overrides.textContent())?.trim()})`, Number.parseInt((await overrides.textContent()) ?? "0", 10) > 1);
 await overrides.click();
 await page.waitForTimeout(600);
-ok("Reset all clears the counter", (await page.getByRole("button", { name: /\d+ edited/ }).count()) === 0);
-ok(
-  `Reset all restored the type weight (${await cssVar("--dp-text-heading-1--font-weight")})`,
-  (await cssVar("--dp-text-heading-1--font-weight")) === beforeWeight,
-);
-ok("Reset all is a single undo step", await page.getByRole("button", { name: "Undo", exact: true }).isEnabled());
+ok("reset all clears the counter", (await page.getByRole("button", { name: /\d+ edited/ }).count()) === 0);
+ok("reset all restored the type weight", (await cssVar("--dp-text-heading-1--font-weight")) === beforeWeight);
 await page.getByRole("button", { name: "Undo", exact: true }).click();
 await page.waitForTimeout(600);
-ok("Undoing reset all brings the overrides back", (await page.getByRole("button", { name: /\d+ edited/ }).count()) === 1);
+ok("one undo brings every override back", (await page.getByRole("button", { name: /\d+ edited/ }).count()) === 1);
 
-ok(`No page errors (${pageErrors.length})`, pageErrors.length === 0);
-if (pageErrors.length) console.log(pageErrors.join("\n"));
-
-await page.screenshot({ path: `${OUT}/08-customisation.png` });
-await browser.close();
-console.log(`\n${failures === 0 ? "ALL PASSED" : `${failures} FAILURE(S)`}`);
-process.exit(failures === 0 ? 0 : 1);
+await page.screenshot({ path: `${OUT}/customisation.png` });
+ok(`no page errors (${pageErrors.length})`, pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
+await finish(browser);

@@ -118,25 +118,41 @@ export function suggestPalette({ detected, fallbackHue = 250 }: SuggestionInput)
     error: { kind: "scale", scale: "error", step: 600 },
   };
 
-  const darkBackground = scales.neutral[950];
-
-  const dark: SemanticMap = {
-    primary: { kind: "scale", scale: "brand", step: accessibleStep(scales.brand, darkBackground, 950, "lighter", 300) },
-    secondary: { kind: "scale", scale: "secondary", step: 400 },
-    accent: { kind: "scale", scale: "accent", step: 400 },
-    background: { kind: "scale", scale: "neutral", step: 950 },
-    surface: { kind: "scale", scale: "neutral", step: 900 },
-    foreground: { kind: "scale", scale: "neutral", step: 50 },
-    // Checked against surface, not background: surface (900) is one rung lighter than
-    // the dark background (950), so it is the harder of the two to sit legibly on.
-    muted: { kind: "scale", scale: "neutral", step: accessibleStep(scales.neutral, scales.neutral[900], 400, "lighter", 200) },
-    border: { kind: "scale", scale: "neutral", step: 800 },
-    success: { kind: "scale", scale: "success", step: 400 },
-    warning: { kind: "scale", scale: "warning", step: 400 },
-    error: { kind: "scale", scale: "error", step: 400 },
-  };
+  const dark = darkThemeFor(scales);
 
   return { scales, light: { semantic: light }, dark: { semantic: dark } };
+}
+
+/**
+ * The dark theme for a set of scales: the same brand, read off the other end of each
+ * ramp, with primary and muted text stepped only as far as legibility on the dark
+ * background demands.
+ *
+ * Separate from the palette suggestion so a project can get its dark theme back — after
+ * hand edits, or after leaving it out — from the scales it has now, without re-deriving
+ * the palette from a logo.
+ */
+export function darkThemeFor(scales: Record<string, ColorScale>): SemanticMap {
+  // A project's scales can be hand-built; anything missing reads from brand or neutral.
+  const pick = (name: string, fallback: string) => (scales[name] ? name : fallback);
+  const neutral = scales[pick("neutral", "brand")]!;
+  const brand = pick("brand", "neutral");
+  const darkBackground = neutral[950];
+  return {
+    primary: { kind: "scale", scale: brand, step: accessibleStep(scales[brand]!, darkBackground, 950, "lighter", 300) },
+    secondary: { kind: "scale", scale: pick("secondary", brand), step: 400 },
+    accent: { kind: "scale", scale: pick("accent", brand), step: 400 },
+    background: { kind: "scale", scale: pick("neutral", brand), step: 950 },
+    surface: { kind: "scale", scale: pick("neutral", brand), step: 900 },
+    foreground: { kind: "scale", scale: pick("neutral", brand), step: 50 },
+    // Checked against surface, not background: surface (900) is one rung lighter than
+    // the dark background (950), so it is the harder of the two to sit legibly on.
+    muted: { kind: "scale", scale: pick("neutral", brand), step: accessibleStep(neutral, neutral[900], 400, "lighter", 200) },
+    border: { kind: "scale", scale: pick("neutral", brand), step: 800 },
+    success: { kind: "scale", scale: pick("success", brand), step: 400 },
+    warning: { kind: "scale", scale: pick("warning", brand), step: 400 },
+    error: { kind: "scale", scale: pick("error", brand), step: 400 },
+  };
 }
 
 function hueDistance(a: number, b: number): number {

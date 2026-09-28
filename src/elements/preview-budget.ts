@@ -21,6 +21,14 @@ export const ACTIVATION_MARGIN_PX = 320;
 /**
  * How long an offscreen preview is kept before teardown. Long enough that a small
  * reverse scroll does not unmount and remount everything it passes.
+ *
+ * Holding a preview this long costs its memory, not its animation. Measured in Chromium
+ * (September 2026): a sandboxed card frame scrolled out of the grid's own scroll
+ * container gets 0 requestAnimationFrame callbacks a second, against 60 on screen, so
+ * WebGL loops and rAF animation stop by themselves; a hidden tab stops them entirely.
+ * Only timers keep running, and the five originals that use one fire every few seconds.
+ * A pause script injected into each document was considered and left out for that
+ * reason — measure again before adding one.
  */
 export const OFFSCREEN_GRACE_MS = 8000;
 
@@ -89,6 +97,19 @@ export function retreatCatalogueWindow(
   return { start, end: Math.min(total, start + mountedLimit) };
 }
 
+/**
+ * A window that has `index` mounted, for a jump the sentinels never saw coming — an
+ * arrow key past the mounted rows, stepping through results in full screen, a link that
+ * opens an element deep in the list. Starts a batch before the target so there is room
+ * above it too, and on a batch boundary like the windows the sentinels produce, so the
+ * spacer arithmetic (whole rows) holds.
+ */
+export function windowAround(index: number, total: number): CatalogueWindow {
+  const target = Math.max(0, Math.min(index, total - 1));
+  const start = Math.max(0, (Math.floor(target / CATALOGUE_BATCH) - 1) * CATALOGUE_BATCH);
+  return { start, end: Math.min(total, start + CATALOGUE_BATCH * 3) };
+}
+
 /** Compiled documents held on the server. */
 export const DOCUMENT_CACHE_ENTRIES = 96;
 
@@ -98,8 +119,13 @@ export const DOCUMENT_CACHE_ENTRIES = 96;
  * Larger than the memory tier because a file is far cheaper to hold than a live entry,
  * and the whole point is surviving restarts — a cache that only held the last session's
  * few previews would rarely hit.
+ *
+ * At least the whole registry index, with headroom: at 400 it held less than the 436
+ * published items, so walking the catalogue always evicted the start of the walk before
+ * reaching the end, and a full pass could never be served warm. A compiled document is
+ * about 1 MB (it carries React), so this is ~600 MB of disk at most.
  */
-export const DISK_CACHE_ENTRIES = 400;
+export const DISK_CACHE_ENTRIES = 600;
 
 /** Browser freshness, then how long a stale copy may be served while revalidating. */
 export const BROWSER_FRESH_SECONDS = 60 * 60;

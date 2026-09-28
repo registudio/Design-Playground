@@ -1767,3 +1767,11 @@ body {
   color: var(--dp-color-primary);
   font-weight: 600;
 }
+
+/* Review notes: annotations on the sample, set apart from the page being designed. */
+.dp-review-note{max-width:72rem;margin:0 auto;padding:14px 20px;border-top:1px dashed #9aa38f;font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#39402f;background:#f4f5ef}
+.dp-review-note strong{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#1f2519;margin-bottom:4px}
+.dp-review-note p{margin:2px 0}
+.dp-review-note .dp-review-note-own{color:#1f2519;font-style:italic}
+.dark .dp-review-note{background:#1a1f16;color:#c4cdb6;border-top-color:#4a5540}
+.dark .dp-review-note strong,.dark .dp-review-note .dp-review-note-own{color:#e6ecd8}

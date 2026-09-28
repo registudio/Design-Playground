@@ -7,6 +7,7 @@ import { PRESETS } from "@/presets";
 import { resolveCopy } from "@/presets/copy";
 import { SEMANTIC_TOKENS } from "@/schema/primitives";
 import { useGoogleFonts } from "@/fonts/use-google-fonts";
+import { useCustomFonts } from "@/fonts/use-custom-fonts";
 
 /**
  * A live specimen of the project's design, beside the Basics controls.
@@ -58,6 +59,7 @@ export function BasicsSpecimen() {
 
   const typography = project?.tokens.typography;
   useGoogleFonts(typography ? [typography.display.family, typography.body.family, typography.mono.family] : []);
+  useCustomFonts(project);
 
   if (!project || !typography) return null;
   const { tokens } = project;

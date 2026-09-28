@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
 import { CHART_ELEMENTS } from "@/elements/chart-elements";
 import { ENGINE_ELEMENTS } from "@/elements/engine-elements";
-import { engineFor, ENGINE_SOURCES } from "@/elements/extended-catalogue";
+import { engineBundles, engineFor, ENGINE_SOURCES } from "@/elements/extended-catalogue";
 import { ENGINE_DEMO_LIST } from "../scripts/engine-demos.mjs";
 
 const byId = new Map(ELEMENTS.map(element => [element.id as string, element]));
@@ -38,13 +38,24 @@ describe("engine demos and their elements", () => {
     for (const element of ENGINE_ELEMENTS) expect(element.js, element.id).toBe("");
   });
 
-  it("loads exactly one engine bundle per engine element, and none for the rest", () => {
+  it("loads the bundles the build produces for each engine element, and none for the rest", () => {
+    // The build decides the file names (scripts/build-engine-demos.mjs) and the document
+    // names them (engineBundles); a drift between the two is a 404 and a card that never
+    // moves, so the two lists are held equal here.
+    const built = new Map(ENGINE_DEMO_LIST.map(demo => [demo.id, demo.bundles]));
     for (const element of ELEMENTS) {
-      const engine = engineFor(element.id);
       const document = elementDocument(element.id);
-      const scripts = [...document.matchAll(/\/engine-demos\/([a-z]+)\.js/g)].map(match => match[1]);
-      expect(scripts, element.id).toEqual(engine ? [engine.id] : []);
+      const scripts = [...document.matchAll(/\/engine-demos\/([a-z0-9-]+)\.js/g)].map(match => match[1]);
+      expect(scripts, element.id).toEqual(built.get(element.id) ?? []);
+      expect(engineBundles(element.id), element.id).toEqual(built.get(element.id) ?? []);
     }
+  });
+
+  it("loads Vanta's shared Three.js before the effect, and only one effect per card", () => {
+    const document = elementDocument("vanta-net");
+    expect(document.indexOf("/engine-demos/vanta-three.js")).toBeLessThan(document.indexOf("/engine-demos/vanta-net.js"));
+    expect(document).not.toContain("/engine-demos/vanta-fog.js");
+    expect(document).toContain("async=false");
   });
 
   it("credits the engine as the runtime and Playground as the author", () => {

@@ -35,7 +35,12 @@ export type HostMessage =
    * Token-only update. Applied by rewriting CSS variables, with no React remount, so
    * dragging a slider stays smooth and running animations are not restarted.
    */
-  | { marker: typeof PREVIEW_ORIGIN_MARKER; type: "tokens"; payload: { css: string } };
+  | { marker: typeof PREVIEW_ORIGIN_MARKER; type: "tokens"; payload: { css: string } }
+  /** Turns the contrast lens (preview/contrast-lens.ts) on or off. */
+  | { marker: typeof PREVIEW_ORIGIN_MARKER; type: "contrastLens"; payload: { on: boolean } };
+
+/** What the contrast lens found, counted for the toolbar. */
+export interface ContrastSummary { checked: number; failing: number; unknown: number }
 
 export type PreviewMessage =
   | { marker: typeof PREVIEW_ORIGIN_MARKER; type: "ready" }
@@ -56,7 +61,9 @@ export type PreviewMessage =
       marker: typeof PREVIEW_ORIGIN_MARKER;
       type: "setComponent";
       payload: { field: string; value: string };
-    };
+    }
+  /** The contrast lens's latest count, re-sent whenever the page changes under it. */
+  | { marker: typeof PREVIEW_ORIGIN_MARKER; type: "contrast"; payload: ContrastSummary };
 
 export const isHostMessage = (data: unknown): data is HostMessage =>
   typeof data === "object" &&

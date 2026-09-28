@@ -57,6 +57,13 @@ export const FontRole = z.object({
    * Required for `custom` so an unlicensed face cannot silently reach a client build.
    */
   license: z.string().optional(),
+  /**
+   * The uploaded files behind a `custom` face, by path relative to the asset root, so
+   * globals.css can declare its @font-face from the tokens alone.
+   */
+  files: z
+    .array(z.object({ file: z.string(), weight: z.number().int().min(1).max(1000), style: z.enum(["normal", "italic"]) }))
+    .optional(),
 });
 export type FontRole = z.infer<typeof FontRole>;
 
