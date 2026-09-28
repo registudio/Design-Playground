@@ -349,6 +349,15 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
 
   /** Set when focus should land on a card once it is mounted and rendered. */
   const pendingFocus = useRef<number | null>(null);
+  const applyPendingFocus = () => {
+    const target = pendingFocus.current;
+    if (target === null) return;
+    const card = grid.current?.querySelector<HTMLElement>(`[data-index="${target}"]`);
+    if (!card) return;
+    pendingFocus.current = null;
+    card.focus({ preventScroll: true });
+    card.scrollIntoView({ block: "nearest" });
+  };
   const moveFocus = (index: number) => {
     const count = resultsRef.current.length;
     if (!count) return;
@@ -357,16 +366,14 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     pendingFocus.current = target;
     // Past the mounted rows: mount the ones around it first, as a jump would.
     setCardWindow(current => target >= current.start && target < current.end ? current : windowAround(target, count));
+    // Applied on the next frame as well as after the next render. Waiting only for a
+    // render left it stranded whenever nothing re-rendered — closing a full-screen view
+    // onto the card that already held focus — and it then fired on the next unrelated
+    // render: the next click on another card, whose press it turned into a focus jump
+    // and a scroll, so the release landed elsewhere and the click never happened.
+    requestAnimationFrame(applyPendingFocus);
   };
-  useEffect(() => {
-    const target = pendingFocus.current;
-    if (target === null) return;
-    const card = grid.current?.querySelector<HTMLElement>(`[data-index="${target}"]`);
-    if (!card) return;
-    pendingFocus.current = null;
-    card.focus({ preventScroll: true });
-    card.scrollIntoView({ block: "nearest" });
-  });
+  useEffect(applyPendingFocus);
   // The tab stop has to be a mounted card, or Tab would skip the grid entirely.
   const tabStop = focusIndex >= cardWindow.start && focusIndex < cardWindow.end ? focusIndex : cardWindow.start;
 
@@ -547,7 +554,9 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       <div className="grid-spacer" style={{ height: rowsAbove * rowHeight }} aria-hidden="true" />
       <div ref={topSentinel} className="grid-edge-sentinel" aria-hidden="true" />
     </>}
-    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid} role="feed" aria-label="Elements" aria-busy={registryState === "loading"} onKeyDown={onGridKey}>{shown.map((item, offset) => {
+    {/* A press anywhere in the grid says where the user is now; a focus move still
+        queued from earlier must not land on top of it. */}
+    <div className={`element-grid ${compact ? "compact-previews" : ""}`} ref={grid} role="feed" aria-label="Elements" aria-busy={registryState === "loading"} onKeyDown={onGridKey} onPointerDownCapture={() => { pendingFocus.current = null; }}>{shown.map((item, offset) => {
       const index = cardWindow.start + offset;
       const chosen = isSelected(item);
       const note = item.registry ? picked.find(s => s.id === item.id) : selected.find(s => s.id === item.id);

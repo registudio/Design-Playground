@@ -91,15 +91,34 @@ jobs:
             require("node:fs").writeFileSync("/tmp/pr-body.md", lines.filter((l) => l !== "").join("\n") + "\n");
           '
 
-          BRANCH="chore/refresh-registry-$(date -u +%Y-%m-%d)"
+          # One branch, rewritten each run, rather than one per date: a dated branch was
+          # left behind by every run whose pull request could not be opened, and a second
+          # run on the same day failed outright because its branch already existed. The
+          # branch only ever holds this bot's single commit, so replacing it loses nothing.
+          BRANCH="chore/refresh-registry"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
+          git checkout -B "$BRANCH"
           git add data/registry-snapshot.json
           git commit -m "Refresh the element registry snapshot"
-          git push -u origin "$BRANCH"
-          gh pr create \
+          git push --force -u origin "$BRANCH"
+
+          # An open pull request from this branch was just updated by the push.
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr edit "$BRANCH" --body-file /tmp/pr-body.md
+            echo "Updated the open pull request from $BRANCH."
+            exit 0
+          fi
+
+          if ! gh pr create \
             --title "Refresh the element registry snapshot" \
             --body-file /tmp/pr-body.md \
             --base main \
-            --head "$BRANCH"
+            --head "$BRANCH" 2> /tmp/pr-error.txt; then
+            cat /tmp/pr-error.txt >&2
+            if grep -q "not permitted to create or approve pull requests" /tmp/pr-error.txt; then
+              # Said plainly, because the raw GraphQL error does not say where the fix is.
+              echo "::error title=Pull requests from Actions are switched off::The refreshed snapshot is on the $BRANCH branch, but this repository does not let GitHub Actions open pull requests. Turn on Settings → Actions → General → Workflow permissions → 'Allow GitHub Actions to create and approve pull requests', or open one by hand: https://github.com/${{ github.repository }}/compare/main...$BRANCH"
+            fi
+            exit 1
+          fi
