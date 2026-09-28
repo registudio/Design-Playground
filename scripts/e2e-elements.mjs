@@ -52,12 +52,15 @@ await page.waitForFunction(
   { timeout: 15000 },
 );
 await page.getByRole("button", { name: "New project", exact: true }).click();
-await page.waitForSelector("iframe[title='Live preview']");
+// A new project opens on its first step; the live preview is behind Visualise now.
+await page.waitForSelector(".sidebar-link");
 
 // --- The rail ---------------------------------------------------------------
 
-// Scoped to the rail's tab strip: panel headings are buttons too.
-await page.locator("nav").getByRole("button", { name: "Elements", exact: true }).click();
+// The registry browser and the engine toggles are Advanced detail on the Motion step:
+// Basic mode is the view a client sees, and neither means anything to one.
+await page.locator(".sidebar-link", { hasText: "Motion" }).click();
+await page.getByRole("button", { name: "Advanced", exact: true }).click();
 await page.waitForSelector("text=Browse elements");
 ok("Elements tab shows the engine toggles (§1b)", await page.getByText("GSAP").first().isVisible());
 ok(
@@ -158,10 +161,12 @@ await page.screenshot({ path: `${OUT}/el-04-selected.png` });
 
 // --- The export (§5) --------------------------------------------------------
 
-await page.getByRole("button", { name: "Export" }).click();
+// Export lives in the header once the page is being visualised.
+await page.getByRole("button", { name: /^Visualise/ }).first().click();
+await page.getByRole("button", { name: /^Export project/ }).click();
 const download = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "Download ZIP" }).click(),
+  page.getByRole("button", { name: /^Download handoff \(ZIP\)/ }).click(),
 ]).then(([d]) => d);
 
 const zipPath = `${OUT}/elements-export.zip`;

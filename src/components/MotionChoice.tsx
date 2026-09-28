@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useProjectStore } from "@/store/project-store";
 
 /**
  * A grid of motion options, each showing what it actually does.
@@ -32,6 +33,8 @@ export function MotionChoice({
   // Bumping a key remounts the demo, which is what restarts a CSS animation. Scoped per
   // tile so replaying one does not restart the whole grid.
   const [replay, setReplay] = useState<Record<string, number>>({});
+  // Which library drives a recipe is for whoever builds the site, not whoever picks it.
+  const advanced = useProjectStore((s) => s.advanced);
   const bump = (id: string) => setReplay((r) => ({ ...r, [id]: (r[id] ?? 0) + 1 }));
 
   return (
@@ -55,7 +58,7 @@ export function MotionChoice({
                 <i /><i /><i />
               </span>
               <strong>{option.label}</strong>
-              <small>{option.engine === "css" ? "CSS" : option.engine === "motion" ? "Motion" : "GSAP"}</small>
+              {advanced && <small>{option.engine === "css" ? "CSS" : option.engine === "motion" ? "Motion" : "GSAP"}</small>}
               {describe?.(option.id) && <em>{describe(option.id)}</em>}
             </button>
           );

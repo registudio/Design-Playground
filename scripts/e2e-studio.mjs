@@ -99,9 +99,17 @@ await page.waitForTimeout(900);
 ok("motion options render as animated tiles", (await page.locator(".motion-tile").count()) > 10);
 ok("the tiles are genuinely animating", (await page.evaluate(() =>
   [...document.querySelectorAll(".motion-stage i")].filter((n) => n.getAnimations().length > 0).length)) > 0);
+// Basic is the view a client sees: engines are worked out automatically, so they are
+// not shown there at all. Advanced keeps them.
+ok("Basic mode shows no engines", (await page.getByRole("switch", { name: "Lenis" }).count()) === 0 && (await page.getByText("Required").count()) === 0);
+ok("Basic mode points to where picks live", (await page.getByRole("button", { name: /Browse elements|Review picks/ }).count()) === 1);
+await page.getByRole("button", { name: "Advanced", exact: true }).click();
+await page.waitForTimeout(600);
 ok("Motion and GSAP are no longer asked for", (await page.getByRole("switch", { name: "GSAP" }).count()) === 0);
 ok("Lenis stays opt-in, since nothing implies it", (await page.getByRole("switch", { name: "Lenis" }).count()) === 1);
 ok("engines are shown as derived", (await page.getByText("Required").count()) > 0);
+await page.getByRole("button", { name: "Basic", exact: true }).click();
+await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/studio-02-motion.png` });
 
 // --- Advanced adds real depth on every step ----------------------------------
@@ -125,6 +133,8 @@ ok("page rhythm appears in Advanced", (await page.locator(".page-rhythm").count(
 // --- A variant choice reaches the export (§1a, §5) ---------------------------
 await page.getByRole("button", { name: /Elements/ }).first().click();
 await page.waitForTimeout(1200);
+// Sources are an Advanced refinement, kept in the closed "More filters" disclosure.
+await page.locator("details.library-filters summary").click();
 await page.getByRole("button", { name: /^React Bits/ }).click();
 await page.waitForTimeout(700);
 const card = page.locator(".element-card").first();
@@ -144,7 +154,7 @@ await page.screenshot({ path: `${OUT}/studio-03-preview.png` });
 await page.getByRole("button", { name: /Export project/ }).click();
 const download = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "Download ZIP" }).click(),
+  page.getByRole("button", { name: /^Download handoff \(ZIP\)/ }).click(),
 ]).then(([d]) => d);
 const zipPath = `${OUT}/studio-export.zip`;
 await download.saveAs(zipPath);

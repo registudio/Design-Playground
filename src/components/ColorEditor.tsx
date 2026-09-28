@@ -55,7 +55,7 @@ export function ColorEditor() {
 
   return (
     <>
-      <Panel title="Semantic colours">
+      <Panel title="Colours">
         <div className="flex flex-col gap-3">
           {SEMANTIC_TOKENS.map((token) => {
             const color = resolveSemantic(colors, theme, token);

@@ -153,7 +153,7 @@ export function Foundation({ hideAssets = false }: { hideAssets?: boolean }) {
         {advanced && <TypeScaleEditor />}
       </Panel>
 
-      <Panel title="Geometry">
+      <Panel title="Shape & spacing">
         <Slider
           label="Radius" from="Sharp" to="Rounded"
           min={0} max={5} step={1}

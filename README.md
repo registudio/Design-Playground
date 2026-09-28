@@ -16,11 +16,13 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 87 interactive original effects with source/runtime labels, expanded previews, notes and placement, alongside every indexed registry component in the same grid. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+5. Browse 103 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes. Return to editing as often as needed.
-7. Download the ZIP handoff, a standalone review page, or a restorable project backup.
+7. Download the ZIP handoff or a restorable project backup; a client rationale page and a standalone sample page are under More options.
 
-Basic/Advanced modes, history, undo/redo, snapshots, saved templates, overrides, command search, the style guide and component gallery remain available.
+The sidebar is the one step list: each step gets a tick once something is chosen there, worked out from the project rather than recorded by hand, and every step ends in Back / Continue.
+
+**Basic** is the view to use with a client: plain language, and no engines, registries or runtimes. **Advanced** adds every control and the technical detail. History, undo/redo, snapshots, saved templates, overrides, command search, the style guide and component gallery are available in both.
 
 ## Preview coverage
 

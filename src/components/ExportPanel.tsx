@@ -21,6 +21,7 @@ import { embedEngineAssets } from "@/export/engine-assets";
  */
 export function ExportPanel({ onClose }: { onClose: () => void }) {
   const project = useProjectStore((s) => s.project);
+  const advanced = useProjectStore((s) => s.advanced);
   const [issues, setIssues] = useState<ValidationIssue[] | null>(null);
   const [directory, setDirectory] = useState<FileSystemDirectoryHandle | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -106,7 +107,7 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         <h2 className="text-[20px] font-semibold">Your ideas, ready to go.</h2>
 
         <div className="mt-4 flex gap-1 rounded-lg border border-chrome-border p-1" role="radiogroup" aria-label="What to export">
-          {([["everything", "Everything"], ["elements", "Elements only"]] as const).map(([value, label]) => (
+          {([["everything", "Full handoff"], ["elements", "Elements only"]] as const).map(([value, label]) => (
             <button
               key={value}
               type="button"
@@ -123,48 +124,32 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <p className="mt-3 text-[13px] text-chrome-muted">
-          {scope === "elements" ? (
+          {scope === "elements"
+            ? "Just the effects you picked, each as a file that opens on its own, in your project's colours."
+            : "Everything the build needs: the sample page, a written brief, colours and type, your uploaded assets, and the effects you picked."}
+          {advanced && project.selections.length > 0 && (
             <>
-              Just the effects: one standalone HTML file per built-in element, with the
-              project&rsquo;s accent already applied and its runtime embedded. No tokens,
-              recipe, assets or sample page.
-              {project.selections.length > 0 && (
-                <>
-                  {" "}
-                  Registry picks come as verified install commands in{" "}
-                  <code className="font-mono">design-playground-selection.json</code>.
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              A complete design handoff: a sample page, Markdown brief, ordered sections,
-              design tokens, uploaded assets, element notes, and runnable built-in effects.
-              {project.selections.length > 0 && (
-                <>
-                  {" "}
-                  Selected elements are written alongside it as{" "}
-                  <code className="font-mono">design-playground-selection.json</code>, at the
-                  project root where the build step looks for them.
-                </>
-              )}
+              {" "}
+              Registry picks are written to{" "}
+              <code className="font-mono">design-playground-selection.json</code> at the project
+              root, where the build step looks for them.
             </>
           )}
         </p>
 
         <div className="mt-5 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => run((files) => downloadZip(files, `${slug(project.name)}-${scope === "elements" ? "elements" : "design"}.zip`))}
+          <Choice
+            primary
             disabled={busy}
-            className="rounded-md bg-chrome-accent px-4 py-2.5 text-[13px] font-medium text-white hover:opacity-90"
-          >
-            {busy ? "Preparing ZIP…" : scope === "elements" ? "Download elements ZIP" : "Download ZIP"}
-          </button>
+            title={busy ? "Preparing…" : scope === "elements" ? "Download elements (ZIP)" : "Download handoff (ZIP)"}
+            hint={scope === "elements" ? "One file per effect, ready to drop into a site." : "The whole design in one file, ready for the build."}
+            onClick={() => run((files) => downloadZip(files, `${slug(project.name)}-${scope === "elements" ? "elements" : "design"}.zip`))}
+          />
 
           {supportsDirectoryAccess() && (
-            <button
-              type="button"
+            <Choice
+              title={directory ? `Save to ${directory.name}` : "Save to project folder…"}
+              hint="Writes the same files straight into your site's folder instead of a download."
               onClick={async () => {
                 let handle = directory;
                 if (!handle) {
@@ -181,43 +166,40 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
                   setStatus(`Written to ${handle!.name}/${scope === "elements" ? "elements" : "design"}`);
                 });
               }}
-              className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
-            >
-              {directory ? `Save to ${directory.name}` : "Save to project folder…"}
-            </button>
+            />
           )}
 
-          <button
-            type="button"
+          <Choice
+            title="Save project backup"
+            hint="A file you can open here later to carry on exactly where you left off."
             onClick={async () => downloadProject(project, await packProject(project))}
-            className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
-          >
-            Save project file (backup)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => downloadRationale(project)}
-            className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
-          >
-            Download client rationale (HTML)
-          </button>
-
-          <button
-            type="button"
-            onClick={async () => {
-              setStatus(null);
-              try {
-                await downloadStaticPage(project);
-              } catch {
-                setStatus("Could not build the static page. Try again.");
-              }
-            }}
-            className="rounded-md border border-chrome-border px-4 py-2.5 text-[13px] hover:bg-chrome-hover"
-          >
-            Share Sample Page (standalone HTML)
-          </button>
+          />
         </div>
+
+        {/* Used now and then, and both are for sending to someone else rather than for the
+            build — so they are one click further away than the two everyday actions. */}
+        <details className="mt-4 rounded-md border border-chrome-border px-4 py-2.5">
+          <summary className="cursor-pointer text-[12px] text-chrome-muted">More options: pages to share with a client</summary>
+          <div className="mt-3 flex flex-col gap-2">
+            <Choice
+              title="Client rationale (HTML)"
+              hint="A page explaining the design choices, written for a client to read."
+              onClick={() => downloadRationale(project)}
+            />
+            <Choice
+              title="Sample page (single HTML file)"
+              hint="The sample page as one file anyone can open in a browser."
+              onClick={async () => {
+                setStatus(null);
+                try {
+                  await downloadStaticPage(project);
+                } catch {
+                  setStatus("Could not build the static page. Try again.");
+                }
+              }}
+            />
+          </div>
+        </details>
 
         {status && <p className="mt-4 text-[12px] text-chrome-accent">{status}</p>}
 
@@ -251,3 +233,26 @@ export function ExportPanel({ onClose }: { onClose: () => void }) {
 }
 
 const slug = (s: string) => s.replace(/[^a-z0-9-_]+/gi, "-").toLowerCase() || "project";
+
+/** One export action: what it does, and one line on when you would want it. */
+function Choice({ title, hint, onClick, primary = false, disabled = false }: {
+  title: string;
+  hint: string;
+  onClick: () => void;
+  primary?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex flex-col items-start gap-0.5 rounded-md px-4 py-2.5 text-left ${
+        primary ? "bg-chrome-accent text-white hover:opacity-90" : "border border-chrome-border hover:bg-chrome-hover"
+      }`}
+    >
+      <span className="text-[13px] font-medium">{title}</span>
+      <span className={`text-[11px] ${primary ? "opacity-75" : "text-chrome-muted"}`}>{hint}</span>
+    </button>
+  );
+}

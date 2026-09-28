@@ -20,6 +20,8 @@ export function ElementsPanel() {
   const loadRegistry = useProjectStore((s) => s.loadRegistry);
   const registryState = useProjectStore((s) => s.registryState);
   const indexedCount = useProjectStore((s) => s.registry.elements.length);
+  const advanced = useProjectStore((s) => s.advanced);
+  const setSection = useProjectStore((s) => s.setSection);
   const [browsing, setBrowsing] = useState(false);
 
   // Loads the committed snapshot the first time this tab is opened rather than on app
@@ -29,6 +31,28 @@ export function ElementsPanel() {
   }, [loadRegistry]);
 
   if (!project) return null;
+
+  // Basic mode is the view a client sees. Engines are worked out from what has been
+  // picked, and the registry browser here duplicates the Elements step, so neither
+  // tells a client anything they can act on — they get where their picks live instead.
+  if (!advanced) {
+    const picks = (project.recipe.elements?.length ?? 0) + project.selections.length;
+    return (
+      <Panel title="Your picks">
+        <p className="text-[12px] leading-relaxed text-chrome-muted">
+          {picks ? `${picks} ${picks === 1 ? "element is" : "elements are"} picked for this page.` : "No elements picked yet."}{" "}
+          The effects themselves are chosen in the Elements step; this step sets how the whole page moves.
+        </p>
+        <button
+          type="button"
+          onClick={() => setSection("elements")}
+          className="w-full rounded-md border border-chrome-border px-3 py-2 text-[13px] text-chrome-text transition-colors hover:border-chrome-accent"
+        >
+          {picks ? "Review picks in Elements →" : "Browse elements →"}
+        </button>
+      </Panel>
+    );
+  }
 
   return (
     <>

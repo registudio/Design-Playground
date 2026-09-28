@@ -56,7 +56,7 @@ await page.screenshot({ path: `${OUT}/07-logo-extracted.png` });
 await page.getByRole("button", { name: "Export" }).click();
 const download = await Promise.all([
   page.waitForEvent("download"),
-  page.getByRole("button", { name: "Download ZIP" }).click(),
+  page.getByRole("button", { name: /^Download handoff \(ZIP\)/ }).click(),
 ]).then(([d]) => d);
 
 const zipPath = `${OUT}/export.zip`;
