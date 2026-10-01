@@ -10,7 +10,7 @@ import {
   DISK_CACHE_ENTRIES,
   DOCUMENT_CACHE_ENTRIES,
 } from "@/elements/preview-budget";
-import { propRecipe } from "@/elements/preview-props";
+import { propRecipe, RECIPES_FINGERPRINT } from "@/elements/preview-props";
 
 /**
  * Compiles one published registry component into a self-contained preview document.
@@ -110,10 +110,55 @@ function rememberResource<T>(
  */
 const DISK_CACHE = process.env.DP_PREVIEW_CACHE ?? path.join(process.cwd(), ".next/cache/element-preview");
 
-/** Keyed by source, name and the route's own version, so a change here invalidates it. */
-const CACHE_VERSION = "4";
-const diskKey = (source: string, name: string) =>
-  createHash("sha256").update(`${CACHE_VERSION}:${source}:${name}`).digest("hex").slice(0, 32);
+/**
+ * Keyed by source, name and a fingerprint of everything that shapes a compiled document.
+ *
+ * This used to be a hand-bumped version, and it went stale: it stayed at "4" while the
+ * compiler moved React and Motion from esm.sh onto local packages, taught the error
+ * boundary to record why it caught, and more. Entries never expire, so documents built
+ * by the older compiler kept being served after the fixes landed, and only Retry, which
+ * skips the disk, ever replaced them. A card could read "Fallback demo" days after
+ * the bug behind it was fixed. The fingerprint changes whenever that code or a bundled
+ * package's version changes, so an update retires the old documents automatically.
+ * CACHE_VERSION remains for retiring them by hand when nothing else would.
+ */
+const CACHE_VERSION = "5";
+
+/** Packages compiled into every document from local disk; see installedPackagePath. */
+const BUNDLED_PACKAGES = ["react", "react-dom", "motion", "motion/node_modules/framer-motion", "gsap", "tailwindcss"];
+
+let compilerFingerprint: Promise<string> | null = null;
+
+function fingerprint(): Promise<string> {
+  compilerFingerprint ??= (async () => {
+    const modules = path.join(process.cwd(), "node_modules");
+    const versions = await Promise.all(
+      BUNDLED_PACKAGES.map(async (name) => {
+        try {
+          const manifest = await readFile(/* turbopackIgnore: true */ path.join(modules, name, "package.json"), "utf-8");
+          return `${name}@${(JSON.parse(manifest) as { version?: string }).version ?? "?"}`;
+        } catch {
+          return `${name}@absent`;
+        }
+      }),
+    );
+    // Function source rather than a list kept by hand: a hand-kept list is exactly what
+    // went stale. Each of these decides something about what ends up in the document.
+    const code = [
+      fetchItem, chooseEntry, compile, virtualFiles, installedPackagePath, resolveRelative, resolvePublished,
+      readImports, shimModule, hookShimModule, iconShimModule, fontShimModule, packageUrl, tailwindFor,
+      harness, documentFor, generatedDocument,
+    ].map(String);
+    return createHash("sha256")
+      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), ...code].join("\n"))
+      .digest("hex")
+      .slice(0, 16);
+  })();
+  return compilerFingerprint;
+}
+
+const diskKey = async (source: string, name: string) =>
+  createHash("sha256").update(`${await fingerprint()}:${source}:${name}`).digest("hex").slice(0, 32);
 
 async function readDisk(key: string): Promise<string | null> {
   try {
@@ -321,7 +366,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const key = diskKey(source, name);
+    const key = await diskKey(source, name);
     const retry = Number(params.get("retry") ?? 0) > 0;
     // Every layer, not just the compiled document. Dropping only the document cache
     // left the retry joining the *same* in-flight item fetch, so a registry that had

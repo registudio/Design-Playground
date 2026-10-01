@@ -117,6 +117,16 @@ const RECIPES: Recipe[] = [
   },
 ];
 
+/**
+ * Everything above, as text, for the preview route's disk cache key. The props are baked
+ * into each compiled document, so a changed recipe has to retire the documents built
+ * with the old one.
+ */
+export const RECIPES_FINGERPRINT = [
+  BASE,
+  ...RECIPES.map((recipe) => `${recipe.sources?.join(",") ?? "*"}|${recipe.match}|${recipe.props}`),
+].join("\n");
+
 /** Splits camelCase so a PascalCase registry name matches on whole words. */
 function words(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[-_/]+/g, " ").toLowerCase();

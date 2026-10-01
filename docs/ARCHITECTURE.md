@@ -69,7 +69,11 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 - `app/api/element-preview/route.ts` — compiles a registry item's published source with
   esbuild into a sandboxed document, reporting `ready` / `fallback` / `blank` /
   `failed`. Two cache tiers: memory, and `.next/cache/element-preview` on disk
-  (`DISK_CACHE_ENTRIES`, sized to hold the whole index — ~1 MB a document).
+  (`DISK_CACHE_ENTRIES`, sized to hold the whole index — ~1 MB a document). Disk
+  entries never expire, so their key carries a fingerprint of the compiler's code, the
+  prop recipes and the bundled package versions: changing any of them retires every
+  document the old compiler built. Do not replace it with a hand-bumped version; that
+  is what let pre-fix documents keep showing "Fallback demo".
   `DP_REGISTRY_BASE` points every source at one origin, for the stand-in registry.
 - `src/components/RegistryPreview.tsx` — a registry card's live preview. `previewSrc()`
   is the one URL builder for card and full screen alike.

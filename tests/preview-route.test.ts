@@ -185,39 +185,91 @@ describe("preview prop recipes", () => {
 });
 
 describe("compiled document disk cache", () => {
-  it("serves a cached document without recompiling", async () => {
-    const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+  /**
+   * A one-item registry on localhost, so the route can really compile something here.
+   * The component imports only React, which the route bundles from local disk, so no
+   * other network is involved.
+   */
+  const ITEM = {
+    files: [{
+      path: "Fixture/Fixture.tsx",
+      content: 'export default function Fixture({ text }: { text?: string }) { return <h1 className="text-xl">{text}</h1>; }',
+    }],
+  };
+
+  async function withRegistry<T>(run: (base: string) => Promise<T>): Promise<T> {
+    const { createServer } = await import("node:http");
+    const server = createServer((request, response) => {
+      if (request.url === "/reactbits/Fixture-TS-TW.json") {
+        response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(ITEM));
+      } else {
+        response.writeHead(404).end();
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+    try {
+      return await run(`http://127.0.0.1:${port}`);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+
+  /** A route module with empty in-memory caches, so only the disk can answer. */
+  async function freshRoute(dir: string, registry: string) {
+    const { vi } = await import("vitest");
+    vi.stubEnv("DP_PREVIEW_CACHE", dir);
+    vi.stubEnv("DP_REGISTRY_BASE", registry);
+    vi.resetModules();
+    const { GET: route } = await import("../app/api/element-preview/route");
+    return async (query: string) => (await route(new Request(`http://localhost/api/element-preview?${query}`))).text();
+  }
+
+  async function cacheDir() {
+    const { mkdtemp } = await import("node:fs/promises");
     const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    return mkdtemp(path.join(tmpdir(), "dp-preview-"));
+  }
+
+  it("serves a compiled document from disk after a restart, without the registry", async () => {
+    const { vi } = await import("vitest");
+    const { readdir } = await import("node:fs/promises");
+    const dir = await cacheDir();
+    try {
+      const compiled = await withRegistry(async (base) => (await freshRoute(dir, base))("source=react-bits&name=Fixture-TS-TW"));
+      expect(compiled).toContain('<div id="root">');
+      expect(compiled).not.toContain('data-generated="true"');
+      expect(await readdir(dir)).toHaveLength(1);
+
+      // The registry is gone now; an answer can only have come from the disk.
+      const fromDisk = await (await freshRoute(dir, "http://127.0.0.1:9"))("source=react-bits&name=Fixture-TS-TW");
+      expect(fromDisk).toContain('<div id="root">');
+      expect(fromDisk).not.toContain('data-generated="true"');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  }, 30_000);
+
+  it("ignores a document an older compiler left on disk", async () => {
+    // The key the route used while CACHE_VERSION was "4". Those documents were built by
+    // a compiler that fetched React and Motion from esm.sh and recorded no reasons, and
+    // serving them kept cards on a stand-in after the fixes had shipped.
+    const { vi } = await import("vitest");
+    const { writeFile } = await import("node:fs/promises");
     const { createHash } = await import("node:crypto");
     const path = await import("node:path");
-    const { vi } = await import("vitest");
-
-    const dir = await mkdtemp(path.join(tmpdir(), "dp-preview-"));
-    await mkdir(dir, { recursive: true });
-    // Same key the route derives: version, source, name.
-    const key = createHash("sha256").update("4:bklit:area-chart").digest("hex").slice(0, 32);
-    await writeFile(path.join(dir, `${key}.html`), "<!doctype html><title>cached</title>", "utf-8");
-
-    vi.stubEnv("DP_PREVIEW_CACHE", dir);
-    vi.resetModules();
-    const { GET: fresh } = await import("../app/api/element-preview/route");
-    const response = await fresh(
-      new Request("http://localhost/api/element-preview?source=bklit&name=area-chart"),
-    );
-    const body = await response.text();
-    vi.unstubAllEnvs();
-
-    // Without the cache this would attempt a fetch and return a diagnostic instead.
-    expect(body).toContain("cached");
-    expect(body).not.toContain("Preview unavailable");
-  });
-
-  it("keys the cache so a change to the route invalidates it", async () => {
-    const { createHash } = await import("node:crypto");
-    const a = createHash("sha256").update("1:bklit:area-chart").digest("hex").slice(0, 32);
-    const b = createHash("sha256").update("2:bklit:area-chart").digest("hex").slice(0, 32);
-    expect(a).not.toBe(b);
-  });
+    const dir = await cacheDir();
+    const legacy = createHash("sha256").update("4:react-bits:Fixture-TS-TW").digest("hex").slice(0, 32);
+    await writeFile(path.join(dir, `${legacy}.html`), "<!doctype html><title>stale</title><body></body>", "utf-8");
+    try {
+      const html = await withRegistry(async (base) => (await freshRoute(dir, base))("source=react-bits&name=Fixture-TS-TW"));
+      expect(html).not.toContain("<title>stale</title>");
+      expect(html).toContain('<div id="root">');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  }, 30_000);
 });
 
 describe("a stand-in says why it is there", () => {
