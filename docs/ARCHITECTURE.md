@@ -27,15 +27,15 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 
 ## The element catalogue
 
-- `src/elements/catalogue.ts` — `ELEMENTS` (104 authored originals), `elementOrigin(id)`
+- `src/elements/catalogue.ts` — `ELEMENTS` (105 authored originals), `elementOrigin(id)`
   for attribution, and `elementDocument(id, accent)`, which wraps an element's
   `{html, css, js}` into the standalone document every card, dialog and export runs.
   `INTERACTION_ONLY` names the elements whose script still runs under reduced motion
-  (controls — carousels, charts, cult-ui ports — rather than decoration).
+  (controls — carousels, charts, cult-ui and 21st.dev ports — rather than decoration).
   `engineLoader()` loads engine bundles after the frame's first paint, when idle: one
   Vanta bundle starting synchronously held up its neighbours' first paint.
 - `src/elements/extended-catalogue.ts` — assembles `EXTENDED_ELEMENTS` from
-  `engine-elements.ts`, `shader-elements.ts`, `cult-elements.ts`, `chart-elements.ts`
+  `engine-elements.ts`, `shader-elements.ts`, `cult-elements.ts`, `twentyfirst-elements.ts`, `chart-elements.ts`
   and a few inline carousels. Defines `ENGINE_SOURCES` (motion, lenis, vanta, shader),
   `engineFor(id)` (by id prefix), `engineBundles(id)` and `PORT_SOURCES`.
 - `scripts/engine-demos.mjs` — the runtime JS for every engine demo, keyed by element id
