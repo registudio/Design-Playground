@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as React from "react";
 import { GET } from "../app/api/element-preview/route";
 import {
   ACTIVATION_MARGIN_PX,
@@ -169,13 +170,13 @@ describe("preview prop recipes", () => {
     for (const element of index.elements) {
       // Spliced into a generated module, so a malformed object would be a compile error
       // for that preview rather than a caught failure.
-      expect(() => new Function(`return ${propRecipe(element.source, element.name)}`)()).not.toThrow();
+      expect(() => new Function("React", `return ${propRecipe(element.source, element.name)}`)(React)).not.toThrow();
     }
   });
 
   it("gives chart items data that a chart library can actually plot", async () => {
     const { propRecipe } = await import("@/elements/preview-props");
-    const value = new Function(`return ${propRecipe("bklit", "Area Chart")}`)() as {
+    const value = new Function("React", `return ${propRecipe("bklit", "Area Chart")}`)(React) as {
       data: Array<Record<string, unknown>>;
     };
     expect(value.data.length).toBeGreaterThan(3);
@@ -302,4 +303,145 @@ describe("a stand-in says why it is there", () => {
     expect(grace).toBeGreaterThanOrEqual(3500);
     expect(watch).toBeGreaterThan(grace);
   });
+});
+
+describe("compiling real registry shapes", () => {
+  /**
+   * Each case is a failure the audit against the published registries found. A local
+   * registry and a local package host stand in for the registries and esm.sh, and every
+   * request either receives is recorded.
+   */
+  const ITEMS: Record<string, unknown> = {
+    // Bklit's layout: the example and its barrel are published under registry/examples,
+    // but installed to app/page.tsx and components/charts/index.ts, and written against
+    // the installed layout.
+    "demo-chart": {
+      files: [
+        { path: "registry/examples/demo-chart.tsx", target: "app/page.tsx",
+          content: 'import { Chart } from "@/components/charts"; export default function Page() { return <Chart/>; }' },
+        { path: "registry/examples/demo-chart-index.ts", target: "components/charts/index.ts",
+          content: 'export { Chart } from "./chart";' },
+        { path: "src/charts/chart.tsx", target: "components/charts/chart.tsx",
+          content: 'export function Chart() { return <svg data-real-chart="yes" width="10" height="10"/>; }' },
+      ],
+    },
+    "uses-hooks": {
+      files: [{ path: "uses-hooks.tsx",
+        content: 'import { useCount } from "fixture-hooks"; export default function UsesHooks() { return <b>{useCount()}</b>; }' }],
+    },
+    "says-body": {
+      files: [{ path: "says-body.tsx",
+        content: 'export default function SaysBody() { return <code>{"</body>"}</code>; }' }],
+    },
+    "themed": {
+      cssVars: { light: { "--legend": "white" }, dark: { "--legend": "rgb(1, 2, 3)" } },
+      files: [{ path: "themed.tsx",
+        content: 'export default function Themed() { return <p className="text-muted-foreground bg-white dark:bg-zinc-900">Hi</p>; }' }],
+    },
+    "toy-chart": {
+      files: [{ path: "src/charts/toy-chart.tsx", target: "components/charts/toy-chart.tsx",
+        content: 'export function ToyChart({ children }: { children?: unknown }) { return <svg data-toy-root="yes">{children as never}</svg>; }' }],
+    },
+    "toy-chart-example": {
+      registryDependencies: ["@bklit/toy-chart"],
+      files: [{ path: "registry/examples/toy-chart.tsx", type: "registry:page", target: "app/page.tsx",
+        content: 'import { ToyChart } from "@/components/charts/toy-chart"; export default function Page() { return <ToyChart><circle data-toy-series="yes" r="4"/></ToyChart>; }' }],
+    },
+    "links-out": {
+      files: [{ path: "links-out.tsx",
+        content: 'import Link from "next/link"; import Image from "next/image"; export default function LinksOut() { return <Link href="/x" prefetch={false}><Image src="/a.png" alt="" width={4} height={4}/>Go</Link>; }' }],
+    },
+  };
+
+  async function compileWith(name: string, source = "kokonutui") {
+    const { createServer } = await import("node:http");
+    const { vi } = await import("vitest");
+    const requests: string[] = [];
+    const server = createServer((request, response) => {
+      const url = request.url ?? "";
+      requests.push(url);
+      const item = url.match(/^\/(?:kokonutui|bklit)\/([\w-]+)\.json$/)?.[1];
+      if (item && ITEMS[item]) {
+        response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(ITEMS[item]));
+      } else if (url.startsWith("/pkg/fixture-hooks")) {
+        response.writeHead(200, { "Content-Type": "application/javascript" })
+          .end('import { useState } from "react"; export function useCount() { return useState(3)[0]; }');
+      } else {
+        response.writeHead(404).end();
+      }
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+    try {
+      vi.stubEnv("DP_REGISTRY_BASE", `http://127.0.0.1:${port}`);
+      vi.stubEnv("DP_PACKAGE_BASE", `http://127.0.0.1:${port}/pkg`);
+      vi.stubEnv("DP_PREVIEW_CACHE", (await import("node:os")).tmpdir() + `/dp-preview-shapes-${Date.now()}-${name}`);
+      vi.resetModules();
+      const { GET: route } = await import("../app/api/element-preview/route");
+      const html = await (await route(new Request(`http://localhost/api/element-preview?source=${source}&name=${name}`))).text();
+      return { html, requests };
+    } finally {
+      vi.unstubAllEnvs();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+
+  it("lays files out where they install, so a barrel import finds the real chart", async () => {
+    const { html } = await compileWith("demo-chart");
+    expect(html).not.toContain('data-generated="true"');
+    expect(html).toContain("data-real-chart");
+  }, 30_000);
+
+  it("gives a package's own React import the document's one React", async () => {
+    const { html, requests } = await compileWith("uses-hooks");
+    expect(html).not.toContain('data-generated="true"');
+    expect(requests.some((url) => url.startsWith("/pkg/fixture-hooks"))).toBe(true);
+    // Two Reacts in one document means the package's hooks read a null dispatcher.
+    expect(requests.filter((url) => url.startsWith("/pkg/react"))).toEqual([]);
+    expect(html.match(/\/\/ node_modules\/react\/cjs\/react\.development\.js/g)).toHaveLength(1);
+  }, 30_000);
+
+  it("keeps the reporter out of a module whose source contains </body>", async () => {
+    const { html } = await compileWith("says-body");
+    const moduleStart = html.indexOf('<script type="module">');
+    const moduleEnd = html.indexOf("</script>", moduleStart);
+    const reporter = html.indexOf("dp-preview-status");
+    expect(moduleStart).toBeGreaterThan(-1);
+    expect(reporter).toBeGreaterThan(moduleEnd);
+  }, 30_000);
+
+  it("gives components the theme a shadcn project would, dark by class", async () => {
+    const { html } = await compileWith("themed");
+    // The utility exists only if the colour is mapped into Tailwind's theme.
+    expect(html).toMatch(/\.text-muted-foreground\s*\{[^}]*var\(--color-muted-foreground\)|\.text-muted-foreground\s*\{[^}]*var\(--muted-foreground\)/);
+    expect(html).toContain("--muted-foreground:");
+    // dark: follows a class on the document, not the viewer's OS.
+    expect(html).toContain('<html lang="en" class="dark">');
+    expect(html).toMatch(/\.dark\\:bg-zinc-900:where\(\.dark, \.dark \*\)|:where\(\.dark, \.dark \*\)/);
+    // The item's own variable, dark value.
+    expect(html).toContain("--legend:rgb(1, 2, 3)");
+    // A container-sized component needs #root to have the frame's size to measure.
+    expect(html).toMatch(/#root\{width:100%;height:calc\(100vh - 36px\)/);
+  }, 30_000);
+
+  it("previews a Bklit chart through the example Bklit publishes for it", async () => {
+    // A composable chart root draws nothing until it is given series as children.
+    const { html, requests } = await compileWith("toy-chart", "bklit");
+    expect(requests).toContain("/bklit/toy-chart-example.json");
+    expect(html).toContain("data-toy-series");
+    expect(html).toContain("<title>toy-chart</title>");
+  }, 30_000);
+
+  it("counts an SVG drawing as painted, whatever case its tagName is in", async () => {
+    const { html } = await compileWith("toy-chart", "bklit");
+    // In an HTML document an svg element's tagName is lowercase.
+    expect(html).toContain("node.tagName.toUpperCase()");
+  }, 30_000);
+
+  it("stands in for next/link and next/image instead of fetching Next", async () => {
+    const { html, requests } = await compileWith("links-out");
+    expect(html).not.toContain('data-generated="true"');
+    expect(requests.filter((url) => url.startsWith("/pkg/next"))).toEqual([]);
+    expect(html).not.toContain("__NEXT_ROUTER_BASEPATH");
+  }, 30_000);
 });

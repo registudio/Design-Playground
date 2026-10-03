@@ -29,11 +29,41 @@ const SERIES = `[
 
 const IMAGE = `"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='260'%3E%3Crect width='400' height='260' fill='%23334423'/%3E%3C/svg%3E"`;
 
+/**
+ * One item shape that satisfies as many list components as it can at once.
+ *
+ * Every field is something a measured component read and crashed or rendered nothing
+ * without: navigation wants href, a dock wants an icon element, glass icons a colour, a
+ * masonry wall an img, url and height, a logo loop a node. `React` is in scope where
+ * this is spliced, so elements can be built here; JSX cannot.
+ *
+ * `icon` is the one field two families disagree on: feature cards render it as a
+ * component (`<item.icon/>`, typed LucideIcon), docks and icon rows as an element. A
+ * component is the default; the navigation recipe swaps in elements.
+ */
+const ICON_COMPONENT = `(props) => React.createElement("svg", { viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", ...props }, React.createElement("circle", { cx: 12, cy: 12, r: 8 }))`;
+const ICON_ELEMENT = `React.createElement("span", { "aria-hidden": true }, "✳")`;
+
+const card = (id: number, title: string, line: string, color: string, height: number, icon = ICON_COMPONENT) =>
+  `{ id: ${id}, title: "${title}", label: "${title}", name: "${title}", text: "${title}", value: "${title.toLowerCase()}", description: "${line}", content: "${line}",
+    image: ${IMAGE}, src: ${IMAGE}, img: ${IMAGE}, url: "#", href: "#", height: ${height}, color: "${color}",
+    icon: ${icon}, node: React.createElement("span", null, "${title}"),
+    onClick: () => {} }`;
+
 const CARDS = `[
-  { id: 1, title: "Discover", label: "Discover", name: "Discover", description: "Find the shape of it.", content: "Find the shape of it.", image: ${IMAGE}, src: ${IMAGE} },
-  { id: 2, title: "Compose", label: "Compose", name: "Compose", description: "Put the pieces together.", content: "Put the pieces together.", image: ${IMAGE}, src: ${IMAGE} },
-  { id: 3, title: "Ship", label: "Ship", name: "Ship", description: "Send it into the world.", content: "Send it into the world.", image: ${IMAGE}, src: ${IMAGE} }
+  ${card(1, "Discover", "Find the shape of it.", "#a78bfa", 320)},
+  ${card(2, "Compose", "Put the pieces together.", "#cbe99a", 240)},
+  ${card(3, "Ship", "Send it into the world.", "#f5a97f", 280)}
 ]`;
+
+const NAV_ITEMS = `[
+  ${card(1, "Discover", "Find the shape of it.", "#a78bfa", 320, ICON_ELEMENT)},
+  ${card(2, "Compose", "Put the pieces together.", "#cbe99a", 240, ICON_ELEMENT)},
+  ${card(3, "Ship", "Send it into the world.", "#f5a97f", 280, ICON_ELEMENT)}
+]`;
+
+/** For lists that render each item directly, where an object is not a valid child. */
+const WORDS = `["Discover", "Compose", "Ship", "Refine", "Launch"]`;
 
 /** Props every component gets, whichever recipe matches. */
 const BASE = `{
@@ -83,6 +113,39 @@ const RECIPES: Recipe[] = [
       categories: ["value"], index: "name", colors: ["#cbe99a", "#a78bfa"] }`,
   },
   {
+    // These render each item as a child. The sequence recipe's card objects made React
+    // throw "Objects are not valid as a React child".
+    sources: ["react-bits"],
+    match: /^(animated list|grid motion)\b/,
+    props: `{ items: ${WORDS} }`,
+  },
+  {
+    sources: ["react-bits"],
+    match: /^stack\b/,
+    props: `{ cards: ${WORDS}.map((word) => React.createElement("div", { style: { width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#25311f", color: "#eef2e6", font: "600 20px system-ui" } }, word)) }`,
+  },
+  {
+    // Navigation, docks, icon rows and logo walls map over items and crashed on reading
+    // .map of undefined; most of them also need a link, an icon or a logo per item.
+    match: /\b(dock|nav|navbar|navigation|icons|logo|logos|masonry|segment|segmented)\b/,
+    props: `{ items: ${NAV_ITEMS}, logos: ${NAV_ITEMS}, links: ${NAV_ITEMS}, logo: ${IMAGE}, logoAlt: "Logo", activeHref: "#" }`,
+  },
+  {
+    // A counter with no target read .toString() of undefined.
+    match: /\b(count|counter|number|ticker|odometer)\b/,
+    props: `{ to: 62, from: 0, end: 62, start: 0, target: 62 }`,
+  },
+  {
+    // Numeric despite its name; the input recipe's empty-string value broke .toFixed.
+    match: /\bscrub\b/,
+    props: `{ value: 62, defaultValue: 62, min: 0, max: 100, step: 1, label: "Opacity", suffix: "%" }`,
+  },
+  {
+    match: /\bproximity\b/,
+    props: `{ label: "Small details. Big possibilities.", containerRef: { current: typeof document === "undefined" ? null : document.body },
+      fromFontVariationSettings: "'wght' 400, 'opsz' 9", toFontVariationSettings: "'wght' 1000, 'opsz' 40", radius: 120 }`,
+  },
+  {
     // Anything that shows a sequence needs more than one thing to show.
     // `cards` plural only: "BounceCards" shows several, "Mouse Effect Card" shows one.
     match: /\b(carousel|gallery|slider|marquee|stack|cards|list|grid|bento|testimonial|accordion|tabs|steps?)\b/,
@@ -90,9 +153,18 @@ const RECIPES: Recipe[] = [
       options: ${CARDS}, tabs: ${CARDS}, data: ${CARDS} }`,
   },
   {
-    match: /\b(image|photo|avatar|media|video|thumbnail|picture)\b/,
+    // Plurals too: "OrbitImages" missed on \bimage\b and got no images at all. Image
+    // trails and spirals take their pictures as plain `items` URLs.
+    match: /\b(images?|photos?|avatars?|media|video|thumbnails?|pictures?|spiral|orbit)\b/,
     props: `{ src: ${IMAGE}, image: ${IMAGE}, images: [${IMAGE}, ${IMAGE}, ${IMAGE}],
+      items: [${IMAGE}, ${IMAGE}, ${IMAGE}, ${IMAGE}, ${IMAGE}],
       alt: "Placeholder", url: ${IMAGE}, poster: ${IMAGE} }`,
+  },
+  {
+    // Two faces to swap between; without them there is nothing on either side.
+    match: /\bpixel swap\b/,
+    props: `{ firstContent: React.createElement("div", { style: { padding: 24, background: "#25311f", color: "#eef2e6", font: "600 20px system-ui" } }, "Small details"),
+      secondContent: React.createElement("div", { style: { padding: 24, background: "#cbe99a", color: "#111412", font: "600 20px system-ui" } }, "Big possibilities") }`,
   },
   {
     // Text effects take the string as a prop far more often than as children.
@@ -109,7 +181,9 @@ const RECIPES: Recipe[] = [
   {
     // Otherwise a dialog renders nothing, since it is closed by default.
     match: /\b(modal|dialog|drawer|sheet|popover|tooltip|dropdown|menu)\b/,
-    props: `{ open: true, defaultOpen: true, isOpen: true, side: "bottom" }`,
+    // A tooltip wraps an element it reads props from, so a bare string child threw.
+    props: `{ open: true, defaultOpen: true, isOpen: true, side: "bottom", content: "Small details",
+      children: React.createElement("button", { type: "button" }, "Hover me") }`,
   },
   {
     match: /\b(progress|loader|loading|spinner|skeleton|meter)\b/,

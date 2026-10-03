@@ -145,12 +145,12 @@ function fingerprint(): Promise<string> {
     // Function source rather than a list kept by hand: a hand-kept list is exactly what
     // went stale. Each of these decides something about what ends up in the document.
     const code = [
-      fetchItem, chooseEntry, compile, virtualFiles, installedPackagePath, resolveRelative, resolvePublished,
+      fetchItem, demonstrationOf, chooseEntry, compile, virtualFiles, installedPackagePath, installedPath, normalize, resolveRelative, resolvePublished,
       readImports, shimModule, hookShimModule, iconShimModule, fontShimModule, packageUrl, tailwindFor,
       harness, documentFor, generatedDocument,
     ].map(String);
     return createHash("sha256")
-      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), ...code].join("\n"))
+      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
       .digest("hex")
       .slice(0, 16);
   })();
@@ -225,11 +225,27 @@ interface RegistryFile {
   path: string;
   content?: string;
   type?: string;
+  /** Where `shadcn add` writes the file in the consuming project. */
+  target?: string;
 }
+
+/**
+ * A file's place in the preview's virtual project: where it would be installed, not
+ * where its publisher keeps it.
+ *
+ * Imports are written against the installed layout. A Bklit example imports
+ * "@/components/charts", which is its barrel's target (components/charts/index.ts) but
+ * nothing like its path (registry/examples/area-chart-index.ts). Laid out by path, the
+ * import missed, fell through to the generic shim, and the chart was assembled from
+ * empty divs: mounted, painted nothing, "Fallback demo".
+ */
+const installedPath = (file: RegistryFile) => normalize(file.target || file.path);
 
 interface PublishedItem {
   files?: RegistryFile[];
   registryDependencies?: string[];
+  /** CSS variables the item asks the consuming project to define. */
+  cssVars?: { theme?: Record<string, string>; light?: Record<string, string>; dark?: Record<string, string> };
 }
 
 /** The published item document, which carries the component's own source files. */
@@ -250,6 +266,7 @@ function forget(source: SourceId, name: string): void {
 async function fetchItem(source: SourceId, name: string) {
   const seen = new Set<string>();
   const files = new Map<string, RegistryFile>();
+  const cssVars: Record<string, string> = {};
   const queue = [name];
   while (queue.length && seen.size < 80) {
     const next = queue.shift()!;
@@ -264,13 +281,15 @@ async function fetchItem(source: SourceId, name: string) {
       // are supplied by the preview shim below.
       continue;
     }
-    for (const file of item.files ?? []) files.set(normalize(file.path), file);
+    for (const file of item.files ?? []) files.set(installedPath(file), file);
+    // The preview surface is dark, so an item's dark values win over its light ones.
+    Object.assign(cssVars, item.cssVars?.theme, item.cssVars?.dark);
     for (const dependency of item.registryDependencies ?? []) {
       const dependencyName = dependency.split("/").pop();
       if (dependencyName && !seen.has(dependencyName)) queue.push(dependencyName);
     }
   }
-  return { files: [...files.values()] } satisfies PublishedItem;
+  return { files: [...files.values()], cssVars: { theme: cssVars } } satisfies PublishedItem;
 }
 
 async function fetchPublishedItem(source: SourceId, name: string): Promise<PublishedItem> {
@@ -341,6 +360,8 @@ function chooseEntry(files: RegistryFile[], name: string): RegistryFile | undefi
   );
   const stem = name.toLowerCase().replace(/[^a-z0-9]/g, "");
   return (
+    // An example item's page is the demonstration, whatever its file is called.
+    candidates.find((file) => file.type === "registry:page") ??
     candidates.find((file) => baseName(file.path).replace(/[^a-z0-9]/g, "") === stem) ??
     candidates.find((file) => baseName(file.path).replace(/[^a-z0-9]/g, "").includes(stem)) ??
     candidates[0]
@@ -395,19 +416,42 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * The item that best demonstrates `name`.
+ *
+ * Bklit's charts are composable roots — `<AreaChart>` draws nothing until it is given
+ * `<Area>`, `<Grid>` and an axis as children — so on their own they mounted, painted
+ * nothing and showed a stand-in. Bklit publishes a `-example` item beside each chart that
+ * composes it the way its documentation does, and that is what a preview should run.
+ */
+async function demonstrationOf(source: SourceId, name: string) {
+  if (source === "bklit" && !name.endsWith("-example")) {
+    try {
+      return { item: await fetchItem(source, `${name}-example`), entryName: `${name}-example` };
+    } catch {
+      // Parts and helpers publish no example; preview the item itself.
+    }
+  }
+  return { item: await fetchItem(source, name), entryName: name };
+}
+
 async function compile(source: SourceId, name: string): Promise<string> {
-  const item = await fetchItem(source, name);
+  const { item, entryName } = await demonstrationOf(source, name);
   const files = (item.files ?? []).filter((file) => typeof file.content === "string");
   if (!files.length) return generatedDocument(name, "This registry entry publishes no source files");
 
-  const entry = chooseEntry(files, name);
+  const entry = chooseEntry(files, entryName);
   if (!entry) return generatedDocument(name, "This registry entry is a helper rather than a React component");
 
   const bundle = await esbuild.build({
-    stdin: { contents: harness(entry.path, propRecipe(source, name)), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
+    stdin: { contents: harness(installedPath(entry), propRecipe(source, name)), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
     bundle: true,
     write: false,
     outdir: "out",
+    // Next inlines process.env at build time, so registry code reads it freely at module
+    // scope (kokonut's v0-button does) and threw "process is not defined" here before
+    // anything mounted. An empty environment is the honest answer in a sandbox.
+    banner: { js: 'var process = { env: { NODE_ENV: "development" }, browser: true };' },
     format: "esm",
     target: "es2020",
     jsx: "automatic",
@@ -419,7 +463,12 @@ async function compile(source: SourceId, name: string): Promise<string> {
   if (!code) throw new Error("Nothing was produced by the bundler");
   const bundledCss = bundle.outputFiles?.find((file) => file.path.endsWith(".css"))?.text ?? "";
   const utilityCss = await tailwindFor(files);
-  return documentFor(name, code, `${utilityCss}\n${bundledCss}`);
+  const itemVars = Object.entries(item.cssVars?.theme ?? {})
+    .filter(([key, value]) => /^[\w-]+$/.test(key) && !/[;{}<]/.test(value))
+    .map(([key, value]) => `${key.startsWith("--") ? key : `--${key}`}:${value}`).join(";");
+  // Theme defaults first, then the item's own variables, then its utilities and styles,
+  // so anything the component defines for itself still wins.
+  return documentFor(name, code, `${THEME_CSS}\n${itemVars ? `:root{${itemVars}}` : ""}\n${utilityCss}\n${bundledCss}`);
 }
 
 /**
@@ -456,7 +505,10 @@ function withStatus(html: string): string {
     const style = getComputedStyle(node);
     if (style.visibility === "hidden" || style.display === "none") return false;
     if (Number.parseFloat(style.opacity) < 0.02) return false;
-    if (/^(IMG|CANVAS|SVG|VIDEO|PICTURE)$/.test(node.tagName)) return true;
+    // Upper-cased: an SVG element keeps its lowercase tagName in an HTML document, so
+    // "svg" never matched and a chart or illustration drawn purely in SVG shapes read as
+    // empty — the stand-in was laid over a component that had rendered perfectly.
+    if (/^(IMG|CANVAS|SVG|VIDEO|PICTURE)$/.test(node.tagName.toUpperCase())) return true;
     // Parsed rather than pattern-matched. This lives inside a template literal, so a
     // regex written here loses its backslashes on the way into the document — which is
     // how the transparency test silently inverted and made every empty box count as ink.
@@ -556,9 +608,14 @@ function withStatus(html: string): string {
   addEventListener("load", report);
 })();
 </script>`;
-  // Appended rather than substituted into </body>: a document without that exact
-  // closing tag would silently lose its reporter.
-  return html.includes("</body>") ? html.replace("</body>", `${script}</body>`) : html + script;
+  // Before the *last* </body>, by slicing. replace() took the first, and a bundle can
+  // contain that text: PillNav's does, so the reporter landed inside the component's own
+  // module script, which then failed to parse — nothing mounted and nothing reported,
+  // and the card sat on "Rendering…" until it timed out. Slicing also keeps a "$&" in
+  // the script from being read as a replacement pattern. With no </body> at all, it is
+  // appended, so a document is never left without its reporter.
+  const end = html.lastIndexOf("</body>");
+  return end === -1 ? html + script : html.slice(0, end) + script + html.slice(end);
 }
 
 /**
@@ -570,15 +627,24 @@ function withStatus(html: string): string {
  * between a preview and an invariant violation.
  */
 function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
-  const byPath = new Map(files.map((file) => [normalize(file.path), file.content!]));
+  const byPath = new Map(files.map((file) => [installedPath(file), file.content!]));
+  // The published path still answers, for the imports a publisher wrote against its own
+  // repository instead — but as an alias, so one file is never bundled twice.
+  const aliases = new Map<string, string>();
+  for (const file of files) {
+    const published = normalize(file.path);
+    if (published !== installedPath(file) && !byPath.has(published)) aliases.set(published, installedPath(file));
+  }
+  const known = new Map([...byPath, ...[...aliases].map(([alias, real]) => [alias, byPath.get(real)!] as const)]);
+  const canonical = (key: string | null) => key && (aliases.get(key) ?? key);
   const shimImports = new Map<string, { names: Set<string>; hasDefault: boolean }>();
 
   const localTarget = (request: string, importer: string): string | null => {
     if (request.startsWith("@/") || request.startsWith("~/")) {
-      return resolvePublished(request.slice(2), byPath);
+      return canonical(resolvePublished(request.slice(2), known));
     }
     if (request.startsWith(".") || request.startsWith("/")) {
-      return resolveRelative(importer, request, byPath);
+      return canonical(resolveRelative(importer, request, known));
     }
     return null;
   };
@@ -610,23 +676,36 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
         }
         if (args.path === "lucide-react" || args.path === "@central-icons-react/all") return shim(args.path, args.importer, "icon-shim");
         if (args.path.startsWith("next/font")) return shim(args.path, args.importer, "font-shim");
+        if (args.path in NEXT_SHIMS) return { path: args.path, namespace: "next-shim" };
         const installed = installedPackagePath(args.path);
         if (installed) return { path: installed };
         return { path: packageUrl(args.path), namespace: "remote" };
       };
 
+      // Every bare import, wherever it comes from, goes through here. The shims and the
+      // esm.sh modules used to send theirs straight to esm.sh, so a package that imports
+      // React (visx, use-gesture, Radix…) got esm.sh's copy while the component and the
+      // renderer used the local one. Two Reacts in one document: the package's first hook
+      // read a null dispatcher and threw "Cannot read properties of null (reading
+      // 'useState')", which took out every Bklit chart. The same split would hand a
+      // package its own gsap or motion, whose plugins and contexts then never meet.
+      const bare = (specifier: string) => {
+        const installed = installedPackagePath(specifier);
+        return installed ? { path: installed } : { path: packageUrl(specifier), namespace: "remote" };
+      };
+
       build.onResolve({ filter: /.*/, namespace: "file" }, resolveRegistryImport);
       build.onResolve({ filter: /.*/, namespace: "virtual" }, resolveRegistryImport);
-      build.onResolve({ filter: /.*/, namespace: "shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
-      build.onResolve({ filter: /.*/, namespace: "hook-shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
-      build.onResolve({ filter: /.*/, namespace: "icon-shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
-      build.onResolve({ filter: /.*/, namespace: "font-shim" }, (args) => ({ path: packageUrl(args.path), namespace: "remote" }));
+      build.onResolve({ filter: /.*/, namespace: "shim" }, (args) => bare(args.path));
+      build.onResolve({ filter: /.*/, namespace: "hook-shim" }, (args) => bare(args.path));
+      build.onResolve({ filter: /.*/, namespace: "icon-shim" }, (args) => bare(args.path));
+      build.onResolve({ filter: /.*/, namespace: "font-shim" }, (args) => bare(args.path));
       build.onResolve({ filter: /.*/, namespace: "remote" }, (args) => {
         if (args.path.startsWith("http://") || args.path.startsWith("https://")) return { path: args.path, namespace: "remote" };
         if (args.path.startsWith(".") || args.path.startsWith("/")) {
           return { path: new URL(args.path, args.importer).href, namespace: "remote" };
         }
-        return { path: packageUrl(args.path), namespace: "remote" };
+        return bare(args.path);
       });
 
       build.onLoad({ filter: /.*/, namespace: "virtual" }, (args) => {
@@ -660,6 +739,11 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
         loader: "js",
         resolveDir: "/",
       }));
+
+      build.onLoad({ filter: /.*/, namespace: "next-shim" }, (args) => ({
+        contents: NEXT_SHIMS[args.path], loader: "js", resolveDir: "/",
+      }));
+      build.onResolve({ filter: /.*/, namespace: "next-shim" }, (args) => bare(args.path));
 
       build.onLoad({ filter: /.*/, namespace: "empty-style" }, () => ({ contents: "", loader: "css" }));
 
@@ -711,7 +795,7 @@ function installedPackagePath(specifier: string): string | null {
   return null;
 }
 
-const normalize = (path: string) => path.replace(/^\.?\//, "");
+const normalize = (path: string) => path.replace(/^(?:\.|~)?\//, "");
 
 function resolveRelative(importer: string, request: string, byPath: Map<string, string>): string | null {
   const from = normalize(importer).split("/").slice(0, -1);
@@ -791,26 +875,63 @@ function iconShimModule(requested = { names: new Set<string>(), hasDefault: fals
   return `import * as React from "react"; ${exports} ${requested.hasDefault ? `export default ${icon};` : ""}`;
 }
 
+/**
+ * Next.js modules a registry component may import, as plain-DOM stand-ins.
+ *
+ * Fetched for real, `next/link` and `next/image` brought the Next client runtime from
+ * esm.sh, which reads process.env.__NEXT_* at module scope and threw "process is not
+ * defined" before the component mounted. Outside a Next app they are only an anchor and
+ * an image, so that is what they become; props only Next understands are dropped rather
+ * than landing on the DOM as unknown attributes.
+ */
+const NEXT_SHIMS: Record<string, string> = {
+  "next/link": `import * as React from "react";
+const Link = React.forwardRef(({ href, prefetch, replace, scroll, shallow, passHref, legacyBehavior, locale, ...rest }, ref) =>
+  React.createElement("a", { ref, href: typeof href === "string" ? href : (href && href.pathname) || "#", ...rest }));
+export default Link;`,
+  "next/image": `import * as React from "react";
+const Image = React.forwardRef(({ src, fill, priority, quality, placeholder, blurDataURL, loader, unoptimized, overrideSrc, style, ...rest }, ref) =>
+  React.createElement("img", { ref, src: typeof src === "string" ? src : src && src.src, decoding: "async",
+    style: fill ? { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", ...style } : style, ...rest }));
+export default Image;`,
+  "next/navigation": `const router = { push() {}, replace() {}, back() {}, forward() {}, refresh() {}, prefetch() {} };
+export const useRouter = () => router;
+export const usePathname = () => "/";
+export const useSearchParams = () => new URLSearchParams();
+export const useParams = () => ({});
+export const useSelectedLayoutSegment = () => null;
+export const useSelectedLayoutSegments = () => [];
+export const redirect = () => {};
+export const notFound = () => {};`,
+};
+
 function fontShimModule(requested = { names: new Set<string>(), hasDefault: false }): string {
   const font = `()=>({className:"",variable:"",style:{fontFamily:"ui-sans-serif, system-ui"}})`;
   const exports = [...requested.names].map((name) => `export const ${name}=${font};`).join("\n");
   return `${exports} ${requested.hasDefault ? `export default ${font};` : ""}`;
 }
 
+/**
+ * DP_PACKAGE_BASE stands in for esm.sh, for the same reason DP_REGISTRY_BASE stands in
+ * for the registries: almost every item reaches a package through it, so without a local
+ * substitute nothing could be compiled where esm.sh is unreachable.
+ */
+const PACKAGE_BASE = (process.env.DP_PACKAGE_BASE ?? "https://esm.sh").replace(/\/$/, "");
+
 function packageUrl(specifier: string): string {
   const options = "?bundle&target=es2020";
-  if (specifier === "react") return `https://esm.sh/react@19.2.0${options}`;
-  if (specifier.startsWith("react/")) return `https://esm.sh/react@19.2.0/${specifier.slice(6)}${options}`;
-  if (specifier === "react-dom") return `https://esm.sh/react-dom@19.2.0${options}&external=react`;
-  if (specifier.startsWith("react-dom/")) return `https://esm.sh/react-dom@19.2.0/${specifier.slice(10)}${options}&external=react`;
-  return `https://esm.sh/${specifier}${options}&external=react,react-dom`;
+  if (specifier === "react") return `${PACKAGE_BASE}/react@19.2.0${options}`;
+  if (specifier.startsWith("react/")) return `${PACKAGE_BASE}/react@19.2.0/${specifier.slice(6)}${options}`;
+  if (specifier === "react-dom") return `${PACKAGE_BASE}/react-dom@19.2.0${options}&external=react`;
+  if (specifier.startsWith("react-dom/")) return `${PACKAGE_BASE}/react-dom@19.2.0/${specifier.slice(10)}${options}&external=react`;
+  return `${PACKAGE_BASE}/${specifier}${options}&external=react,react-dom`;
 }
 
 /** Compiles just the utility candidates present in this item, once, on the server. */
 async function tailwindFor(files: RegistryFile[]): Promise<string> {
   if (!tailwindCompiler) {
     tailwindCompiler = readFile(path.join(process.cwd(), "node_modules/tailwindcss/theme.css"), "utf-8")
-      .then((theme) => compileTailwind(`${theme}\n@tailwind utilities;`));
+      .then((theme) => compileTailwind(`${theme}\n${TAILWIND_PROJECT}\n@tailwind utilities;`));
   }
   if (!preflightCss) {
     preflightCss = readFile(path.join(process.cwd(), "node_modules/tailwindcss/preflight.css"), "utf-8");
@@ -885,12 +1006,36 @@ root.render(
 );
 `;
 
-/** Base styling so a component with no CSS of its own is still legible and contained. */
+/**
+ * What a shadcn project defines and every registry here assumes: the theme variables,
+ * the Tailwind colours mapped onto them, and a class-driven dark variant.
+ *
+ * Without them a component styled `text-muted-foreground` or `bg-background` got no CSS
+ * at all, and Bklit's charts drew in var(--chart-1) — undefined, so near-black on the
+ * near-black surface. Dark is a class here, not the viewer's OS setting: the surface is
+ * always dark, and following the OS gave light-mode viewers white cards and dark-grey
+ * text (`text-gray-800 dark:text-gray-200`) on it.
+ */
+const THEME_CSS = `:root{--background:#111412;--foreground:#eef2e6;--card:#181d16;--card-foreground:#eef2e6;--popover:#181d16;--popover-foreground:#eef2e6;--primary:#cbe99a;--primary-foreground:#111412;--secondary:#25311f;--secondary-foreground:#eef2e6;--muted:#222a1e;--muted-foreground:#9aa98c;--accent:#25311f;--accent-foreground:#eef2e6;--destructive:#f87171;--destructive-foreground:#111412;--border:#2e3a28;--input:#2e3a28;--ring:#cbe99a;--radius:.625rem;--chart-1:#cbe99a;--chart-2:#a78bfa;--chart-3:#7dd3fc;--chart-4:#f5a97f;--chart-5:#f0abfc;--chart-line-primary:var(--chart-1);--chart-line-secondary:var(--chart-2);--chart-grid:#2e3a28;--chart-background:transparent;--chart-foreground:#eef2e6;--chart-foreground-muted:#9aa98c;--chart-label:#9aa98c}`;
+
+const SHADCN_COLOURS = ["background", "foreground", "card", "card-foreground", "popover", "popover-foreground", "primary", "primary-foreground", "secondary", "secondary-foreground", "muted", "muted-foreground", "accent", "accent-foreground", "destructive", "destructive-foreground", "border", "input", "ring", "chart-1", "chart-2", "chart-3", "chart-4", "chart-5"];
+
+const TAILWIND_PROJECT = `@custom-variant dark (&:where(.dark, .dark *));
+@theme inline { ${SHADCN_COLOURS.map((name) => `--color-${name}: var(--${name});`).join(" ")} --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px); }`;
+
+/**
+ * Base styling so a component with no CSS of its own is still legible and contained.
+ *
+ * #root takes the frame's whole content box (the body's 18px padding aside). It used to
+ * shrink to fit its content, which is circular for anything sized to its container: a
+ * w-full chart measured 0 wide and drew nothing, an h-full WebGL background got a 0px
+ * canvas. Content-sized components are still centred within it by place-items.
+ */
 const BASE_CSS = `
 :root{color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:#111412;color:#eef2e6;font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;overflow:hidden}
-#root{max-width:100%;max-height:100vh;overflow:hidden;display:grid;place-items:center}
+#root{width:100%;height:calc(100vh - 36px);overflow:hidden;display:grid;place-items:center}
 img,svg,canvas,video{max-width:100%;height:auto}
 button{font:inherit;cursor:pointer}
 .dp-auto-visual{position:relative;width:min(178px,70vw);height:min(178px,70vw);display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#29401f 0,#151d12 48%,transparent 70%)}
@@ -908,7 +1053,7 @@ const CSP =
   "img-src data: https:; font-src data: https:; connect-src 'none'";
 
 function documentFor(name: string, code: string, componentCss: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="en" class="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <title>${escapeHtml(name)}</title><style>${componentCss.replace(/<\/style/gi, "<\\/style")}\n${BASE_CSS}</style></head>
@@ -917,7 +1062,7 @@ function documentFor(name: string, code: string, componentCss: string): string {
 
 /** Shown when the component could not be compiled at all. */
 function generatedDocument(name: string, reason: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="en" class="dark"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <title>${escapeHtml(name)}</title><style>${BASE_CSS}</style></head>
 <body data-generated="true" data-reason="${escapeHtml(reason)}"><div class="dp-auto-visual" aria-label="Visual demonstration for ${escapeHtml(name)}"><div class="dp-auto-orbit"><i></i><i></i><i></i></div><div class="dp-auto-bars"><i></i><i></i><i></i><i></i><i></i></div><small>${escapeHtml(name)}</small></div></body></html>`;

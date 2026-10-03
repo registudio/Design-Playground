@@ -74,6 +74,18 @@ arranged and which parts are easy to break. Keep it current when a part moves.
   prop recipes and the bundled package versions: changing any of them retires every
   document the old compiler built. Do not replace it with a hand-bumped version; that
   is what let pre-fix documents keep showing "Fallback demo".
+  Things that each blanked whole families of previews when they were wrong:
+  - Files are laid out by their registry `target` (where `shadcn add` installs them),
+    with the published `path` as an alias; imports are written against the target.
+  - There is one React: every bare import, including those inside esm.sh modules and
+    the shims, goes through `installedPackagePath` before esm.sh.
+  - `#root` takes the frame's full width and height, so `w-full`/`h-full` components
+    have something to measure; it used to shrink to its content and give them 0px.
+  - The document defines the shadcn theme variables and Tailwind colours, and `dark:` is
+    a class on `<html>` (always dark), not the viewer's OS setting.
+  - `next/link`, `next/image` and `next/navigation` are shimmed; `process` exists.
+  - Bklit chart roots are previewed through the `-example` item Bklit publishes.
+  `DP_PACKAGE_BASE` points esm.sh lookups at a local stand-in, like `DP_REGISTRY_BASE`.
   `DP_REGISTRY_BASE` points every source at one origin, for the stand-in registry.
 - `src/components/RegistryPreview.tsx` — a registry card's live preview. `previewSrc()`
   is the one URL builder for card and full screen alike.

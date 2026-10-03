@@ -23,15 +23,10 @@ const browser=await chromium.launch({...(process.env.PLAYWRIGHT_EXECUTABLE_PATH 
 const page=await browser.newPage({viewport:{width:1500,height:950}});
 const errs=[]; page.on("pageerror",e=>errs.push(e.message));
 await page.goto(BASE,{waitUntil:"networkidle"});
-await page.getByRole("button",{name:"+ New project"}).click();
-const n=page.getByPlaceholder("Project name"); await n.click(); await n.pressSequentially("Render QA");
-await page.waitForFunction(()=>!document.querySelector("button[type=submit]")?.hasAttribute("disabled"),null,{timeout:15000});
-await page.getByRole("button",{name:"New project",exact:true}).click();
-await page.waitForTimeout(1200);
-await page.getByRole("button",{name:/Elements/}).first().click();
-await page.waitForTimeout(2000);
-// The authored originals lead the grid; narrow to the fixture registry source.
-await page.getByRole("button",{name:/^Bklit/}).click();
+// The library opens straight onto the fixture registry's source through its link; the
+// buttons this used to click through went away when the filters became one dropdown.
+await page.goto(new URL("/?source=bklit", BASE).href, { waitUntil: "networkidle" });
+await page.waitForSelector(".element-card", { timeout: 60000 });
 await page.waitForTimeout(800);
 /**
  * Each card is read while it is on screen.
