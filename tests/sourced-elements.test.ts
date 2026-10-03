@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
 import { CULT_ELEMENTS } from "@/elements/cult-elements";
 import { SHADER_ELEMENTS } from "@/elements/shader-elements";
+import { TWENTYFIRST_ELEMENTS } from "@/elements/twentyfirst-elements";
 import { ENGINE_SOURCES, PORT_SOURCES } from "@/elements/extended-catalogue";
 
 /**
@@ -89,6 +90,36 @@ describe("cult-ui ports", () => {
         const text = content.replace(/<[^>]*>/g, "").replace(/[\s\u2190-\u21ff\u25a0-\u27bf\u2800-\u28ff]/g, "");
         const named = /aria-label=/.test(attributes) || text.length > 0;
         expect(named, `${element.id}: <button${attributes}>${content}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe("21st.dev ports", () => {
+  it("credits 21st.dev rather than calling them ours", () => {
+    expect(TWENTYFIRST_ELEMENTS.length).toBeGreaterThan(0);
+    for (const element of TWENTYFIRST_ELEMENTS) {
+      expect(element.id, element.id).toMatch(/^21st-/);
+      expect(element.tag, element.id).toBe("21st.dev");
+      expect(elementOrigin(element.id).name, element.id).toBe("21st.dev · Playground port");
+      expect(elementOrigin(element.id).url, element.id).toBe("https://21st.dev");
+    }
+  });
+
+  it("runs their scripts under reduced motion, and has each damp its own movement", () => {
+    for (const element of TWENTYFIRST_ELEMENTS) {
+      expect(elementDocument(element.id), element.id).toContain(`<script>${element.js}</script>`);
+      if (/setInterval|setTimeout|requestAnimationFrame|animate\(/.test(element.js)) {
+        expect(element.js, element.id).toContain("prefers-reduced-motion");
+      }
+    }
+  });
+
+  it("gives every button an accessible name", () => {
+    for (const element of TWENTYFIRST_ELEMENTS) {
+      for (const [, attributes, content] of element.html.matchAll(/<button([^>]*)>([\s\S]*?)<\/button>/g)) {
+        const text = content.replace(/<[^>]*>/g, "").trim();
+        expect(/aria-label=/.test(attributes) || text.length > 0, `${element.id}: <button${attributes}>`).toBe(true);
       }
     }
   });
