@@ -70,6 +70,21 @@ const orbitalNode = (item: (typeof TIMELINE)[number]) => {
 </div>`;
 };
 
+/**
+ * The screen inside the container-scroll frame. Upstream's demo shows a photo; a drawn
+ * dashboard reads as the same thing, needs no network, and so still paints in an
+ * exported ZIP opened offline. Sized in container units so it scales with the frame.
+ */
+const DASHBOARD = `<div class="dash" aria-hidden="true">
+  <aside class="dash-side"><b class="dash-logo"></b>${["Overview", "Projects", "Clients", "Invoices", "Reports", "Settings"].map((label, index) => `<span class="dash-nav${index === 0 ? " on" : ""}"><i></i>${label}</span>`).join("")}</aside>
+  <div class="dash-main">
+    <div class="dash-head"><div><small>Studio dashboard</small><strong>Overview</strong></div><span class="dash-pill">Last 30 days</span></div>
+    <div class="dash-stats">${[["Revenue", "£48.2k", "+12.4%"], ["Active clients", "2,841", "+3.1%"], ["Conversion", "3.6%", "+0.4%"]].map(([label, value, change]) => `<div class="dash-stat"><small>${label}</small><strong>${value}</strong><em>${change}</em></div>`).join("")}</div>
+    <div class="dash-chart"><small>Weekly revenue</small><svg viewBox="0 0 300 90" preserveAspectRatio="none"><defs><linearGradient id="dash-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".35"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><path d="M0 70 L25 64 L50 68 L75 52 L100 56 L125 40 L150 46 L175 30 L200 36 L225 22 L250 26 L275 12 L300 16 L300 90 L0 90Z" fill="url(#dash-fill)"/><path d="M0 70 L25 64 L50 68 L75 52 L100 56 L125 40 L150 46 L175 30 L200 36 L225 22 L250 26 L275 12 L300 16" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
+    <div class="dash-rows">${[["Northfield rebrand", "In review", "72%"], ["Harbour & Co. site", "Building", "45%"], ["Atlas annual report", "Planning", "18%"]].map(([name, state, done]) => `<div class="dash-row"><span>${name}</span><em>${state}</em><i><b style="width:${done}"></b></i></div>`).join("")}</div>
+  </div>
+</div>`;
+
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
     id: "21st-radial-orbital-timeline",
@@ -180,5 +195,65 @@ root.addEventListener('click',event=>{if(event.target===root||event.target===orb
 addEventListener('keydown',event=>{if(event.key==='Escape'&&active!==null){const node=nodes.find(item=>item.id===active);close();node.dot.focus();}});
 addEventListener('resize',place);
 place();requestAnimationFrame(frame);`,
+  },
+  {
+    // After Aceternity UI's ContainerScroll, as published on 21st.dev: the device frame, its
+    // 20° tilt, the 0.7→0.9 / 1.05→1 scales either side of 768px and the 100px title lift
+    // are upstream's. Upstream scrolls a 60–80rem section past the page; a card frame is a
+    // few hundred pixels tall, so here the stage is pinned inside its own viewport and the
+    // same progress is spent while it holds still.
+    id: "21st-container-scroll",
+    title: "Container scroll tilt",
+    category: "Scroll effects",
+    description:
+      "A device frame tipped back 20° lowers itself flat as you scroll, while the headline lifts away above it. After Aceternity UI's ContainerScroll on 21st.dev.",
+    tag: "21st.dev",
+    html: `<div class="cscroll"><div class="cscroll-viewport"><section class="cscroll-track"><div class="cscroll-stage"><div class="cscroll-title"><small>SCROLL INSIDE ↓</small><h1>Unleash the power of<br><span>Scroll Animations</span></h1></div><div class="cscroll-card"><div class="cscroll-screen">${DASHBOARD}</div></div></div></section><div class="cscroll-end">END OF SECTION</div></div></div>`,
+    css: `body{display:block!important}.cscroll{height:100vh}.cscroll-viewport{position:relative;height:100vh;overflow:auto;overscroll-behavior:contain}.cscroll-track{height:220vh}
+.cscroll-stage{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:12px;perspective:1000px}
+.cscroll-title{max-width:64rem;text-align:center;will-change:transform}.cscroll-title small{display:block;margin-bottom:12px}.cscroll-title h1{font-size:clamp(14px,3.6vw,30px);letter-spacing:-.03em;font-weight:600}
+.cscroll-title span{display:inline-block;margin-top:4px;font-size:clamp(26px,9vw,96px);font-weight:700;letter-spacing:-.05em;line-height:1;color:var(--accent)}
+.cscroll-card{width:min(100%,64rem);height:min(58vh,40rem);margin-top:-6px;padding:clamp(6px,1.4vw,24px);border:4px solid #6c6c6c;border-radius:clamp(16px,3vw,30px);background:#222;
+  box-shadow:0 0 #0000004d,0 9px 20px #0000004a,0 37px 37px #00000042,0 84px 50px #00000026,0 149px 60px #0000000a,0 233px 65px #00000003;will-change:transform}
+.cscroll-screen{height:100%;overflow:hidden;border-radius:clamp(10px,1.6vw,16px);background:#18181b;container-type:size}
+.cscroll-end{padding:30px 0 40px;text-align:center;font-size:8px;letter-spacing:.16em;color:#6f7d68}
+.dash{display:flex;height:100%;font-size:clamp(5px,1.55cqw,13px);color:#e4e4e7;text-align:left}
+.dash small{display:block;font-size:.8em;letter-spacing:0;color:#a1a1aa}
+.dash-side{flex:0 0 18%;display:flex;flex-direction:column;gap:.4em;padding:1.4em 1em;background:#111113;border-right:1px solid #27272a}
+.dash-logo{width:1.8em;height:1.8em;border-radius:.5em;margin-bottom:1em;background:var(--accent)}
+.dash-nav{display:flex;align-items:center;gap:.6em;padding:.45em .6em;border-radius:.4em;color:#a1a1aa;white-space:nowrap;overflow:hidden}
+.dash-nav i{flex:none;width:.8em;height:.8em;border-radius:.2em;background:#3f3f46}
+.dash-nav.on{background:#27272a;color:#fafafa}.dash-nav.on i{background:var(--accent)}
+.dash-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1em;padding:1.4em 1.6em}
+.dash-head{display:flex;justify-content:space-between;align-items:center}.dash-head strong{font-size:1.6em;letter-spacing:-.02em}
+.dash-pill{padding:.35em .8em;border:1px solid #3f3f46;border-radius:999px;color:#a1a1aa;font-size:.85em}
+.dash-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.8em}
+.dash-stat{padding:.8em 1em;border:1px solid #27272a;border-radius:.6em;background:#1f1f23}
+.dash-stat strong{display:block;margin:.2em 0;font-size:1.5em;letter-spacing:-.02em}.dash-stat em{font-style:normal;font-size:.8em;color:#86efac}
+.dash-chart{flex:1;min-height:0;display:flex;flex-direction:column;padding:.8em 1em;border:1px solid #27272a;border-radius:.6em;background:#1f1f23;color:var(--accent)}
+.dash-chart svg{flex:1;width:100%;min-height:0;margin-top:.4em}
+.dash-rows{display:grid;gap:.45em}
+.dash-row{display:grid;grid-template-columns:2fr 1fr 1.2fr;align-items:center;gap:1em;padding:.45em .2em;border-top:1px solid #27272a}
+.dash-row em{font-style:normal;color:#a1a1aa}.dash-row i{height:.4em;border-radius:999px;background:#27272a;overflow:hidden}.dash-row b{display:block;height:100%;background:var(--accent)}`,
+    js: `if(!matchMedia('(prefers-reduced-motion:reduce)').matches){
+const viewport=document.querySelector('.cscroll-viewport'),track=document.querySelector('.cscroll-track');
+const title=document.querySelector('.cscroll-title'),card=document.querySelector('.cscroll-card');
+const mix=(from,to,progress)=>from+(to-from)*progress;
+let frame=0;
+function paint(){
+  frame=0;
+  // Progress runs from the track's top meeting the viewport's top to its bottom meeting the viewport's bottom.
+  const span=Math.max(1,track.offsetHeight-viewport.clientHeight);
+  const progress=Math.min(1,Math.max(0,(viewport.scrollTop-track.offsetTop)/span));
+  const[from,to]=innerWidth<=768?[0.7,0.9]:[1.05,1];
+  const lift=Math.min(100,viewport.clientHeight*0.12);
+  title.style.transform='translateY('+(-lift*progress)+'px)';
+  card.style.transform='rotateX('+mix(20,0,progress)+'deg) scale('+mix(from,to,progress)+')';
+}
+const queue=()=>{if(!frame)frame=requestAnimationFrame(paint)};
+viewport.addEventListener('scroll',queue,{passive:true});
+addEventListener('resize',queue);
+paint();
+}`,
   },
 ];
