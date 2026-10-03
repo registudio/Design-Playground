@@ -19,7 +19,7 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets — or read them off the client's current website — and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image and the brand's own uploaded typeface. Decide whether the site has a dark theme. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 103 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+5. Browse 104 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes, light, dark or side by side, with a contrast lens that outlines failing text in place. Return to editing as often as needed.
 7. Download the ZIP handoff or a restorable project backup; a client rationale page and a standalone sample page are under More options.
 

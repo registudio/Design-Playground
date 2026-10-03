@@ -106,6 +106,23 @@ export const ENGINE_ELEMENTS = [
     js: "",
   },
 
+  // root: .cscroll
+  // After Aceternity UI's ContainerScroll (ui.aceternity.com/components/container-scroll-animation):
+  // the device frame, its 20° tilt, the 0.7→0.9 / 1.05→1 scales either side of 768px and the
+  // 100px title lift are upstream's. Upstream scrolls a 60–80rem section past the page; a card
+  // frame is a few hundred pixels tall, so here the stage is pinned inside its own viewport
+  // and the same progress is spent while it holds still.
+  {
+    id: "motion-container-scroll",
+    title: "Container scroll tilt",
+    category: "Scroll effects",
+    description: "A device frame tipped back 20° lowers itself flat as you scroll, while the headline lifts away above it. After Aceternity UI's ContainerScroll, driven by Motion's scroll().",
+    tag: "Motion.dev",
+    html: `<div class="cscroll"><div class="cscroll-viewport"><section class="cscroll-track"><div class="cscroll-stage"><small>SCROLL INSIDE ↓</small><div class="cscroll-title"><h1>Unleash the power of<br><span>Scroll Animations</span></h1></div><div class="cscroll-card"><div class="cscroll-screen"><img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1400&q=75" alt="An analytics dashboard with charts and figures" width="1400" height="720" draggable="false" onerror="this.remove()"></div></div></div></section><div class="cscroll-end">END OF SECTION</div></div></div>`,
+    css: `body{display:block!important}.cscroll{height:100vh}.cscroll-viewport{height:100vh;overflow:auto;overscroll-behavior:contain}.cscroll-track{height:220vh}.cscroll-stage{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:12px;perspective:1000px}.cscroll-title{max-width:64rem;text-align:center;will-change:transform}.cscroll-title h1{font-size:clamp(14px,3.6vw,30px);letter-spacing:-.03em;font-weight:600}.cscroll-title span{display:inline-block;margin-top:4px;font-size:clamp(26px,9vw,96px);font-weight:700;letter-spacing:-.05em;line-height:1;color:var(--accent)}.cscroll-card{width:min(100%,64rem);height:min(58vh,40rem);margin-top:-6px;padding:clamp(6px,1.4vw,24px);border:4px solid #6c6c6c;border-radius:clamp(16px,3vw,30px);background:#222;box-shadow:0 0 #0000004d,0 9px 20px #0000004a,0 37px 37px #00000042,0 84px 50px #00000026,0 149px 60px #0000000a,0 233px 65px #00000003;will-change:transform}.cscroll-screen{height:100%;overflow:hidden;border-radius:clamp(10px,1.6vw,16px);background:linear-gradient(160deg,#27301f,#141912)}.cscroll-screen img{display:block;width:100%;height:100%;object-fit:cover;object-position:left top;user-select:none}.cscroll-end{padding:30px 0 40px;text-align:center;font-size:8px;letter-spacing:.16em;color:#6f7d68}`,
+    js: "",
+  },
+
   // --- Lenis ----------------------------------------------------------------------
   // root: .lvel
   {

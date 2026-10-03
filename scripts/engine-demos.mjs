@@ -133,6 +133,22 @@ const play=()=>{
 };
 root.querySelector('.replay').onclick=play;play();`,
       },
+      {
+        id: 'motion-container-scroll',
+        root: '.cscroll',
+        source: `if(${REDUCED})return;
+const viewport=root.querySelector('.cscroll-viewport'),title=root.querySelector('.cscroll-title'),card=root.querySelector('.cscroll-card');
+const mix=(from,to,progress)=>from+(to-from)*progress;
+let progress=0;
+const paint=()=>{
+  const[from,to]=innerWidth<=768?[0.7,0.9]:[1.05,1];
+  const lift=Math.min(100,viewport.clientHeight*0.12);
+  title.style.transform='translateY('+(-lift*progress)+'px)';
+  card.style.transform='rotateX('+mix(20,0,progress)+'deg) scale('+mix(from,to,progress)+')';
+};
+scroll(value=>{progress=value;paint();},{container:viewport,target:root.querySelector('.cscroll-track'),offset:['start start','end end']});
+addEventListener('resize',paint);paint();`,
+      },
     ],
   },
 
