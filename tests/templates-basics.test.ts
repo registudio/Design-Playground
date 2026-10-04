@@ -18,7 +18,7 @@ describe("client templates", () => {
 
   it("covers the client types this studio works with", () => {
     const names = PRESETS.map((p) => p.name);
-    expect(names).toEqual(expect.arrayContaining(["Tuition Centre", "Enrichment & Kids", "Pre-launch Waitlist", "Creative Agency", "Performance Agency"]));
+    expect(names).toEqual(expect.arrayContaining(["Tuition Centre", "Tuition Agency", "Debate & Public Speaking", "Exam Intensive", "Language School", "Coding & STEM", "Enrichment & Kids", "Pre-launch Waitlist", "Creative Agency", "Performance Agency"]));
   });
 
   it("gives every client template its own copy and a plain-language 'best for'", () => {
