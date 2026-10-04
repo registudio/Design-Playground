@@ -404,6 +404,12 @@ describe("compiling real registry shapes", () => {
     expect(html).not.toContain("react.development.js");
   }, 30_000);
 
+  it("says in plain words when a part only renders inside its parent", async () => {
+    const { html } = await compileWith("says-body");
+    // The boundary maps context errors ("must be used within a ChartProvider") to this.
+    expect(html).toContain("Part of a larger component: it only renders inside its parent");
+  }, 30_000);
+
   it("keeps the reporter out of a module whose source contains </body>", async () => {
     const { html } = await compileWith("says-body");
     const moduleStart = html.indexOf('<script type="module">');

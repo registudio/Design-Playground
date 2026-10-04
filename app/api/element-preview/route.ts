@@ -1004,7 +1004,12 @@ class Boundary extends React.Component {
     // Recorded where the status reporter can read it. A component that rejects this
     // environment is the most common reason a card shows a stand-in, and swallowing the
     // message left every one of those looking identical to a failed download.
-    document.body.dataset.reason = "The component threw while rendering: " + (error && error.message ? error.message : String(error));
+    const message = error && error.message ? error.message : String(error);
+    // A part that needs its parent (a chart's axis, a menu's item) throws a context
+    // error by design. Said in plain words: on a card the raw message read as a bug.
+    document.body.dataset.reason = /must be (?:used|wrapped|rendered) (?:within|inside|in)|outside (?:of )?(?:a|an|the) .*(?:Provider|context)|within a .*Provider/i.test(message)
+      ? "Part of a larger component: it only renders inside its parent, so it has no preview of its own."
+      : "The component threw while rendering: " + message;
   }
   render() {
     if (this.state.error) {
