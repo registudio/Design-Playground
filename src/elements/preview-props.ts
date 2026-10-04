@@ -141,6 +141,13 @@ const RECIPES: Recipe[] = [
     props: `{ value: 62, defaultValue: 62, min: 0, max: 100, step: 1, label: "Opacity", suffix: "%" }`,
   },
   {
+    // Needs a model, and its default environment downloads an HDR the sandbox cannot
+    // fetch. The path is one the preview route serves from its vendored React Bits files.
+    sources: ["react-bits"],
+    match: /^model viewer\b/,
+    props: `{ url: "/assets/3d/card.glb", environmentPreset: "none", autoRotate: true, autoRotateSpeed: 0.6, showScreenshotButton: false }`,
+  },
+  {
     match: /\bproximity\b/,
     props: `{ label: "Small details. Big possibilities.", containerRef: { current: typeof document === "undefined" ? null : document.body },
       fromFontVariationSettings: "'wght' 400, 'opsz' 9", toFontVariationSettings: "'wght' 1000, 'opsz' 40", radius: 120 }`,

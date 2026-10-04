@@ -61,7 +61,9 @@ describe("element preview route", () => {
     const body = await (await call("source=bklit&name=area-chart")).text();
     expect(body).toContain("default-src 'none'");
     // Everything the module needs is bundled in, so the frame never needs the network.
-    expect(body).toContain("connect-src 'none'");
+    // A model loader may read the data: and blob: URLs it was handed, and nothing else.
+    const connect = body.match(/connect-src ([^;"]+)/)?.[1]?.trim().split(/\s+/) ?? [];
+    expect(connect.sort()).toEqual(["blob:", "data:"]);
   });
 
   it("turns an unavailable upstream item into a visual demo without compiler prose", async () => {
@@ -347,6 +349,14 @@ describe("compiling real registry shapes", () => {
       files: [{ path: "registry/examples/toy-chart.tsx", type: "registry:page", target: "app/page.tsx",
         content: 'import { ToyChart } from "@/components/charts/toy-chart"; export default function Page() { return <ToyChart><circle data-toy-series="yes" r="4"/></ToyChart>; }' }],
     },
+    "Models-TS-TW": {
+      files: [{ path: "Models/Models.tsx",
+        content: 'import card from "./card.glb"; export default function Models() { const lens = "/assets/3d/lens.glb"; return <i data-card={card} data-lens={lens}>3D</i>; }' }],
+    },
+    "Lettering-TS-TW": {
+      files: [{ path: "Lettering/Lettering.tsx",
+        content: 'import { font } from "fixture-text"; export default function Lettering() { return <i data-font={String(font()).slice(0, 20)}>Aa</i>; }' }],
+    },
     "links-out": {
       files: [{ path: "links-out.tsx",
         content: 'import Link from "next/link"; import Image from "next/image"; export default function LinksOut() { return <Link href="/x" prefetch={false}><Image src="/a.png" alt="" width={4} height={4}/>Go</Link>; }' }],
@@ -360,9 +370,13 @@ describe("compiling real registry shapes", () => {
     const server = createServer((request, response) => {
       const url = request.url ?? "";
       requests.push(url);
-      const item = url.match(/^\/(?:kokonutui|bklit)\/([\w-]+)\.json$/)?.[1];
+      const item = url.match(/^\/(?:kokonutui|bklit|reactbits)\/([\w-]+)\.json$/)?.[1];
       if (item && ITEMS[item]) {
         response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(ITEMS[item]));
+      } else if (url.startsWith("/pkg/fixture-text")) {
+        // Shaped like troika's defaults inside drei's bundle.
+        response.writeHead(200, { "Content-Type": "application/javascript" })
+          .end('const CONFIG = { defaultFontURL: null, useWorker: true }; export const font = () => CONFIG.defaultFontURL;');
       } else if (url.startsWith("/pkg/fixture-hooks")) {
         response.writeHead(200, { "Content-Type": "application/javascript" })
           .end('import { useState } from "react"; export function useCount() { return useState(3)[0]; }');
@@ -445,6 +459,22 @@ describe("compiling real registry shapes", () => {
     const { html } = await compileWith("toy-chart", "bklit");
     // In an HTML document an svg element's tagName is lowercase.
     expect(html).toContain("node.tagName.toUpperCase()");
+  }, 30_000);
+
+  it("hands a component the demo models its publisher's site would serve", async () => {
+    // Imported beside the source (Lanyard's card.glb) or fetched by path (FluidGlass's
+    // lens.glb): both arrive as data: URLs, keeping the file name for loaders that
+    // choose by extension.
+    const { html } = await compileWith("Models-TS-TW", "react-bits");
+    expect(html).not.toContain('data-generated="true"');
+    expect(html).toMatch(/"data:model\/gltf-binary;base64,[A-Za-z0-9+/=]+#card\.glb"/);
+    expect(html).toMatch(/"data:model\/gltf-binary;base64,[A-Za-z0-9+/=]+#lens\.glb"/);
+    expect(html).not.toContain('"/assets/3d/lens.glb"');
+  }, 30_000);
+
+  it("gives troika a default font so text never waits on a CDN", async () => {
+    const { html } = await compileWith("Lettering-TS-TW", "react-bits");
+    expect(html).toMatch(/defaultFontURL:\s*"data:font\/ttf;base64,/);
   }, 30_000);
 
   it("stands in for next/link and next/image instead of fetching Next", async () => {

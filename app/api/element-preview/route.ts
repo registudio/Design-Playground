@@ -145,12 +145,12 @@ function fingerprint(): Promise<string> {
     // Function source rather than a list kept by hand: a hand-kept list is exactly what
     // went stale. Each of these decides something about what ends up in the document.
     const code = [
-      fetchItem, demonstrationOf, chooseEntry, compile, virtualFiles, installedPackagePath, installedPath, normalize, resolveRelative, resolvePublished,
+      fetchItem, demonstrationOf, chooseEntry, compile, withAssets, previewAssets, withDefaultTextFont, virtualFiles, installedPackagePath, installedPath, normalize, resolveRelative, resolvePublished,
       readImports, shimModule, hookShimModule, iconShimModule, fontShimModule, packageUrl, tailwindFor,
       harness, documentFor, generatedDocument,
     ].map(String);
     return createHash("sha256")
-      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
+      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), JSON.stringify(PREVIEW_ASSETS), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
       .digest("hex")
       .slice(0, 16);
   })();
@@ -416,6 +416,51 @@ export async function GET(request: Request) {
   }
 }
 
+/** Files a component imports or fetches that are models, textures or media. */
+const ASSET_FILE = /\.(?:glb|gltf|png|jpe?g|webp|avif|gif|hdr|exr|ktx2|bin|mp4|webm|mp3|wav)$/i;
+
+/**
+ * Demo files a registry's components load, which its registry does not publish.
+ *
+ * React Bits' 3D components load models from its own site (FluidGlass fetches
+ * /assets/3d/lens.glb) or import them beside their source (Lanyard's card.glb). The
+ * sandbox has no network, so they are vendored under data/preview-assets — see the
+ * README there — and inlined as data: URLs. Keyed by file name, scoped to the source.
+ */
+const PREVIEW_ASSETS: Partial<Record<SourceId, string[]>> = {
+  "react-bits": ["lens.glb", "bar.glb", "cube.glb", "card.glb", "lanyard.png"],
+};
+
+const assetCache = new Map<SourceId, Promise<Map<string, string>>>();
+
+function previewAssets(source: SourceId): Promise<Map<string, string>> {
+  const names = PREVIEW_ASSETS[source];
+  if (!names) return Promise.resolve(new Map());
+  if (!assetCache.has(source)) {
+    assetCache.set(source, Promise.all(names.map(async (file) => {
+      const bytes = await readFile(/* turbopackIgnore: true */ path.join(process.cwd(), "data/preview-assets", source, file));
+      const type = file.endsWith(".png") ? "image/png" : "model/gltf-binary";
+      return [file, `data:${type};base64,${bytes.toString("base64")}`] as const;
+    })).then((entries) => new Map(entries)));
+  }
+  return assetCache.get(source)!;
+}
+
+/**
+ * Points a held file's path at its data: URL wherever it appears as a string, so a
+ * component's `useGLTF("/assets/3d/lens.glb")` loads the vendored model.
+ *
+ * Import specifiers are left alone — `import card from "./card.glb"` goes through the
+ * resolver's asset namespace instead; rewritten, it became an import *from* a data: URL.
+ * The URL keeps the file name as a fragment, which fetch ignores: ModelViewer chooses
+ * its loader from the extension at the end of the URL, and a bare data: URL has none.
+ */
+function withAssets(code: string, assets: Map<string, string>): string {
+  if (!assets.size) return code;
+  return code.replace(/(?<!\b(?:from|import)\s*\(?\s*)(["'`])((?:\.{0,2}\/)?(?:[\w.-]+\/)*)([\w.-]+)\1/g, (whole, quote: string, _dir: string, file: string) =>
+    assets.has(file) && ASSET_FILE.test(file) ? `${quote}${assets.get(file)}#${file}${quote}` : whole);
+}
+
 /**
  * The item that best demonstrates `name`.
  *
@@ -437,6 +482,7 @@ async function demonstrationOf(source: SourceId, name: string) {
 
 async function compile(source: SourceId, name: string): Promise<string> {
   const { item, entryName } = await demonstrationOf(source, name);
+  const assets = await previewAssets(source);
   const files = (item.files ?? []).filter((file) => typeof file.content === "string");
   if (!files.length) return generatedDocument(name, "This registry entry publishes no source files");
 
@@ -444,7 +490,7 @@ async function compile(source: SourceId, name: string): Promise<string> {
   if (!entry) return generatedDocument(name, "This registry entry is a helper rather than a React component");
 
   const bundle = await esbuild.build({
-    stdin: { contents: harness(installedPath(entry), propRecipe(source, name)), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
+    stdin: { contents: withAssets(harness(installedPath(entry), propRecipe(source, name)), assets), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
     bundle: true,
     write: false,
     outdir: "out",
@@ -461,7 +507,7 @@ async function compile(source: SourceId, name: string): Promise<string> {
     target: "es2020",
     jsx: "automatic",
     logLevel: "silent",
-    plugins: [virtualFiles(files)],
+    plugins: [virtualFiles(files, assets)],
   });
 
   const code = bundle.outputFiles?.find((file) => file.path.endsWith(".js"))?.text;
@@ -631,7 +677,7 @@ function withStatus(html: string): string {
  * copy: the component and the renderer sharing a React instance is the difference
  * between a preview and an invariant violation.
  */
-function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
+function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new Map()): esbuild.Plugin {
   const byPath = new Map(files.map((file) => [installedPath(file), file.content!]));
   // The published path still answers, for the imports a publisher wrote against its own
   // repository instead — but as an alias, so one file is never bundled twice.
@@ -677,6 +723,7 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
         if (local) return { path: local, namespace: "virtual" };
         if (args.path.startsWith("@/") || args.path.startsWith("~/") || args.path.startsWith(".") || args.path.startsWith("/")) {
           if (/\.(css|scss|sass|less)$/.test(args.path)) return { path: args.path, namespace: "empty-style" };
+          if (ASSET_FILE.test(args.path)) return { path: args.path.split("/").pop()!, namespace: "asset" };
           return shim(args.path, args.importer);
         }
         if (args.path === "lucide-react" || args.path === "@central-icons-react/all") return shim(args.path, args.importer, "icon-shim");
@@ -716,8 +763,17 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
       build.onLoad({ filter: /.*/, namespace: "virtual" }, (args) => {
         const contents = byPath.get(args.path);
         if (contents === undefined) throw new Error(`Imports "${args.path}", which this item does not publish`);
-        return { contents, loader: args.path.endsWith(".ts") ? "ts" : "tsx", resolveDir: "/" };
+        return { contents: withAssets(contents, assets), loader: args.path.endsWith(".ts") ? "ts" : "tsx", resolveDir: "/" };
       });
+
+      // An imported model or image is a URL, not a component. These used to fall through
+      // to the generic shim, so `cardGLB` arrived as a React component and the loader
+      // was handed a function. A file we hold becomes a data: URL; one we do not becomes
+      // an empty string, which fails as a missing file rather than as a type error.
+      build.onLoad({ filter: /.*/, namespace: "asset" }, (args) => ({
+        contents: `export default ${JSON.stringify(assets.has(args.path) ? `${assets.get(args.path)}#${args.path}` : "")};`,
+        loader: "js",
+      }));
 
       build.onLoad({ filter: /.*/, namespace: "shim" }, (args) => ({
         // Lightweight stand-ins for the shadcn-style primitives most items assume are
@@ -753,7 +809,7 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
       build.onLoad({ filter: /.*/, namespace: "empty-style" }, () => ({ contents: "", loader: "css" }));
 
       build.onLoad({ filter: /.*/, namespace: "remote" }, async (args) => {
-        const contents = await rememberResource(
+        const fetched = await rememberResource(
           remoteModules,
           args.path,
           REMOTE_MODULE_CACHE_ENTRIES,
@@ -763,11 +819,31 @@ function virtualFiles(files: RegistryFile[]): esbuild.Plugin {
             return response.text();
           },
         );
-        return { contents, loader: "js" };
+        return { contents: await withDefaultTextFont(fetched), loader: "js" };
       });
     },
   };
 }
+
+/**
+ * Gives troika — the text renderer behind drei's <Text>, bundled inside drei — a default
+ * font. With none, troika asks a CDN which font covers the text; the sandbox refuses
+ * the request, the text suspends, and everything under the same Suspense with it.
+ * FluidGlass drew only its background for that reason. Set where troika declares its
+ * defaults, since the copy inside drei's bundle is not reachable from anywhere else.
+ */
+let defaultTextFont: Promise<string> | null = null;
+
+async function withDefaultTextFont(code: string): Promise<string> {
+  if (!/defaultFontURL:\s*null/.test(code)) return code;
+  defaultTextFont ??= readFile(/* turbopackIgnore: true */ path.join(process.cwd(), DEFAULT_TEXT_FONT))
+    .then((bytes) => `data:font/ttf;base64,${bytes.toString("base64")}`);
+  const font = await defaultTextFont;
+  return code.replace(/defaultFontURL:\s*null/, () => `defaultFontURL:${JSON.stringify(font)}`);
+}
+
+/** See data/preview-assets/fonts/README.md. */
+const DEFAULT_TEXT_FONT = "data/preview-assets/fonts/figtree-black.ttf";
 
 /**
  * Static paths keep these packages on local disk without asking Next's server bundler
@@ -1069,13 +1145,18 @@ button{font:inherit;cursor:pointer}
 `;
 
 /**
- * Connections denied outright: everything the module needs is already bundled in.
- * 'wasm-unsafe-eval' lets a component compile WebAssembly it carries (Rapier physics,
- * for one) without permitting eval of JavaScript.
+ * No network: everything the module needs is already bundled in. Connections reach only
+ * data: and blob: URLs, which is how a model loader reads a vendored model (see
+ * PREVIEW_ASSETS) and the textures inside it. A loader may decode in a worker it builds
+ * from a blob: of its own code, hence worker-src, and that worker importScripts() further
+ * blobs under this same policy (troika, behind drei's <Text>), hence blob: in script-src
+ * — code the page made itself, which 'unsafe-inline' already lets it run. 'wasm-unsafe-eval' lets a component
+ * compile WebAssembly it carries (Rapier physics, for one) without permitting eval of
+ * JavaScript.
  */
 const CSP =
-  "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; " +
-  "img-src data: https:; font-src data: https:; connect-src 'none'";
+  "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline'; " +
+  "img-src data: blob: https:; font-src data: https:; connect-src data: blob:; worker-src blob:";
 
 function documentFor(name: string, code: string, componentCss: string): string {
   return `<!doctype html><html lang="en" class="dark"><head><meta charset="utf-8">
