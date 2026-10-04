@@ -398,7 +398,10 @@ describe("compiling real registry shapes", () => {
     expect(requests.some((url) => url.startsWith("/pkg/fixture-hooks"))).toBe(true);
     // Two Reacts in one document means the package's hooks read a null dispatcher.
     expect(requests.filter((url) => url.startsWith("/pkg/react"))).toEqual([]);
-    expect(html.match(/\/\/ node_modules\/react\/cjs\/react\.development\.js/g)).toHaveLength(1);
+    expect(html.match(/\/\/ node_modules\/react\/cjs\/react\.production\.js/g)).toHaveLength(1);
+    // And the production build, as every esm.sh package is: a dev React with a prod
+    // renderer crashed on dispatcher.getOwner().
+    expect(html).not.toContain("react.development.js");
   }, 30_000);
 
   it("keeps the reporter out of a module whose source contains </body>", async () => {

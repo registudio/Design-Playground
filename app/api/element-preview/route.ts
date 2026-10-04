@@ -150,7 +150,7 @@ function fingerprint(): Promise<string> {
       harness, documentFor, generatedDocument,
     ].map(String);
     return createHash("sha256")
-      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
+      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
       .digest("hex")
       .slice(0, 16);
   })();
@@ -451,7 +451,12 @@ async function compile(source: SourceId, name: string): Promise<string> {
     // Next inlines process.env at build time, so registry code reads it freely at module
     // scope (kokonut's v0-button does) and threw "process is not defined" here before
     // anything mounted. An empty environment is the honest answer in a sandbox.
-    banner: { js: 'var process = { env: { NODE_ENV: "development" }, browser: true };' },
+    banner: { js: 'var process = { env: { NODE_ENV: "production" }, browser: true };' },
+    // Production React, to match everything esm.sh serves (its default build). Bundled
+    // unminified, esbuild picked React's development build, and React 19.2's dev
+    // createElement calls dispatcher.getOwner(), which only a dev renderer provides — so
+    // @react-three/fiber's production reconciler crashed every Canvas on first render.
+    define: { "process.env.NODE_ENV": '"production"' },
     format: "esm",
     target: "es2020",
     jsx: "automatic",
@@ -924,8 +929,19 @@ function packageUrl(specifier: string): string {
   if (specifier.startsWith("react/")) return `${PACKAGE_BASE}/react@19.2.0/${specifier.slice(6)}${options}`;
   if (specifier === "react-dom") return `${PACKAGE_BASE}/react-dom@19.2.0${options}&external=react`;
   if (specifier.startsWith("react-dom/")) return `${PACKAGE_BASE}/react-dom@19.2.0/${specifier.slice(10)}${options}&external=react`;
-  return `${PACKAGE_BASE}/${specifier}${options}&external=react,react-dom`;
+  // A package bundled with its own copy of one of these breaks whatever it shares
+  // with: drei's hooks threw outside fiber's Canvas, postprocessing passes rejected the
+  // component's three.js objects, @gsap/react registered plugins on a gsap no one else
+  // used. Kept bare, they come back through the resolver and meet the document's one copy.
+  const own = SINGLETONS.filter((name) => specifier !== name && !specifier.startsWith(`${name}/`));
+  return `${PACKAGE_BASE}/${specifier}${options}&external=${own.join(",")}`;
 }
+
+/** Libraries a document must hold exactly one instance of. */
+const SINGLETONS = [
+  "react", "react-dom", "three", "@react-three/fiber", "@react-three/drei", "@react-three/postprocessing",
+  "postprocessing", "gsap", "motion", "framer-motion",
+];
 
 /** Compiles just the utility candidates present in this item, once, on the server. */
 async function tailwindFor(files: RegistryFile[]): Promise<string> {
@@ -1047,9 +1063,13 @@ button{font:inherit;cursor:pointer}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 `;
 
-/** Connections denied outright: everything the module needs is already bundled in. */
+/**
+ * Connections denied outright: everything the module needs is already bundled in.
+ * 'wasm-unsafe-eval' lets a component compile WebAssembly it carries (Rapier physics,
+ * for one) without permitting eval of JavaScript.
+ */
 const CSP =
-  "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+  "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; " +
   "img-src data: https:; font-src data: https:; connect-src 'none'";
 
 function documentFor(name: string, code: string, componentCss: string): string {
