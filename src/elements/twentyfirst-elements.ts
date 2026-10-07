@@ -112,6 +112,21 @@ const testimonialColumn = (from: number, seconds: number, column: number) => {
   return `<div class="tcol tcol-${column}"><div class="tcol-track" style="animation-duration:${seconds}s">${cards}<div class="tcol-copy" aria-hidden="true">${cards}</div></div></div>`;
 };
 
+/**
+ * Upstream's default slides: no photos, each a layered-ridge landscape painted on a
+ * canvas from a palette and a seed. They are what the component shows with no assets
+ * at all, and so they paint offline and in an exported ZIP too.
+ */
+const LENS_SLIDES = [
+  { title: "First Light", caption: "Haze lifting off the eastern ridges.", palette: "dawn", seed: 3 },
+  { title: "High Pass", caption: "Cold air, clear to the far range.", palette: "alpine", seed: 8 },
+  { title: "Ember Hour", caption: "The last of the sun on the valley floor.", palette: "dusk", seed: 14 },
+  { title: "Still Valley", caption: "Morning mist that never quite lifts.", palette: "mist", seed: 21 },
+  { title: "Rose Ridge", caption: "Five ridges, one long exhale.", palette: "dawn", seed: 34 },
+  { title: "Blue Hour", caption: "Pines going dark against the snow.", palette: "alpine", seed: 55 },
+] as const;
+const CHEVRON = (d: string) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="${d}" stroke="currentColor" stroke-width="1.4"/></svg>`;
+
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
     id: "21st-radial-orbital-timeline",
@@ -319,5 +334,166 @@ paint();
 @media(max-width:1023px){.tcol-3{display:none}}
 @media(max-height:320px){.tcol-head p{display:none}}`,
     js: "",
+  },
+  {
+    // After the Lens Zoom Carousel on 21st.dev: the 1050ms landing, the 1.35 start scale
+    // and its inverse for going back, the two screen-blended ghosts and their 40ms stagger,
+    // and the painted landscapes are upstream's, the painter line for line. What differs:
+    // the canvas is sized to the frame, autoplay pauses while focus is inside and is off
+    // under reduced motion, where a slide changes in place rather than zooming.
+    id: "21st-lens-zoom-carousel",
+    title: "Lens zoom carousel",
+    category: "Carousels",
+    description:
+      "A full-bleed carousel where the next picture rushes in like a fast zoom pull, landing out of a magnified blur with two ghost copies trailing it while the old one falls back and darkens. Going back zooms out. After the Lens Zoom Carousel on 21st.dev.",
+    tag: "21st.dev",
+    html: `<div class="lz-root" role="region" aria-roledescription="carousel" aria-label="Image carousel" tabindex="0" data-moving="0" data-paused="0">
+<div class="lz-base"><img class="lz-img" alt="" draggable="false"></div>
+<div class="lz-stage"></div>
+<div class="lz-shade" aria-hidden="true"></div>
+<div class="lz-text" aria-hidden="true"><span class="lz-line lz-title"><span>${LENS_SLIDES[0].title}</span></span><span class="lz-line lz-cap"><span>${LENS_SLIDES[0].caption}</span></span></div>
+<div class="lz-nav"><span class="lz-count" aria-hidden="true">01 / ${String(LENS_SLIDES.length).padStart(2, "0")}</span><button type="button" class="lz-btn lz-prev" aria-label="Previous">${CHEVRON("M10 3 5 8l5 5")}</button><button type="button" class="lz-btn lz-next" aria-label="Next">${CHEVRON("m6 3 5 5-5 5")}</button></div>
+<div class="lz-track" aria-hidden="true"><div class="lz-fill"></div></div>
+<div class="lz-sr" aria-live="polite"></div>
+</div>`,
+    css: `.lz-root{--lz-ink:#fff;--lz-d:1050ms;--lz-auto:6000ms;position:fixed;inset:0;overflow:hidden;background:#0d0d0f;color:var(--lz-ink);user-select:none;-webkit-user-select:none;touch-action:pan-y;outline:none}
+.lz-root:focus-visible{box-shadow:inset 0 0 0 2px var(--lz-ink)}
+.lz-base{position:absolute;inset:0;background:linear-gradient(#e7b7a5,#f8e8d6 60%,#3a2a3b 61%);transition:filter .9s ease,transform 1.4s cubic-bezier(.2,.7,.2,1)}
+.lz-root[data-moving='1'] .lz-base{filter:brightness(.42);transform:scale(1.04)}
+.lz-img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover;display:block;pointer-events:none}
+.lz-base .lz-img:not([src]){display:none}
+.lz-in{position:absolute;inset:0;overflow:hidden;animation:lz-show var(--lz-d) cubic-bezier(.2,.75,.2,1) both}
+.lz-main{animation:lz-zoom var(--lz-d) cubic-bezier(.16,.8,.2,1) both}
+.lz-ghost{opacity:0;mix-blend-mode:screen;animation:lz-ghost var(--lz-d) cubic-bezier(.16,.8,.2,1) both}
+.lz-shade{position:absolute;inset:auto 0 0 0;height:46%;background:linear-gradient(to top,rgba(0,0,0,.6),rgba(0,0,0,0));pointer-events:none}
+.lz-text{position:absolute;left:clamp(20px,4vw,56px);bottom:clamp(44px,8vh,80px);right:clamp(140px,20vw,280px);pointer-events:none}
+.lz-line{display:block;overflow:hidden;padding-bottom:.08em}
+.lz-line>span{display:block;animation:lz-rise .9s cubic-bezier(.2,.8,.2,1) both}
+.lz-title{font:500 clamp(30px,6vw,84px)/1 ui-serif,Georgia,'Times New Roman',serif;letter-spacing:-.02em}
+.lz-cap{margin-top:12px;font:400 14px/1.4 ui-sans-serif,system-ui,sans-serif;opacity:.82;max-width:44ch}
+.lz-cap>span{animation-delay:.08s}
+.lz-nav{position:absolute;right:clamp(20px,4vw,56px);bottom:clamp(44px,8vh,80px);display:flex;align-items:center;gap:14px}
+.lz-count{font:500 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em}
+.lz-btn{appearance:none;width:44px;height:44px;border-radius:50%;border:1px solid color-mix(in srgb,var(--lz-ink) 45%,transparent);background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer;transition:background .2s ease,color .2s ease}
+.lz-btn:hover{background:var(--lz-ink);color:#0d0d0f}
+.lz-btn:focus-visible{outline:2px solid var(--lz-ink);outline-offset:2px}
+.lz-track{position:absolute;left:clamp(20px,4vw,56px);right:clamp(20px,4vw,56px);bottom:clamp(20px,3.5vh,36px);height:1px;background:color-mix(in srgb,var(--lz-ink) 28%,transparent)}
+.lz-root[data-auto='0'] .lz-track{display:none}
+.lz-fill{height:100%;background:var(--lz-ink);transform-origin:left;transform:scaleX(0)}
+.lz-fill[data-run='1']{animation:lz-fill var(--lz-auto) linear forwards}
+.lz-root[data-paused='1'] .lz-fill{animation-play-state:paused}
+.lz-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@keyframes lz-show{from{opacity:0}35%{opacity:1}to{opacity:1}}
+@keyframes lz-zoom{from{transform:scale(var(--lz-depth));filter:blur(14px) brightness(1.2)}to{transform:none;filter:none}}
+@keyframes lz-ghost{from{transform:scale(var(--lz-g));opacity:.4;filter:blur(6px)}to{transform:scale(1);opacity:0;filter:blur(0)}}
+@keyframes lz-rise{from{transform:translateY(105%)}to{transform:none}}
+@keyframes lz-fill{to{transform:scaleX(1)}}
+@media(max-width:480px){.lz-nav{gap:8px}.lz-btn{width:36px;height:36px}.lz-text{right:clamp(20px,4vw,56px);bottom:clamp(88px,22vh,120px)}}`,
+    js: `const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const SLIDES=${JSON.stringify(LENS_SLIDES)},DEPTH=1.35,AUTOPLAY=6000;
+const PALETTES={
+  dawn:{top:'#e7b7a5',bottom:'#f8e8d6',sun:'#fff4df',far:'#d2b2bb',near:'#3a2a3b',mist:'255,240,232'},
+  alpine:{top:'#7ea5c8',bottom:'#e3ecf2',sun:'#ffffff',far:'#a9bfd0',near:'#1c3044',mist:'236,244,250'},
+  dusk:{top:'#2a2450',bottom:'#ef8d60',sun:'#ffd9a6',far:'#93607c',near:'#18121f',mist:'255,196,160'},
+  mist:{top:'#c4d0cb',bottom:'#eef1ec',sun:'#ffffff',far:'#aebcb5',near:'#2c3a33',mist:'246,248,245'}};
+const wrap=(i,n)=>n?((i%n)+n)%n:0;
+const ghostScale=(depth,g)=>depth+(depth-1)*0.6*(g+1);
+const pad2=n=>n<10?'0'+n:String(n);
+function mulberry32(seed){let a=seed>>>0;return()=>{a=(a+0x6d2b79f5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+function hexRgb(h){const v=parseInt(h.replace('#',''),16);return[(v>>16)&255,(v>>8)&255,v&255]}
+function mixRgb(a,b,t){const A=hexRgb(a),B=hexRgb(b);return'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(',')+')'}
+// Upstream paints at 1600x1000. The drawing keeps those coordinates, so every slide is
+// the same picture, but the canvas is only as many pixels as the frame can show.
+const SCALE=Math.min(1,Math.max(innerWidth,innerHeight*1.6)*(devicePixelRatio||1)/1600);
+function paintLandscape(seed,palette){
+  const w=1600,h=1000,c=document.createElement('canvas');
+  c.width=Math.round(w*SCALE);c.height=Math.round(h*SCALE);
+  const g=c.getContext('2d');if(!g)return'';
+  g.scale(SCALE,SCALE);
+  const P=PALETTES[palette]||PALETTES.dawn,r=mulberry32(seed*104729+7);
+  const sky=g.createLinearGradient(0,0,0,h*0.72);sky.addColorStop(0,P.top);sky.addColorStop(1,P.bottom);
+  g.fillStyle=sky;g.fillRect(0,0,w,h);
+  const sx=w*(0.22+r()*0.56),sy=h*(0.26+r()*0.16),sun=hexRgb(P.sun).join(',');
+  const halo=g.createRadialGradient(sx,sy,0,sx,sy,w*0.45);
+  halo.addColorStop(0,'rgba('+sun+',.85)');halo.addColorStop(0.08,'rgba('+sun+',.55)');halo.addColorStop(1,'rgba('+sun+',0)');
+  g.fillStyle=halo;g.fillRect(0,0,w,h);
+  g.fillStyle=P.sun;g.beginPath();g.arc(sx,sy,h*0.045,0,Math.PI*2);g.fill();
+  const layers=5;
+  for(let L=0;L<layers;L++){
+    const k=L/(layers-1),base=h*(0.42+k*0.4),amp=h*(0.07+k*0.1);
+    const ph=[r(),r(),r(),r()].map(v=>v*Math.PI*2),fr=[1.3+r(),3.1+r()*2,7+r()*4,17+r()*8];
+    const ridge=x=>{const u=x/w;return base-amp*(0.55*Math.sin(u*fr[0]+ph[0])+0.28*Math.sin(u*fr[1]+ph[1])+0.12*Math.abs(Math.sin(u*fr[2]+ph[2]))+0.05*Math.sin(u*fr[3]+ph[3]))};
+    const mist=g.createLinearGradient(0,base-amp*1.4,0,base+amp*0.4);
+    mist.addColorStop(0,'rgba('+P.mist+',0)');mist.addColorStop(1,'rgba('+P.mist+','+(0.55-k*0.35).toFixed(2)+')');
+    g.fillStyle=mist;g.fillRect(0,base-amp*1.4,w,amp*1.8);
+    const body=g.createLinearGradient(0,base-amp,0,h);
+    body.addColorStop(0,mixRgb(P.far,P.near,Math.pow(k,1.3)));body.addColorStop(1,mixRgb(P.far,P.near,Math.min(1,Math.pow(k,1.3)+0.18)));
+    g.fillStyle=body;g.beginPath();g.moveTo(0,h);for(let x=0;x<=w;x+=6)g.lineTo(x,ridge(x));g.lineTo(w,ridge(w));g.lineTo(w,h);g.closePath();g.fill();
+    if(L>=layers-2){
+      g.fillStyle=mixRgb(P.far,P.near,Math.min(1,Math.pow(k,1.3)+0.08));
+      for(let x=0;x<w;x+=7+r()*9){
+        if(r()<0.35)continue;
+        const y=ridge(x)+2,th=h*(0.025+r()*0.035)*(0.6+k),tw=th*0.32;
+        g.beginPath();g.moveTo(x,y-th);g.lineTo(x+tw,y);g.lineTo(x-tw,y);g.closePath();g.fill();
+      }
+    }
+  }
+  const vig=g.createRadialGradient(w/2,h*0.45,h*0.3,w/2,h/2,w*0.78);
+  vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.32)');
+  g.fillStyle=vig;g.fillRect(0,0,w,h);
+  const grain=g.getImageData(0,0,c.width,c.height),d=grain.data;
+  for(let i=0;i<d.length;i+=4){const v=(r()-0.5)*14;d[i]+=v;d[i+1]+=v;d[i+2]+=v}
+  g.putImageData(grain,0,0);
+  return c.toDataURL('image/jpeg',0.88);
+}
+const root=document.querySelector('.lz-root'),baseImg=root.querySelector('.lz-base .lz-img'),stage=root.querySelector('.lz-stage');
+const text=root.querySelector('.lz-text'),count=root.querySelector('.lz-count'),fill=root.querySelector('.lz-fill'),live=root.querySelector('.lz-sr');
+const n=SLIDES.length,srcs=[];
+const src=i=>srcs[i]||(srcs[i]=paintLandscape(SLIDES[i].seed,SLIDES[i].palette));
+let index=0,moving=false,seen=true,focused=false;
+// The current slide is painted now; the rest when the frame is idle, one at a time.
+baseImg.src=src(0);baseImg.alt=SLIDES[0].title;
+const idle=window.requestIdleCallback||(fn=>setTimeout(fn,80));
+(function next(i){if(i<n)idle(()=>{src(i);next(i+1)})})(1);
+// No autoplay under reduced motion: a carousel that moves on its own is the motion being asked away.
+const auto=!still&&AUTOPLAY>0&&n>1;
+root.dataset.auto=auto?'1':'0';
+const syncPause=()=>{root.dataset.paused=!seen||document.hidden||focused?'1':'0'};
+new IntersectionObserver(([entry])=>{seen=entry.isIntersecting;syncPause()}).observe(root);
+document.addEventListener('visibilitychange',syncPause);
+root.addEventListener('focusin',()=>{focused=true;syncPause()});
+root.addEventListener('focusout',e=>{if(!root.contains(e.relatedTarget)){focused=false;syncPause()}});
+function restartFill(){fill.dataset.run='0';if(!auto)return;void fill.offsetWidth;fill.dataset.run='1'}
+function caption(i){
+  const s=SLIDES[i];
+  text.innerHTML='<span class="lz-line lz-title"><span></span></span><span class="lz-line lz-cap"><span></span></span>';
+  text.querySelector('.lz-title>span').textContent=s.title;text.querySelector('.lz-cap>span').textContent=s.caption;
+  count.textContent=pad2(i+1)+' / '+pad2(n);
+  live.textContent='Slide '+(i+1)+' of '+n+': '+s.title;
+}
+function land(to){index=to;baseImg.src=src(to);baseImg.alt=SLIDES[to].title;moving=false;root.dataset.moving='0';restartFill()}
+function go(dir){
+  if(moving||n<2)return;
+  const to=wrap(index+dir,n);
+  caption(to);fill.dataset.run='0';
+  if(still){land(to);return}
+  moving=true;root.dataset.moving='1';
+  const depth=dir>=0?DEPTH:1/DEPTH,image=src(to),layer=document.createElement('div');
+  layer.className='lz-in';layer.setAttribute('aria-hidden','true');layer.style.setProperty('--lz-depth',String(depth));
+  const img=cls=>{const el=document.createElement('img');el.className='lz-img '+cls;el.src=image;el.alt='';el.draggable=false;return el};
+  layer.append(img('lz-main'));
+  for(const g of[1,0]){const ghost=img('lz-ghost');ghost.style.setProperty('--lz-g',String(ghostScale(depth,g)));ghost.style.animationDelay=g*40+'ms';layer.append(ghost)}
+  layer.addEventListener('animationend',e=>{if(e.target!==layer)return;land(to);layer.remove()});
+  stage.append(layer);
+}
+fill.addEventListener('animationend',()=>go(1));
+root.querySelector('.lz-prev').onclick=()=>go(-1);
+root.querySelector('.lz-next').onclick=()=>go(1);
+for(const b of root.querySelectorAll('.lz-btn'))b.addEventListener('pointerdown',e=>e.stopPropagation());
+root.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1);else return;e.preventDefault()});
+let down=null;
+root.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY}});
+root.addEventListener('pointerup',e=>{const s=down;down=null;if(!s)return;const dx=e.clientX-s.x;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(e.clientY-s.y))go(dx<0?1:-1)});
+caption(0);restartFill();`,
   },
 ];
