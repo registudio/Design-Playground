@@ -6,6 +6,24 @@ import { generateCss } from "@/export/css";
 import {
   DEVICE_WIDTHS, isPreviewMessage, PREVIEW_ORIGIN_MARKER, type ContrastSummary, type HostMessage,
 } from "@/preview/bridge";
+import type { DesignProject } from "@/schema/project";
+
+/** How long token edits must pause before the frame gets the full state as well. */
+const TOKEN_STATE_DELAY_MS = 200;
+
+/**
+ * True when the only things that differ between two project versions are `tokens` and
+ * `provenance`. A slider's first tick marks its token as the user's, and the preview never
+ * reads provenance, so counting it as structural would put that tick on the slow path.
+ */
+export function onlyTokensChanged(previous: DesignProject, next: DesignProject): boolean {
+  if (previous === next || previous.tokens === next.tokens) return false;
+  const keys = new Set([...Object.keys(previous), ...Object.keys(next)]) as Set<keyof DesignProject>;
+  for (const key of keys) {
+    if (key !== "tokens" && key !== "provenance" && previous[key] !== next[key]) return false;
+  }
+  return true;
+}
 
 /**
  * Hosts the preview iframe and keeps it in sync.
@@ -82,13 +100,31 @@ export function PreviewFrame({
   }, [ready, contrastLens]);
 
   // Full state on connect and whenever anything structural changes.
+  //
+  // A token edit gives the project a new identity too, so this used to fire on every
+  // tick of a slider drag: alongside the CSS fast path below, the frame re-rendered the
+  // whole sample page sixty times a second, which is what made dragging stutter. The
+  // surfaces do still read tokens (font loading, the style guide's printed values), so a
+  // token-only change is not dropped — it is sent once the drag has paused. Anything
+  // else goes immediately. Immer keeps unchanged branches by reference, so comparing
+  // everything but `tokens` by identity is exact.
+  const sent = useRef<{ project: DesignProject; mode: unknown; device: unknown; theme: unknown; advanced: unknown } | null>(null);
   useEffect(() => {
     if (!ready || !project) return;
-    post({
-      marker: PREVIEW_ORIGIN_MARKER,
-      type: "state",
-      payload: { project, mode, device, theme, advanced },
-    });
+    const send = () => {
+      sent.current = { project, mode, device, theme, advanced };
+      post({
+        marker: PREVIEW_ORIGIN_MARKER,
+        type: "state",
+        payload: { project, mode, device, theme, advanced },
+      });
+    };
+    const last = sent.current;
+    const tokensOnly = !!last && last.mode === mode && last.device === device && last.theme === theme
+      && last.advanced === advanced && onlyTokensChanged(last.project, project);
+    if (!tokensOnly) { send(); return; }
+    const timer = setTimeout(send, TOKEN_STATE_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [ready, project, mode, device, theme, advanced]);
 
   // Fast path: tokens alone, applied as CSS with no remount.

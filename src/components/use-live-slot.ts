@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, type MutableRefObject, type RefObject } from "react";
+import { useEffect, useRef, useSyncExternalStore, type MutableRefObject, type RefObject } from "react";
 import {
   ACTIVATION_MARGIN_PX,
   IN_FLIGHT_PROTECTION_MS,
-  MAX_LIVE_PREVIEWS,
+  livePreviewBudget,
   OFFSCREEN_GRACE_MS,
 } from "@/elements/preview-budget";
-import { createSlotQueue } from "@/elements/preview-queue";
+import { createSlotQueue, type SlotQueue } from "@/elements/preview-queue";
 
 /**
  * When a card's live document may exist, for every kind of card in the grid.
@@ -30,11 +30,73 @@ import { createSlotQueue } from "@/elements/preview-queue";
  * any one card, and a queue each card kept its own copy of would not be a queue. The
  * rules for who gets a slot, and who gives one up, live in preview-queue.ts.
  */
-const slots = createSlotQueue(MAX_LIVE_PREVIEWS);
+let queue: SlotQueue | null = null;
+/**
+ * Created on first use, in the browser, because its size depends on the device
+ * (livePreviewBudget). Module scope also runs during server rendering, where there is no
+ * navigator to ask.
+ */
+function slotQueue(): SlotQueue {
+  if (!queue) {
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    queue = createSlotQueue(livePreviewBudget({
+      deviceMemory: nav.deviceMemory,
+      hardwareConcurrency: nav.hardwareConcurrency || undefined,
+      width: innerWidth,
+    }));
+  }
+  return queue;
+}
 
 /** Exposed for the browser check, which asserts the concurrency budget is respected. */
 export function livePreviewCount(): number {
-  return slots.liveCount();
+  return queue?.liveCount() ?? 0;
+}
+
+/**
+ * How long the tab may be hidden before every preview is given up.
+ *
+ * A hidden tab already stops animation frames, but not memory: each live document keeps
+ * its heap and its GPU buffers, and a background tab holding a dozen of them is the first
+ * thing the browser discards or kills under pressure. Long enough that switching away to
+ * check something keeps the grid as it was; the previews come back on return, from
+ * cache, nearest first.
+ */
+const AWAY_RELEASE_MS = 30_000;
+
+let away = false;
+const awayListeners = new Set<() => void>();
+let awayTimer: ReturnType<typeof setTimeout> | null = null;
+function setAway(next: boolean) {
+  if (away === next) return;
+  away = next;
+  awayListeners.forEach((listener) => listener());
+}
+function onVisibility() {
+  if (awayTimer) clearTimeout(awayTimer);
+  awayTimer = null;
+  if (document.visibilityState === "hidden") awayTimer = setTimeout(() => setAway(true), AWAY_RELEASE_MS);
+  else setAway(false);
+}
+function subscribeAway(listener: () => void) {
+  if (!awayListeners.size) {
+    document.addEventListener("visibilitychange", onVisibility);
+    // Re-read rather than trusted: nothing was listening while no card was mounted, so
+    // a stale "away" would otherwise keep every new card paused on a visible tab.
+    onVisibility();
+  }
+  awayListeners.add(listener);
+  return () => {
+    awayListeners.delete(listener);
+    if (awayListeners.size) return;
+    document.removeEventListener("visibilitychange", onVisibility);
+    if (awayTimer) clearTimeout(awayTimer);
+    awayTimer = null;
+  };
+}
+/** True once the tab has been hidden for AWAY_RELEASE_MS, until it is shown again. */
+function useAway(): boolean {
+  return useSyncExternalStore(subscribeAway, () => away, () => false);
 }
 
 /**
@@ -46,7 +108,7 @@ const pumpedRoots = new WeakSet<EventTarget>();
 function pumpOnSettle(root: EventTarget): void {
   if (pumpedRoots.has(root)) return;
   pumpedRoots.add(root);
-  root.addEventListener("scrollend", slots.pump, { passive: true });
+  root.addEventListener("scrollend", () => slotQueue().pump(), { passive: true });
 }
 
 /**
@@ -87,10 +149,13 @@ export interface LiveSlotWork {
 export function useLiveSlot(
   host: RefObject<HTMLElement | null>,
   slotKey: string,
-  { paused, eager }: { paused: boolean; eager: boolean },
+  { paused: pausedByViewer, eager }: { paused: boolean; eager: boolean },
   work: LiveSlotWork,
   handlers: { start: () => void; stop: () => void },
 ): void {
+  // Called before the ||, never inside it: a hook has to run on every render.
+  const tabAway = useAway();
+  const paused = pausedByViewer || tabAway;
   const instance = useRef(Math.random().toString(36).slice(2));
   /** Inside the activation margin: still wanted, even while it has no slot. */
   const near = useRef(false);
@@ -105,6 +170,7 @@ export function useLiveSlot(
     const node = host.current;
     if (!node) return;
     const id = `${slotKey}:${instance.current}`;
+    const slots = slotQueue();
     const start = () => { startedAt.current = Date.now(); settled.current = false; latest.current.start(); };
     const root = scrollParent(node);
     pumpOnSettle(root ?? window);

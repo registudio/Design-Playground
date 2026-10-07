@@ -1,4 +1,5 @@
 import { EXTENDED_ELEMENTS, componentSourceFor, engineBundles, engineFor, portFor } from "./extended-catalogue";
+import { FRAME_HOST_SCRIPT } from "./frame-host";
 /** Authored effects. The same documents run in the gallery, sample and ZIP. */
 export const ELEMENTS = [
   ...EXTENDED_ELEMENTS,
@@ -85,11 +86,16 @@ export function elementOrigin(id: string) {
  */
 export const INTERACTION_ONLY = /^(carousel-|chart-|cult-|21st-|shipnotes-|gallery-lightbox$)/;
 
-export function elementDocument(id: string, accent = "#d2ef9e"): string {
+/**
+ * `host` adds the playground's frame script (frame-host.ts): Escape forwarding and WebGL
+ * release. On for the gallery and the full-screen view; off for exports, which run on
+ * their own with nothing around them to talk to.
+ */
+export function elementDocument(id: string, accent = "#d2ef9e", { host = false }: { host?: boolean } = {}): string {
   const item = ELEMENTS.find((e) => e.id === id);
   if (!item) return "";
   const safeAccent = /^#[a-f0-9]{6}$/i.test(accent) ? accent : "#d2ef9e";
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${item.title}</title><style>
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${item.title}</title>${host ? `<script>${FRAME_HOST_SCRIPT}</script>` : ""}<style>
   :root{--accent:${safeAccent};color-scheme:dark}*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111412;color:#f2f3ed;font-family:Arial,sans-serif;position:relative}button{font:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.center{position:relative;text-align:center;display:flex;align-items:center;flex-direction:column;gap:20px}h1{font-size:clamp(28px,8vw,55px);letter-spacing:-.065em;line-height:1.05;margin:0;font-weight:600}h2{letter-spacing:-.04em}small{font-size:9px;letter-spacing:2px;color:#a4af9b}.hint{font-size:10px;color:#8b968b}${item.css}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.split span,.reveal-block{opacity:1!important;transform:none!important}}
   </style><body>${item.html}<script>${INTERACTION_ONLY.test(id) ? item.js : `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){${item.js}}`}</script>${engineFor(id) ? engineLoader(engineBundles(id)) : ""}</body></html>`;

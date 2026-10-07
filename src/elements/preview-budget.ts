@@ -9,11 +9,33 @@
  * tuned against a profile rather than raised to make more previews appear at once.
  */
 
-/** Registry previews allowed to be live at the same time. */
+/** Previews allowed to be live at the same time, on a machine with room for them. */
 // Covers a full large-screen grid plus one approaching row. A cap of four left visible
 // cards waiting behind other visible cards, which made their prose posters look like
 // the final preview rather than a loading state.
 export const MAX_LIVE_PREVIEWS = 12;
+
+/**
+ * The cap for this device: MAX_LIVE_PREVIEWS where there is room, fewer where there is not.
+ *
+ * All the card frames share one renderer process, each with its own React heap and often
+ * a WebGL context, so a fixed twelve that a desktop shrugs off is what took a 4 GB laptop
+ * or a phone's tab down. The floor is still a full screen of cards — a cap below what is
+ * on screen leaves visible cards queued, which reads as slow rather than safe — and a
+ * phone's single column shows three or four at a time.
+ *
+ * `deviceMemory` (Chromium only, rounded and capped at 8) and `hardwareConcurrency` are
+ * coarse, so this is three tiers rather than a formula. Without either, the full cap.
+ */
+export function livePreviewBudget(
+  device: { deviceMemory?: number; hardwareConcurrency?: number; width?: number } = {},
+): number {
+  const { deviceMemory, hardwareConcurrency, width } = device;
+  if (width !== undefined && width <= 480) return 5;
+  if ((deviceMemory !== undefined && deviceMemory <= 2) || (hardwareConcurrency !== undefined && hardwareConcurrency <= 2)) return 8;
+  if ((deviceMemory !== undefined && deviceMemory <= 4) || (hardwareConcurrency !== undefined && hardwareConcurrency <= 4)) return 10;
+  return MAX_LIVE_PREVIEWS;
+}
 
 /** How far outside the viewport a card starts loading. */
 export const ACTIVATION_MARGIN_PX = 320;
@@ -21,6 +43,11 @@ export const ACTIVATION_MARGIN_PX = 320;
 /**
  * How long an offscreen preview is kept before teardown. Long enough that a small
  * reverse scroll does not unmount and remount everything it passes.
+ *
+ * Was 8 seconds. At reading pace that kept the previous two screenfuls resident behind
+ * the current one — twenty-odd documents alive for a dozen on screen — and memory, not
+ * animation, is what crashed the tab. Coming back to a torn-down card is cheap: the
+ * compiled document is cached by the route and the browser.
  *
  * Holding a preview this long costs its memory, not its animation. Measured in Chromium
  * (September 2026): a sandboxed card frame scrolled out of the grid's own scroll
@@ -30,10 +57,13 @@ export const ACTIVATION_MARGIN_PX = 320;
  * A pause script injected into each document was considered and left out for that
  * reason — measure again before adding one.
  */
-export const OFFSCREEN_GRACE_MS = 8000;
+export const OFFSCREEN_GRACE_MS = 3000;
 
 /**
  * A preview that has not reached a terminal state is never torn down before this.
+ *
+ * Was 25 seconds; a compile that has started keeps running on the server when its frame
+ * goes, so the frame only has to live long enough to see a typical compile through.
  *
  * Compiling a registry component takes seconds. With a short grace period alone, a card
  * nudged just outside the activation margin lost its slot mid-compile, and scrolling
@@ -41,7 +71,7 @@ export const OFFSCREEN_GRACE_MS = 8000;
  * indefinitely without ever finishing. Work already in flight is protected until it
  * resolves or this cap expires.
  */
-export const IN_FLIGHT_PROTECTION_MS = 25_000;
+export const IN_FLIGHT_PROTECTION_MS = 12_000;
 
 /**
  * A search this narrow is taken as "show me these", so its results activate without

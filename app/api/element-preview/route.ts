@@ -11,6 +11,7 @@ import {
   DOCUMENT_CACHE_ENTRIES,
 } from "@/elements/preview-budget";
 import { propRecipe, RECIPES_FINGERPRINT } from "@/elements/preview-props";
+import { FRAME_HOST_SCRIPT } from "@/elements/frame-host";
 
 /**
  * Compiles one published registry component into a self-contained preview document.
@@ -559,6 +560,12 @@ async function compile(source: SourceId, name: string): Promise<string> {
     // createElement calls dispatcher.getOwner(), which only a dev renderer provides — so
     // @react-three/fiber's production reconciler crashed every Canvas on first render.
     define: { "process.env.NODE_ENV": '"production"' },
+    // Every document carries its own React, and up to a dozen run side by side in one
+    // renderer process. Unminified, each was ~1 MB to parse and hold; minified it is
+    // well under half that. Names are kept because components and their libraries read
+    // displayName and Function.name for context lookups and error messages.
+    minify: true,
+    keepNames: true,
     format: "esm",
     target: "es2020",
     jsx: "automatic",
@@ -716,29 +723,69 @@ function withStatus(html: string): string {
 
   const report = () => {
     const status = evaluate();
+    lastSent = status;
     send(status, status === "fallback" ? reason() : undefined);
+    settle(status);
     return status;
   };
 
-  new MutationObserver(report).observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+  // Coalesced, and stopped once the answer is final.
+  //
+  // Each report walks the whole document calling getComputedStyle, and an animating
+  // component changes a style attribute every frame — so reporting on every mutation
+  // meant a full-document style walk and a postMessage sixty times a second, in each of
+  // a dozen frames, for as long as the card was live. That alone was enough to starve
+  // the shared preview process. Now a burst of mutations produces one report within
+  // REPORT_EVERY_MS (the first goes straight out, so a card shows the moment it
+  // paints), only a changed status is sent, and once the card is ready — or the late
+  // paint window has passed — the observer is gone and the document costs nothing.
+  const REPORT_EVERY_MS = 150;
+  let lastSent = "";
+  let pending = 0;
+  let lastRun = 0;
+  let observer = null;
+  const finish = () => { if (observer) { observer.disconnect(); observer = null; } clearInterval(poll); };
+  const settle = (status) => {
+    if (status === "ready" || Date.now() - started > ${LATE_PAINT_WATCH_MS}) finish();
+  };
+  const reportIfChanged = () => {
+    pending = 0;
+    lastRun = Date.now();
+    const status = evaluate();
+    if (status !== lastSent) { lastSent = status; send(status, status === "fallback" ? reason() : undefined); }
+    settle(status);
+    return status;
+  };
+  // A timer, not requestAnimationFrame: a frame scrolled out of view gets no animation
+  // frames at all, and a report waiting on one would never arrive.
+  const schedule = () => {
+    if (pending) return;
+    pending = setTimeout(reportIfChanged, Math.max(0, REPORT_EVERY_MS - (Date.now() - lastRun)));
+  };
+  observer = new MutationObserver(schedule);
+  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
   // An error is only a failure if nothing is showing. Components throw from effects and
   // handlers all the time after painting perfectly well, and reporting those as failed
   // hid a working preview behind the placeholder.
-  addEventListener("error", (event) => { errored = true; thrown = thrown || ("An error was thrown: " + (event.message || event.error)); report(); });
-  addEventListener("unhandledrejection", (event) => { errored = true; thrown = thrown || ("A promise rejected: " + (event.reason && event.reason.message ? event.reason.message : event.reason)); report(); });
+  addEventListener("error", (event) => { errored = true; thrown = thrown || ("An error was thrown: " + (event.message || event.error)); schedule(); });
+  addEventListener("unhandledrejection", (event) => { errored = true; thrown = thrown || ("A promise rejected: " + (event.reason && event.reason.message ? event.reason.message : event.reason)); schedule(); });
   // The card may ask at any time, which removes the race entirely: a status that
   // arrives before anyone is listening is no longer lost.
-  addEventListener("message", (event) => { if (event.data && event.data.type === "dp-preview-ping") report(); });
+  // Once settled, the last answer is repeated rather than re-measured.
+  addEventListener("message", (event) => {
+    if (!event.data || event.data.type !== "dp-preview-ping") return;
+    if (observer) report(); else send(lastSent, lastSent === "fallback" ? reason() : undefined);
+  });
 
-  requestAnimationFrame(() => requestAnimationFrame(report));
+  requestAnimationFrame(() => requestAnimationFrame(reportIfChanged));
   // Polled briefly as well, so a surface that appears without mutating the DOM — a
   // canvas drawing itself, an image decoding — is still noticed.
   // Kept going past a fallback: a CSS-only entrance changes nothing in the DOM, so the
   // mutation observer alone would never see it arrive.
-  const poll = setInterval(() => { const status = report(); if (status === "ready" || Date.now() - started > ${LATE_PAINT_WATCH_MS}) clearInterval(poll); }, 400);
-  addEventListener("load", report);
+  const poll = setInterval(() => { if (!pending) reportIfChanged(); }, 400);
+  addEventListener("load", schedule);
 })();
-</script>`;
+</script><script>${FRAME_HOST_SCRIPT}</script>`;
   // Before the *last* </body>, by slicing. replace() took the first, and a bundle can
   // contain that text: PillNav's does, so the reporter landed inside the component's own
   // module script, which then failed to parse — nothing mounted and nothing reported,

@@ -13,6 +13,7 @@ import { BROWSE_CATEGORIES, browseCategory } from "@/elements/taxonomy";
 import { describeElement } from "@/elements/descriptions";
 import { ALL_TYPES, clearLibraryView, COLLECTIONS, DEFAULT_VIEW, readLibraryView, writeLibraryView, type LibraryView } from "@/elements/library-url";
 import { OriginalPreview } from "./OriginalPreview";
+import { FRAME_ESCAPE } from "@/elements/frame-host";
 import { previewSrc, RegistryPreview } from "./RegistryPreview";
 import {
   advanceCatalogueWindow,
@@ -63,8 +64,23 @@ function scrollRoot(node: HTMLElement): HTMLElement | null {
   return null;
 }
 
+/**
+ * Whether a click on a card should open it full screen: anywhere on the card except the
+ * live preview, which is for playing with, and the card's own controls — add, notes,
+ * placement, links, the advanced panel. Selecting text is not a click either.
+ */
+function opensFromCard(target: EventTarget, card: HTMLElement): boolean {
+  if (!(target instanceof Element) || !card.contains(target)) return false;
+  if (target.closest(".element-canvas, .element-note, .element-advanced, button, a, input, textarea, select, label")) return false;
+  return !window.getSelection()?.toString();
+}
+
 export function ElementLibrary({ exploring = false, onCreate }: { exploring?: boolean; onCreate?: () => void }) {
-  const project = useProjectStore(s => s.project);
+  // The parts of the project the grid shows, not the project: subscribed whole, every
+  // colour or spacing tweak elsewhere re-rendered all of the mounted cards.
+  const hasProject = useProjectStore(s => !!s.project);
+  const recipe = useProjectStore(s => s.project?.recipe);
+  const selections = useProjectStore(s => s.project?.selections);
   const edit = useProjectStore(s => s.edit);
   const loadRegistry = useProjectStore(s => s.loadRegistry);
   const registry = useProjectStore(s => s.registry);
@@ -191,8 +207,8 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
     setFullId(null);
   };
 
-  const selected = exploring ? [] : project?.recipe.elements ?? [];
-  const picked = exploring ? [] : project?.selections ?? [];
+  const selected = exploring ? [] : recipe?.elements ?? [];
+  const picked = exploring ? [] : selections ?? [];
 
   const items = useMemo<LibraryItem[]>(() => {
     const all: LibraryItem[] = [
@@ -469,8 +485,19 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       };
+      // Escape pressed inside the preview itself, forwarded by its document
+      // (elements/frame-host.ts): key events in a frame never reach this one.
+      const fromFrame = (event: MessageEvent) => {
+        if (event.data?.type !== FRAME_ESCAPE) return;
+        const frame = document.querySelector<HTMLIFrameElement>(".demo-dialog iframe");
+        if (frame && event.source === frame.contentWindow) closeFull();
+      };
       document.addEventListener("keydown", trap);
-      return () => document.removeEventListener("keydown", trap);
+      window.addEventListener("message", fromFrame);
+      return () => {
+        document.removeEventListener("keydown", trap);
+        window.removeEventListener("message", fromFrame);
+      };
     }
     // Closed: back to the card of the element last looked at, mounting it if need be.
     const id = lastViewed.current;
@@ -485,7 +512,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   stepRef.current = step;
 
   const toggle = (item: LibraryItem) => {
-    if (exploring || !project) { onCreate?.(); return; }
+    if (exploring || !hasProject) { onCreate?.(); return; }
     if (item.registry) {
       if (picked.some(s => s.id === item.id)) deselectElement(item.id);
       else selectElement(item.registry);
@@ -571,21 +598,24 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         aria-posinset={index + 1}
         aria-setsize={results.length}
         onFocus={() => { if (focusIndex !== index) setFocusIndex(index); }}
+        onClick={event => { if (opensFromCard(event.target, event.currentTarget)) openFull(item.id); }}
       >
         <div className="element-canvas">
           <span className="canvas-tag">{item.tag ?? sourceById(item.registry!.source)?.label}</span>
           {item.preview
             ? <OriginalPreview id={item.id} title={item.title} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onResume={() => setPaused(false)}/>
-            : <RegistryPreview element={withVariant(item.registry!)} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => openFull(item.id)}/>}
-          {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => openFull(item.id)}>↗</button>}
+            : <RegistryPreview element={withVariant(item.registry!)} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT}/>}
+          {/* One button, in one place, for both kinds of card. Each preview used to draw
+              its own — bottom right on originals, top right on registry cards. */}
+          <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => openFull(item.id)}>↗</button>
         </div>
         <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category}</span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>
         {item.registry
           ? <div className="element-origin"><span className="registry-source-badge" title="Installed from a third-party registry at build time">↗ {sourceById(item.registry.source)?.label}</span>{advanced && <small>{item.registry.referenceOnly ? "REFERENCE ONLY" : item.registry.engineDependency.length ? item.registry.engineDependency.join(" + ").toUpperCase() : "NO ENGINE"}</small>}</div>
           : <div className="element-origin">{elementOrigin(item.id).url ? <a href={elementOrigin(item.id).url} target="_blank" rel="noreferrer noopener">↗ {elementOrigin(item.id).name}</a> : <span title="Authored for this playground; included as source in your export">✳ {elementOrigin(item.id).name}</span>}{advanced && <small>{elementOrigin(item.id).runtime}</small>}</div>}
         {advanced && item.registry && <ElementAdvanced element={item.registry} selected={chosen}/>}
-        {chosen && note && "note" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="Add a note… What do you have in mind?" value={note.note} onChange={e => edit(`Note for ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.note = e.target.value; }, `element-note:${item.id}`)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => edit(`Place ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.placement = e.target.value; })}><option value="page">End of page</option>{project && pageSections(project.recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
-        {chosen && note && "intendedUse" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="What's it for? e.g. hero headline reveal" value={note.intendedUse} onChange={e => useProjectStore.getState().setIntendedUse(item.id, e.target.value)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => useProjectStore.getState().setSelectionPlacement(item.id, e.target.value)}><option value="page">End of page</option>{project && pageSections(project.recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
+        {chosen && note && "note" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="Add a note… What do you have in mind?" value={note.note} onChange={e => edit(`Note for ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.note = e.target.value; }, `element-note:${item.id}`)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => edit(`Place ${item.title}`, d => { const s = d.recipe.elements?.find(s => s.id === item.id); if (s) s.placement = e.target.value; })}><option value="page">End of page</option>{recipe && pageSections(recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
+        {chosen && note && "intendedUse" in note && <div className="element-note"><textarea aria-label={`Note for ${item.title}`} placeholder="What's it for? e.g. hero headline reveal" value={note.intendedUse} onChange={e => useProjectStore.getState().setIntendedUse(item.id, e.target.value)}/><label>Place after <select aria-label={`Placement for ${item.title}`} value={note.placement} onChange={e => useProjectStore.getState().setSelectionPlacement(item.id, e.target.value)}><option value="page">End of page</option>{recipe && pageSections(recipe).map(k => <option value={k} key={k}>{SECTION_LABELS[k]}</option>)}</select></label></div>}
       </article>;
     })}</div>
 
@@ -619,7 +649,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         <button className="primary-button" onClick={() => toggle({ id: expanded.id, title: expanded.title, description: expanded.description, category: browseCategory(expanded), preview: false, registry: expanded })}>{picked.some(s => s.id === expanded.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button>
       </footer>
     </div></div>}
-    {active && <div className="studio-overlay" onClick={closeFull}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={active.title} onClick={e => e.stopPropagation()}><header><div><h2>{active.title}</h2><p>{active.description}</p>{advanced && <p className="demo-origin">Source: {elementOrigin(active.id).name} · {elementOrigin(active.id).runtime}</p>}</div><div className="dialog-actions">{stepper}<button autoFocus className="quiet-button" onClick={closeFull}>Close ×</button></div></header><iframe key={`${active.id}:${replay}`} title={`${active.title} expanded preview`} sandbox="allow-scripts" srcDoc={elementDocument(active.id)}/><footer><button className="quiet-button" onClick={() => setReplay(replay + 1)}>↻ Replay</button><button className="primary-button" onClick={() => toggle({ id: active.id, title: active.title, description: active.description, category: active.category, preview: true })}>{selected.some(s => s.id === active.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button></footer></div></div>}
+    {active && <div className="studio-overlay" onClick={closeFull}><div className="demo-dialog" role="dialog" aria-modal="true" aria-label={active.title} onClick={e => e.stopPropagation()}><header><div><h2>{active.title}</h2><p>{active.description}</p>{advanced && <p className="demo-origin">Source: {elementOrigin(active.id).name} · {elementOrigin(active.id).runtime}</p>}</div><div className="dialog-actions">{stepper}<button autoFocus className="quiet-button" onClick={closeFull}>Close ×</button></div></header><iframe key={`${active.id}:${replay}`} title={`${active.title} expanded preview`} sandbox="allow-scripts" srcDoc={elementDocument(active.id, undefined, { host: true })}/><footer><button className="quiet-button" onClick={() => setReplay(replay + 1)}>↻ Replay</button><button className="primary-button" onClick={() => toggle({ id: active.id, title: active.title, description: active.description, category: active.category, preview: true })}>{selected.some(s => s.id === active.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button></footer></div></div>}
   </>;
 }
 

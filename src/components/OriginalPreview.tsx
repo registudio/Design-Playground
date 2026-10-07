@@ -39,7 +39,7 @@ export function OriginalPreview({
   const startedAt = useRef(0);
   const settled = useRef(false);
   const interested = useRef(false);
-  const document = useMemo(() => elementDocument(id), [id]);
+  const document = useMemo(() => elementDocument(id, undefined, { host: true }), [id]);
 
   useLiveSlot(host, id, { paused, eager }, { startedAt, settled, interested }, {
     start: () => setActive(true),

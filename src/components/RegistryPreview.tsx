@@ -36,7 +36,7 @@ export function previewSrc(
   const concreteName = element.source === "react-bits" && element.variant
     ? `${element.name}-${element.variant.language}-${element.variant.styling}`
     : element.name;
-  return `/api/element-preview?v=6&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
+  return `/api/element-preview?v=7&source=${encodeURIComponent(element.source)}&name=${encodeURIComponent(concreteName)}&retry=${attempt}`;
 }
 
 export function RegistryPreview({
@@ -50,13 +50,10 @@ export function RegistryPreview({
    * asked for.
    */
   paused = false,
-  onExpand,
 }: {
   element: Pick<DesignElement, "id" | "source" | "name" | "title" | "category" | "variant">;
   eager?: boolean;
   paused?: boolean;
-  /** Opens this preview full size. Registry cards had no way to do that at all. */
-  onExpand?: () => void;
 }) {
   const [active, setActive] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -103,9 +100,13 @@ export function RegistryPreview({
 
     // Asked rather than awaited. The document reports on its own too, but a single
     // announcement can land before this listener exists, and a component that renders
-    // once and never mutates never sends another.
+    // once and never mutates never sends another. Only until the answer is final: a
+    // dozen settled cards pinging forever kept every frame's thread waking for nothing.
     const ping = active
-      ? setInterval(() => frame.current?.contentWindow?.postMessage({ type: "dp-preview-ping" }, "*"), 600)
+      ? setInterval(() => {
+          if (settled.current) clearInterval(ping);
+          else frame.current?.contentWindow?.postMessage({ type: "dp-preview-ping" }, "*");
+        }, 600)
       : undefined;
     const timeout = active
       ? setTimeout(() => {
@@ -168,16 +169,6 @@ export function RegistryPreview({
       </div>
       {reason && !paused && (status === "fallback" || status === "failed") && (
         <p className="preview-reason">{reason}</p>
-      )}
-      {onExpand && (
-        <button
-          type="button"
-          className="expand-demo"
-          aria-label={`Expand ${element.title}`}
-          onClick={() => onExpand()}
-        >
-          ↗
-        </button>
       )}
     </div>
   );

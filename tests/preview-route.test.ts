@@ -7,6 +7,7 @@ import {
   CATALOGUE_BATCH,
   DOCUMENT_CACHE_ENTRIES,
   IN_FLIGHT_PROTECTION_MS,
+  livePreviewBudget,
   MAX_LIVE_PREVIEWS,
   NARROW_SEARCH_LIMIT,
   OFFSCREEN_GRACE_MS,
@@ -88,8 +89,10 @@ describe("preview budgets", () => {
     // Was 750ms, which freed slots promptly but killed compiles: a card nudged just
     // outside the activation margin lost its slot mid-build, and scrolling back
     // restarted it from nothing. A preview in a busy part of the grid could churn
-    // indefinitely and never finish — the "stuck loading" cards.
-    expect(OFFSCREEN_GRACE_MS).toBeGreaterThanOrEqual(5_000);
+    // indefinitely and never finish — the "stuck loading" cards. Not 8s either: that
+    // kept two screenfuls of documents resident behind the current one.
+    expect(OFFSCREEN_GRACE_MS).toBeGreaterThanOrEqual(2_000);
+    expect(OFFSCREEN_GRACE_MS).toBeLessThanOrEqual(5_000);
   });
 
   it("protects work already in flight for longer than a compile takes", () => {
@@ -97,7 +100,19 @@ describe("preview budgets", () => {
     // torn down. Work that has not reached a terminal state is held until it resolves
     // or this cap expires, whichever comes first.
     expect(IN_FLIGHT_PROTECTION_MS).toBeGreaterThan(OFFSCREEN_GRACE_MS);
-    expect(IN_FLIGHT_PROTECTION_MS).toBeGreaterThanOrEqual(20_000);
+    expect(IN_FLIGHT_PROTECTION_MS).toBeGreaterThanOrEqual(10_000);
+  });
+
+  it("sizes the live budget to the device, never below a screen of cards", () => {
+    expect(livePreviewBudget()).toBe(MAX_LIVE_PREVIEWS);
+    expect(livePreviewBudget({ deviceMemory: 8, hardwareConcurrency: 16, width: 1600 })).toBe(MAX_LIVE_PREVIEWS);
+    expect(livePreviewBudget({ deviceMemory: 4, hardwareConcurrency: 8 })).toBe(10);
+    expect(livePreviewBudget({ deviceMemory: 2 })).toBe(8);
+    expect(livePreviewBudget({ hardwareConcurrency: 2 })).toBe(8);
+    // A phone's single column.
+    expect(livePreviewBudget({ deviceMemory: 8, width: 390 })).toBe(5);
+    // Three columns of three rows is what a desktop grid shows at once.
+    expect(livePreviewBudget({ deviceMemory: 0.5, hardwareConcurrency: 1 })).toBeGreaterThanOrEqual(8);
   });
 
   it("still bounds how long a slot can be held", () => {
@@ -301,7 +316,7 @@ describe("a stand-in says why it is there", () => {
     // than one that says "Rendering…" a little longer.
     const html = await body("source=bklit&name=area-chart");
     const grace = Number(html.match(/Date\.now\(\) - started > (\d+)/)?.[1] ?? 0);
-    const watch = Number(html.match(/Date\.now\(\) - started > (\d+)\) clearInterval/)?.[1] ?? 0);
+    const watch = Number(html.match(/Date\.now\(\) - started > (\d+)\) finish/)?.[1] ?? 0);
     expect(grace).toBeGreaterThanOrEqual(3500);
     expect(watch).toBeGreaterThan(grace);
   });
@@ -421,7 +436,9 @@ describe("compiling real registry shapes", () => {
     expect(requests.some((url) => url.startsWith("/pkg/fixture-hooks"))).toBe(true);
     // Two Reacts in one document means the package's hooks read a null dispatcher.
     expect(requests.filter((url) => url.startsWith("/pkg/react"))).toEqual([]);
-    expect(html.match(/\/\/ node_modules\/react\/cjs\/react\.production\.js/g)).toHaveLength(1);
+    // Counted by React's own export assignment, which survives minification (the path
+    // comments the bundler writes into unminified output do not).
+    expect(html.match(/\.Children=/g)).toHaveLength(1);
     // And the production build, as every esm.sh package is: a dev React with a prod
     // renderer crashed on dispatcher.getOwner().
     expect(html).not.toContain("react.development.js");

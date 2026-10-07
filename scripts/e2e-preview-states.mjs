@@ -46,7 +46,7 @@ const read = card => card.evaluate(node => {
     frameVisible: !!rect && rect.width > 20 && rect.height > 20,
     hasRetry: !!canvas?.querySelector(".preview-status button"),
     reason: canvas?.querySelector(".preview-reason")?.textContent ?? "",
-    hasExpand: !!canvas?.querySelector(".expand-demo"),
+    hasExpand: !!node.querySelector(".element-canvas > .expand-demo"),
   };
 });
 
@@ -106,8 +106,11 @@ await page.waitForTimeout(500);
 ok("Escape closes the expanded preview", (await page.locator(".demo-dialog").count()) === 0);
 
 // Retry must restart the work, not sit on the previous answer.
+// Scrolled to first: the live budget depends on the device (livePreviewBudget), and on a
+// small machine a card below the fold rightly waits its turn rather than holding a slot.
 const failedCard = page.locator(".element-card").filter({ hasText: "Never" }).first();
-await failedCard.locator(".preview-status button").click();
+await failedCard.scrollIntoViewIfNeeded();
+await failedCard.locator(".preview-status button").click({ timeout: 45000 });
 await page.waitForTimeout(1200);
 const afterRetry = await failedCard.locator(".preview-status").textContent();
 ok(`retry restarts the attempt (now "${afterRetry?.replace("Retry","").trim()}")`, /Rendering/.test(afterRetry ?? ""));
