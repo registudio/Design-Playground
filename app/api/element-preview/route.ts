@@ -124,7 +124,7 @@ const DISK_CACHE = process.env.DP_PREVIEW_CACHE ?? path.join(process.cwd(), ".ne
  */
 const CACHE_VERSION = "5";
 
-/** Packages compiled into every document from local disk; see installedPackagePath. */
+/** Packages compiled into every document from local disk; see LOCAL_PACKAGES. */
 const BUNDLED_PACKAGES = ["react", "react-dom", "motion", "motion/node_modules/framer-motion", "gsap", "tailwindcss"];
 
 let compilerFingerprint: Promise<string> | null = null;
@@ -145,7 +145,7 @@ function fingerprint(): Promise<string> {
     // Function source rather than a list kept by hand: a hand-kept list is exactly what
     // went stale. Each of these decides something about what ends up in the document.
     const code = [
-      fetchItem, demonstrationOf, patched, chooseEntry, compile, withAssets, previewAssets, withDefaultTextFont, virtualFiles, installedPackagePath, installedPath, normalize, resolveRelative, resolvePublished,
+      fetchItem, demonstrationOf, patched, chooseEntry, compile, withAssets, previewAssets, withDefaultTextFont, virtualFiles, isLocalPackage, installedPath, normalize, resolveRelative, resolvePublished,
       readImports, shimModule, hookShimModule, iconShimModule, fontShimModule, packageUrl, tailwindFor,
       harness, documentFor, generatedDocument,
     ].map(String);
@@ -795,7 +795,33 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
   return {
     name: "registry-virtual-fs",
     setup(build) {
-      const resolveRegistryImport = (args: esbuild.OnResolveArgs) => {
+      /**
+       * A local package, resolved by esbuild itself from the project root.
+       *
+       * These used to be hard-coded paths (node_modules/react-dom/index.js and so on).
+       * Under pnpm, or any install that links packages in from a store, that path is a
+       * symlink, and esbuild looked for react-dom's own dependencies beside the link
+       * instead of beside the real files: every preview failed with 'Could not resolve
+       * "scheduler"'. Resolved properly, the symlink is followed. framer-motion is looked
+       * for inside motion too, where npm puts it when it is not hoisted. Anything not
+       * found locally falls back to esm.sh rather than failing the build.
+       */
+      const root = process.cwd();
+      const resolveLocal = async (specifier: string, kind: esbuild.ImportKind) => {
+        if (!isLocalPackage(specifier)) return null;
+        const from = async (resolveDir: string) => {
+          const found = await build.resolve(specifier, { kind, resolveDir, pluginData: { local: true } });
+          return found.errors.length ? null : found.path;
+        };
+        const direct = await from(root);
+        if (direct || !specifier.startsWith("framer-motion")) return direct;
+        const motion = await build.resolve("motion", { kind, resolveDir: root, pluginData: { local: true } });
+        return motion.errors.length ? null : from(path.dirname(motion.path));
+      };
+
+      const resolveRegistryImport = async (args: esbuild.OnResolveArgs) => {
+        // Our own build.resolve calls above: let esbuild resolve them normally.
+        if (args.pluginData?.local) return;
         // Once a local package has been admitted, let esbuild resolve its own relative
         // and transitive imports normally rather than treating them as registry files.
         if (args.namespace === "file" && args.importer.includes("node_modules")) return;
@@ -809,7 +835,7 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
         if (args.path === "lucide-react" || args.path === "@central-icons-react/all") return shim(args.path, args.importer, "icon-shim");
         if (args.path.startsWith("next/font")) return shim(args.path, args.importer, "font-shim");
         if (args.path in NEXT_SHIMS) return { path: args.path, namespace: "next-shim" };
-        const installed = installedPackagePath(args.path);
+        const installed = await resolveLocal(args.path, args.kind);
         if (installed) return { path: installed };
         return { path: packageUrl(args.path, versions), namespace: "remote" };
       };
@@ -821,23 +847,23 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
       // read a null dispatcher and threw "Cannot read properties of null (reading
       // 'useState')", which took out every Bklit chart. The same split would hand a
       // package its own gsap or motion, whose plugins and contexts then never meet.
-      const bare = (specifier: string) => {
-        const installed = installedPackagePath(specifier);
+      const bare = async (specifier: string, kind: esbuild.ImportKind) => {
+        const installed = await resolveLocal(specifier, kind);
         return installed ? { path: installed } : { path: packageUrl(specifier, versions), namespace: "remote" };
       };
 
       build.onResolve({ filter: /.*/, namespace: "file" }, resolveRegistryImport);
       build.onResolve({ filter: /.*/, namespace: "virtual" }, resolveRegistryImport);
-      build.onResolve({ filter: /.*/, namespace: "shim" }, (args) => bare(args.path));
-      build.onResolve({ filter: /.*/, namespace: "hook-shim" }, (args) => bare(args.path));
-      build.onResolve({ filter: /.*/, namespace: "icon-shim" }, (args) => bare(args.path));
-      build.onResolve({ filter: /.*/, namespace: "font-shim" }, (args) => bare(args.path));
+      build.onResolve({ filter: /.*/, namespace: "shim" }, (args) => bare(args.path, args.kind));
+      build.onResolve({ filter: /.*/, namespace: "hook-shim" }, (args) => bare(args.path, args.kind));
+      build.onResolve({ filter: /.*/, namespace: "icon-shim" }, (args) => bare(args.path, args.kind));
+      build.onResolve({ filter: /.*/, namespace: "font-shim" }, (args) => bare(args.path, args.kind));
       build.onResolve({ filter: /.*/, namespace: "remote" }, (args) => {
         if (args.path.startsWith("http://") || args.path.startsWith("https://")) return { path: args.path, namespace: "remote" };
         if (args.path.startsWith(".") || args.path.startsWith("/")) {
           return { path: new URL(args.path, args.importer).href, namespace: "remote" };
         }
-        return bare(args.path);
+        return bare(args.path, args.kind);
       });
 
       build.onLoad({ filter: /.*/, namespace: "virtual" }, (args) => {
@@ -884,7 +910,7 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
       build.onLoad({ filter: /.*/, namespace: "next-shim" }, (args) => ({
         contents: NEXT_SHIMS[args.path], loader: "js", resolveDir: "/",
       }));
-      build.onResolve({ filter: /.*/, namespace: "next-shim" }, (args) => bare(args.path));
+      build.onResolve({ filter: /.*/, namespace: "next-shim" }, (args) => bare(args.path, args.kind));
 
       build.onLoad({ filter: /.*/, namespace: "empty-style" }, () => ({ contents: "", loader: "css" }));
 
@@ -925,36 +951,11 @@ async function withDefaultTextFont(code: string): Promise<string> {
 /** See data/preview-assets/fonts/README.md. */
 const DEFAULT_TEXT_FONT = "data/preview-assets/fonts/figtree-black.ttf";
 
-/**
- * Static paths keep these packages on local disk without asking Next's server bundler
- * to evaluate a dynamic require.resolve expression. Esbuild resolves every import
- * below these entry files normally, including Motion's nested Framer Motion package.
- */
-function installedPackagePath(specifier: string): string | null {
-  const modules = path.join(process.cwd(), "node_modules");
-  if (specifier === "react") return path.join(modules, "react/index.js");
-  if (specifier.startsWith("react/")) return path.join(modules, `react/${specifier.slice(6)}.js`);
-  if (specifier === "react-dom") return path.join(modules, "react-dom/index.js");
-  if (specifier.startsWith("react-dom/")) return path.join(modules, `react-dom/${specifier.slice(10)}.js`);
+/** Packages bundled from the project's own node_modules rather than fetched from esm.sh. */
+const LOCAL_PACKAGES = ["react", "react-dom", "motion", "framer-motion", "gsap"];
 
-  if (specifier === "motion") return path.join(modules, "motion/dist/es/index.mjs");
-  if (specifier.startsWith("motion/")) {
-    return path.join(modules, `motion/dist/es/${specifier.slice(7)}.mjs`);
-  }
-  if (specifier === "framer-motion") {
-    return path.join(modules, "motion/node_modules/framer-motion/dist/es/index.mjs");
-  }
-  if (specifier.startsWith("framer-motion/")) {
-    return path.join(modules, `motion/node_modules/framer-motion/dist/es/${specifier.slice(14)}.mjs`);
-  }
-
-  if (specifier === "gsap") return path.join(modules, "gsap/index.js");
-  if (specifier.startsWith("gsap/")) {
-    const subpath = specifier.slice(5);
-    return path.join(modules, `gsap/${subpath}${subpath.endsWith(".js") ? "" : ".js"}`);
-  }
-  return null;
-}
+const isLocalPackage = (specifier: string) =>
+  LOCAL_PACKAGES.some((name) => specifier === name || specifier.startsWith(`${name}/`));
 
 const normalize = (path: string) => path.replace(/^(?:\.|~)?\//, "");
 

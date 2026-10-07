@@ -86,7 +86,9 @@ arranged and which parts are easy to break. Keep it current when a part moves.
   - Files are laid out by their registry `target` (where `shadcn add` installs them),
     with the published `path` as an alias; imports are written against the target.
   - There is one React: every bare import, including those inside esm.sh modules and
-    the shims, goes through `installedPackagePath` before esm.sh.
+    the shims, goes through `resolveLocal` (esbuild resolution from the project root, so
+    symlinked and hoisted installs work) before esm.sh. On Vercel those packages exist only
+    because `outputFileTracingIncludes` in next.config.ts ships them with the route.
   - `#root` takes the frame's full width and height, so `w-full`/`h-full` components
     have something to measure; it used to shrink to its content and give them 0px.
   - The document defines the shadcn theme variables and Tailwind colours, and `dark:` is
