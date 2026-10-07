@@ -531,12 +531,15 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
           be scanned at a glance rather than options hidden in a menu. */}
       <nav className="category-row" aria-label="Element types">{categories.map(c => <button key={c} aria-pressed={category === c} className={category === c ? "active" : ""} onClick={() => setCategory(c)}>{c}<span>{typeCount(c)}</span></button>)}</nav>
       <div className="library-filterbar" role="group" aria-label="Filter the library">
-        {advanced && <label><span>Source</span><select value={source ?? ""} onChange={e => setSource(e.target.value || null)}>
+        {/* The source is a way to browse, not a technical detail, so it is there in
+            Basic too. Engines are the one jargon-heavy group and stay Advanced-only —
+            unless a link has already selected one, which must still show. */}
+        <label><span>Source</span><select value={source ?? ""} onChange={e => setSource(e.target.value || null)}>
           <option value="">Every source</option>
           <option value={ORIGINALS}>Playground originals · {sourceCount(ORIGINALS)}</option>
           <optgroup label="Registries">{REGISTRY_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label} · {sourceCount(s.id)}</option>)}</optgroup>
-          <optgroup label="Engines">{ENGINE_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label} · {sourceCount(s.id)}</option>)}</optgroup>
-        </select></label>}
+          {(advanced || ENGINE_SOURCES.some(s => s.id === source)) && <optgroup label="Engines">{ENGINE_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label} · {sourceCount(s.id)}</option>)}</optgroup>}
+        </select></label>
         <label><span>Collection</span><select value={collection} onChange={e => setCollection(e.target.value)}>{COLLECTIONS.map(label => <option key={label} value={label}>{label}</option>)}</select></label>
         {!exploring && <><button className="quiet-button" aria-pressed={compact} onClick={() => setCompact(!compact)}>{compact ? "Back to library" : "Compact view of your picks"}</button></>}
       </div>

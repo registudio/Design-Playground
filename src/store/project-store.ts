@@ -13,7 +13,7 @@ import { engineRequirements, type EngineId } from "@/schema/engines";
 import { captureCustomPresetFacets } from "@/presets";
 import { baselineDescription, baselineFor, resetPath } from "./baseline";
 import {
-  loadLastProjectId, loadPreferences, samePreferences, savePreferences, saveLastProjectId,
+  loadLastProjectId, loadPreferences, samePreferences, savePreferences, saveLastProjectId, type Tray,
   type ViewPreferences,
 } from "./preferences";
 import {
@@ -84,6 +84,9 @@ interface ProjectState {
   /** Collapsed control panels, by title. View state, so it stays out of the export. */
   collapsedPanels: string[];
   togglePanel: (title: string) => void;
+  /** Side trays minimised to a slim strip. View state, remembered between sessions. */
+  collapsedTrays: Tray[];
+  toggleTray: (tray: Tray) => void;
   /**
    * Restores remembered view preferences and keeps them saved from then on. Called
    * from an effect on mount rather than at module load: the server render has no
@@ -157,6 +160,7 @@ const viewPreferencesOf = (state: ProjectState): ViewPreferences => ({
   theme: state.theme,
   advanced: state.advanced,
   collapsedPanels: state.collapsedPanels,
+  collapsedTrays: state.collapsedTrays,
 });
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -213,6 +217,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   theme: "light",
   advanced: false,
   collapsedPanels: [],
+  collapsedTrays: [],
   registry: emptyIndex(),
   registryState: "idle",
   registryError: null,
@@ -326,6 +331,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       collapsedPanels: state.collapsedPanels.includes(title)
         ? state.collapsedPanels.filter((t) => t !== title)
         : [...state.collapsedPanels, title],
+    })),
+
+  toggleTray: (tray) =>
+    set((state) => ({
+      collapsedTrays: state.collapsedTrays.includes(tray)
+        ? state.collapsedTrays.filter((t) => t !== tray)
+        : [...state.collapsedTrays, tray],
     })),
 
   resetField: (path) => {
