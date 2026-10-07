@@ -12,8 +12,8 @@ arranged and which parts are easy to break. Keep it current when a part moves.
   unbudgeted (45 frames at once, 11 of them WebGL) and far-scrolled full-screen views
   painted nothing. Anything drawn over the whole grid pauses the cards behind it
   (`covered` in `ElementLibrary.tsx`).
-- **engines or attribution** — read the comments on `ENGINE_SOURCES` and
-  `PORT_SOURCES` in `src/elements/extended-catalogue.ts`. `label` (whose design) and
+- **engines or attribution** — read the comments on `ENGINE_SOURCES`,
+  `PORT_SOURCES` and `COMPONENT_SOURCES` in `src/elements/extended-catalogue.ts`. `label` (whose design) and
   `runtime` (what code runs) are separate on purpose: ShaderGradient's technique runs on
   this project's own WebGL, and cult-ui's components are ports. Neither ships the
   library it credits.
@@ -27,17 +27,25 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 
 ## The element catalogue
 
-- `src/elements/catalogue.ts` — `ELEMENTS` (107 authored originals), `elementOrigin(id)`
+- `src/elements/catalogue.ts` — `ELEMENTS` (113 authored originals), `elementOrigin(id)`
   for attribution, and `elementDocument(id, accent)`, which wraps an element's
   `{html, css, js}` into the standalone document every card, dialog and export runs.
   `INTERACTION_ONLY` names the elements whose script still runs under reduced motion
-  (controls — carousels, charts, cult-ui and 21st.dev ports — rather than decoration).
+  (controls — carousels, charts, cult-ui and 21st.dev ports, and Ship Notes components,
+  whose script is what defines them — rather than decoration).
   `engineLoader()` loads engine bundles after the frame's first paint, when idle: one
   Vanta bundle starting synchronously held up its neighbours' first paint.
 - `src/elements/extended-catalogue.ts` — assembles `EXTENDED_ELEMENTS` from
-  `engine-elements.ts`, `shader-elements.ts`, `cult-elements.ts`, `twentyfirst-elements.ts`, `chart-elements.ts`
+  `engine-elements.ts`, `shader-elements.ts`, `cult-elements.ts`, `twentyfirst-elements.ts`,
+  `shipnotes-elements.ts`, `chart-elements.ts`
   and a few inline carousels. Defines `ENGINE_SOURCES` (motion, lenis, vanta, shader),
-  `engineFor(id)` (by id prefix), `engineBundles(id)` and `PORT_SOURCES`.
+  `engineFor(id)` (by id prefix), `engineBundles(id)`, `PORT_SOURCES` and
+  `COMPONENT_SOURCES`.
+- `src/elements/shipnotes-elements.ts` — Ship Notes' web components, run as published.
+  Their scripts are vendored unchanged in `vendor/shipnotes-components/` (see its
+  `SOURCE.md`) and minified, MIT notice first, into the generated
+  `src/elements/shipnotes-sources.ts` by `scripts/vendor-shipnotes.mjs`; a test fails
+  if the two drift. Never edit the generated module or the vendored files by hand.
 - `scripts/engine-demos.mjs` — the runtime JS for every engine demo, keyed by element id
   and root selector. Plain `.mjs` so the build imports it with no compile step;
   `engine-demos.d.mts` types it for tests.

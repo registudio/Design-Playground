@@ -7,6 +7,7 @@ import { buildExport, toZip } from "@/export/bundle";
 import { unzipSync, strFromU8 } from "fflate";
 import { commit, emptyHistory, undo, redo } from "@/store/history";
 import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
+import { componentSourceFor } from "@/elements/extended-catalogue";
 import { toHex } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
 
@@ -68,7 +69,10 @@ describe("composed projects", () => {
   });
   it("exports every authored demo with honest origins and reduced-motion support", () => {
     for (const item of ELEMENTS) {
-      expect(elementOrigin(item.id).name).toMatch(/Playground/);
+      // Playground's own work, or a publisher's component credited as theirs, never unattributed.
+      const publisher = componentSourceFor(item.id);
+      if (publisher) expect(elementOrigin(item.id).name).toBe(`${publisher.label} · original component`);
+      else expect(elementOrigin(item.id).name).toMatch(/Playground/);
       expect(elementDocument(item.id)).toContain("prefers-reduced-motion:reduce");
       expect(elementDocument(item.id)).toContain(item.html);
     }

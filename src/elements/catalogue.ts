@@ -1,4 +1,4 @@
-import { EXTENDED_ELEMENTS, engineBundles, engineFor, portFor } from "./extended-catalogue";
+import { EXTENDED_ELEMENTS, componentSourceFor, engineBundles, engineFor, portFor } from "./extended-catalogue";
 /** Authored effects. The same documents run in the gallery, sample and ZIP. */
 export const ELEMENTS = [
   ...EXTENDED_ELEMENTS,
@@ -70,6 +70,8 @@ export function elementOrigin(id: string) {
   const runtime = engine?.runtime ?? (item?.js ? "CSS + JavaScript" : "CSS");
   if (engine) return { name: `${engine.label} · Playground demo`, runtime, url: engine.url };
   if (port) return { name: `${port.label} · Playground port`, runtime, url: port.url };
+  const component = componentSourceFor(id);
+  if (component) return { name: `${component.label} · original component`, runtime: `${component.label} web component (${component.licence})`, url: component.url };
   return { name: "Playground Originals", runtime, url: undefined as string | undefined };
 }
 /**
@@ -81,7 +83,7 @@ export function elementOrigin(id: string) {
  * rather than calmed, and neither is a tab strip that cannot change tabs. These run
  * either way and damp their own animation internally.
  */
-export const INTERACTION_ONLY = /^(carousel-|chart-|cult-|21st-|gallery-lightbox$)/;
+export const INTERACTION_ONLY = /^(carousel-|chart-|cult-|21st-|shipnotes-|gallery-lightbox$)/;
 
 export function elementDocument(id: string, accent = "#d2ef9e"): string {
   const item = ELEMENTS.find((e) => e.id === id);

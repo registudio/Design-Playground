@@ -2,6 +2,7 @@ import { CHART_ELEMENTS } from "./chart-elements";
 import { CULT_ELEMENTS } from "./cult-elements";
 import { ENGINE_ELEMENTS } from "./engine-elements";
 import { SHADER_ELEMENTS } from "./shader-elements";
+import { SHIPNOTES_ELEMENTS } from "./shipnotes-elements";
 import { TWENTYFIRST_ELEMENTS } from "./twentyfirst-elements";
 /**
  * Playground-authored demos. Engine attribution describes the runtime, not authorship.
@@ -54,6 +55,18 @@ export const PORT_SOURCES = [
 ] as const;
 export function portFor(id: string) { return PORT_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
 
+/**
+ * Publishers whose components run here as published.
+ *
+ * The third relationship, next to engines and ports: the publisher's own script ships
+ * inside the element document, unchanged and under its licence, so both the design and
+ * the code are theirs. Only the demo around it is this project's. Matched by id prefix.
+ */
+export const COMPONENT_SOURCES = [
+  { id: "shipnotes", label: "Ship Notes", url: "https://github.com/aqualang89/shipnotes-components", licence: "MIT" },
+] as const;
+export function componentSourceFor(id: string) { return COMPONENT_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
+
 const palettes = ["#e5bcb0", "#c6d9a4", "#b5c6ef", "#d7b4eb"];
 const art = (i: number) => `<svg viewBox="0 0 300 200" role="img" aria-label="Abstract landscape ${i + 1}"><rect width="300" height="200" fill="${palettes[i]}"/><circle cx="${75 + i * 35}" cy="65" r="42" fill="#fff8"/><path d="M0 170 Q80 ${i * 20} 160 140 T300 100 V200 H0Z" fill="#25372f"/><path d="M0 190 Q140 90 300 175 V200 H0Z" fill="#587764"/></svg>`;
 const carouselStyles = [
@@ -79,6 +92,7 @@ export const EXTENDED_ELEMENTS = [
   ...SHADER_ELEMENTS,
   ...CULT_ELEMENTS,
   ...TWENTYFIRST_ELEMENTS,
+  ...SHIPNOTES_ELEMENTS,
   ...CHART_ELEMENTS,
   { id: "gallery-lightbox", title: "Landscape lightbox", category: "Galleries & media", description: "An illustrated gallery with keyboard-accessible, enlarged artwork.", tag: "INTERACTIVE", html: `<div class="art-grid">${palettes.map((_, i) => `<button aria-label="Open landscape ${i + 1}">${art(i)}</button>`).join("")}</div><dialog><button class="close">Close ×</button><div class="large"></div></dialog>`, css: '.art-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:85%}.art-grid button{padding:0;border:0;background:none;border-radius:10px;overflow:hidden}.art-grid svg{display:block;width:100%}dialog{background:#172019;border:1px solid var(--accent);color:white;width:min(90%,700px)}dialog::backdrop{background:#000b}.large svg{width:100%;max-height:70vh}.close{float:right;margin-bottom:12px}', js: "const dialog=document.querySelector('dialog');document.querySelectorAll('.art-grid button').forEach(b=>b.onclick=()=>{document.querySelector('.large').innerHTML=b.innerHTML;dialog.showModal()});document.querySelector('.close').onclick=()=>dialog.close();" },
   { id: "motion-spring", title: "Spring playground", category: "Hover effects", description: "A real Motion spring follows your click with a gentle bounce. Authored by Playground using Motion.dev.", tag: "Motion.dev", html: '<div class="spring-stage"><button class="spring-ball" aria-label="Move spring">✳</button><small>CLICK ANYWHERE TO MOVE</small></div>', css: '.spring-stage{position:relative;width:90%;height:80%;border:1px dashed #586b47;border-radius:18px}.spring-ball{position:absolute;left:20px;top:20px;width:62px;height:62px;background:var(--accent);border:0;border-radius:18px;color:#192013;font-size:36px}.spring-stage small{position:absolute;bottom:12px;width:100%;text-align:center}', js: '' },

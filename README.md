@@ -19,7 +19,7 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets — or read them off the client's current website — and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image and the brand's own uploaded typeface. Decide whether the site has a dark theme. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 107 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+5. Browse 113 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes, light, dark or side by side, with a contrast lens that outlines failing text in place. Return to editing as often as needed.
 7. Download the ZIP handoff or a restorable project backup; a client rationale page and a standalone sample page are under More options.
 
@@ -215,7 +215,7 @@ packages with no registry to browse — they are turned on once for the whole pr
 motion binding that needs a switched-off engine blocks the export, since that recipe
 could not run.
 
-**Borrowed designs are credited as borrowed.** Three of the authored sets come from
+**Borrowed designs are credited as borrowed.** Four of the authored sets come from
 published libraries rather than from here, and they are credited differently because the
 relationships differ. The eight ShaderGradient cards run a WebGL runtime written for this
 project from the technique ShaderGradient publishes — installing the library itself would
@@ -225,7 +225,10 @@ fields that must not collapse into one. The eight cult-ui cards are ports: cult-
 React components rebuilt as plain documents, shown as "cult-ui · Playground port" and
 linked to their docs. Components taken from 21st.dev are ported the same way and shown
 as "21st.dev · Playground port". None of these sets ships the library it credits, and
-none is presented as a Playground Original.
+none is presented as a Playground Original. The six Ship Notes cards are the third
+relationship: plain web components that run here as published, so their own script
+ships inside each element document, unchanged and minified with its MIT notice at the
+head, credited as "Ship Notes · original component". Only the demo around each is ours.
 
 **Preview coverage is explicit.** Every original effect has a live visualiser, and every registry entry a compiled one; a card that cannot render says why rather than showing a blank tile. Hooks and utilities, which have nothing to render, are hidden from the grid unless asked for (a search or their own type still finds them).
 

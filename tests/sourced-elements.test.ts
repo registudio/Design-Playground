@@ -3,7 +3,10 @@ import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
 import { CULT_ELEMENTS } from "@/elements/cult-elements";
 import { SHADER_ELEMENTS } from "@/elements/shader-elements";
 import { TWENTYFIRST_ELEMENTS } from "@/elements/twentyfirst-elements";
-import { ENGINE_SOURCES, PORT_SOURCES } from "@/elements/extended-catalogue";
+import { COMPONENT_SOURCES, ENGINE_SOURCES, PORT_SOURCES } from "@/elements/extended-catalogue";
+import { SHIPNOTES_ELEMENTS } from "@/elements/shipnotes-elements";
+import { readFile } from "node:fs/promises";
+import { shipnotesModule } from "../scripts/vendor-shipnotes.mjs";
 
 /**
  * The originals that come from somewhere else.
@@ -43,7 +46,7 @@ describe("attribution", () => {
   it("keeps engine and port prefixes from colliding", () => {
     // Both are matched by `${id}-`, so one prefix that is a prefix of another would send
     // a card's credit to whichever list happened to be checked first.
-    const prefixes = [...ENGINE_SOURCES, ...PORT_SOURCES].map(source => source.id);
+    const prefixes = [...ENGINE_SOURCES, ...PORT_SOURCES, ...COMPONENT_SOURCES].map(source => source.id);
     for (const one of prefixes) {
       for (const other of prefixes) {
         if (one !== other) expect(other.startsWith(one), `${other} starts with ${one}`).toBe(false);
@@ -122,6 +125,44 @@ describe("21st.dev ports", () => {
         expect(/aria-label=/.test(attributes) || text.length > 0, `${element.id}: <button${attributes}>`).toBe(true);
       }
     }
+  });
+});
+
+describe("Ship Notes components", () => {
+  it("credits Ship Notes for both the design and the code", () => {
+    expect(SHIPNOTES_ELEMENTS.length).toBe(6);
+    for (const element of SHIPNOTES_ELEMENTS) {
+      expect(element.id, element.id).toMatch(/^shipnotes-/);
+      expect(element.tag, element.id).toBe("Ship Notes");
+      const origin = elementOrigin(element.id);
+      expect(origin.name, element.id).toBe("Ship Notes · original component");
+      expect(origin.url, element.id).toBe("https://github.com/aqualang89/shipnotes-components");
+    }
+  });
+
+  it("carries the MIT notice in every document that carries the code", () => {
+    // The licence requires the notice with every copy. The script is the copy, and it
+    // goes into each card, export and review page, so the notice is at its head.
+    for (const element of SHIPNOTES_ELEMENTS) {
+      const document = elementDocument(element.id);
+      expect(document, element.id).toContain("Copyright (c) 2026 Ship Notes");
+      expect(document, element.id).toContain("Permission is hereby granted, free of charge");
+    }
+  });
+
+  it("runs under reduced motion, since the script is what defines the element", () => {
+    for (const element of SHIPNOTES_ELEMENTS) {
+      expect(elementDocument(element.id), element.id).toContain(`<script>${element.js}</script>`);
+    }
+  });
+
+  it("never closes its own script tag early", () => {
+    for (const element of SHIPNOTES_ELEMENTS) expect(element.js, element.id).not.toMatch(/<\/script/i);
+  });
+
+  it("keeps the generated sources in step with the vendored files", async () => {
+    const committed = await readFile(new URL("../src/elements/shipnotes-sources.ts", import.meta.url), "utf8");
+    expect(committed, "run node scripts/vendor-shipnotes.mjs").toBe(await shipnotesModule());
   });
 });
 
