@@ -85,6 +85,33 @@ const DASHBOARD = `<div class="dash" aria-hidden="true">
   </div>
 </div>`;
 
+/** Upstream's demo testimonials, unchanged; three columns of three. */
+const TESTIMONIALS = [
+  ["This ERP revolutionized our operations, streamlining finance and inventory. The cloud-based platform keeps us productive, even remotely.", "Briana Patton", "Operations Manager"],
+  ["Implementing this ERP was smooth and quick. The customizable, user-friendly interface made team training effortless.", "Bilal Ahmed", "IT Manager"],
+  ["The support team is exceptional, guiding us through setup and providing ongoing assistance, ensuring our satisfaction.", "Saman Malik", "Customer Support Lead"],
+  ["This ERP's seamless integration enhanced our business operations and efficiency. Highly recommend for its intuitive interface.", "Omar Raza", "CEO"],
+  ["Its robust features and quick support have transformed our workflow, making us significantly more efficient.", "Zainab Hussain", "Project Manager"],
+  ["The smooth implementation exceeded expectations. It streamlined processes, improving overall business performance.", "Aliza Khan", "Business Analyst"],
+  ["Our business functions improved with a user-friendly design and positive customer feedback.", "Farhan Siddiqui", "Marketing Director"],
+  ["They delivered a solution that exceeded expectations, understanding our needs and enhancing our operations.", "Sana Sheikh", "Sales Manager"],
+  ["Using this ERP, our online presence and conversions significantly improved, boosting business performance.", "Hassan Ali", "E-commerce Manager"],
+] as const;
+
+/**
+ * Upstream's portraits are photos on 21st.dev's CDN. Drawn initials keep the card
+ * painting offline and in an exported ZIP, the same reason the container scroll draws
+ * its screen.
+ */
+const AVATAR_TONES = ["#f0abfc,#818cf8", "#fdba74,#f43f5e", "#86efac,#0ea5e9", "#fde68a,#f97316", "#a5b4fc,#14b8a6", "#fca5a5,#a855f7"];
+const testimonialCard = ([text, name, role]: (typeof TESTIMONIALS)[number], index: number) =>
+  `<figure class="tcol-card"><blockquote>${text}</blockquote><figcaption><span class="tcol-avatar" style="background:linear-gradient(135deg,${AVATAR_TONES[index % AVATAR_TONES.length]})" aria-hidden="true">${name.split(" ").map(part => part[0]).join("")}</span><span><b>${name}</b><small>${role}</small></span></figcaption></figure>`;
+/** One column, its cards written twice so a -50% translate loops without a seam. */
+const testimonialColumn = (from: number, seconds: number, column: number) => {
+  const cards = TESTIMONIALS.slice(from, from + 3).map((item, i) => testimonialCard(item, from + i)).join("");
+  return `<div class="tcol tcol-${column}"><div class="tcol-track" style="animation-duration:${seconds}s">${cards}<div class="tcol-copy" aria-hidden="true">${cards}</div></div></div>`;
+};
+
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
     id: "21st-radial-orbital-timeline",
@@ -255,5 +282,42 @@ viewport.addEventListener('scroll',queue,{passive:true});
 addEventListener('resize',queue);
 paint();
 }`,
+  },
+  {
+    // After the Testimonials Columns on 21st.dev: three columns at 15s, 19s and 17s so
+    // they never line up, the 25%/75% fade mask, and the second and third columns
+    // dropping out below 768px and 1024px are upstream's. Motion's endless linear tween
+    // is a CSS animation here, which the reduced-motion rule already stills.
+    id: "21st-testimonials-columns",
+    title: "Testimonial columns",
+    category: "Layout blocks",
+    description:
+      "Three columns of testimonials drift upward at different speeds and fade at the edges, a wall of social proof that never lines up. After the Testimonials Columns on 21st.dev.",
+    tag: "21st.dev",
+    html: `<section class="tcol-wrap" aria-label="Testimonials"><header class="tcol-head"><span class="tcol-badge">Testimonials</span><h2>What our users say</h2><p>See what our customers have to say about us.</p></header><div class="tcol-cols">${testimonialColumn(0, 15, 1)}${testimonialColumn(3, 19, 2)}${testimonialColumn(6, 17, 3)}</div></section>`,
+    css: `body{display:block!important}
+.tcol-wrap{height:100vh;display:flex;flex-direction:column;align-items:center;padding:clamp(14px,4vh,48px) 16px 0}
+.tcol-head{display:flex;flex-direction:column;align-items:center;max-width:540px;text-align:center;animation:tcol-rise .8s .1s cubic-bezier(.16,1,.3,1) both}
+@keyframes tcol-rise{from{opacity:0;transform:translateY(20px)}}
+.tcol-badge{padding:4px 16px;border:1px solid #2f362e;border-radius:8px;font-size:clamp(11px,1.6vw,14px)}
+.tcol-head h2{margin:clamp(8px,2vh,20px) 0 0;font-size:clamp(20px,4.2vw,48px);font-weight:700;letter-spacing:-.05em;line-height:1.1}
+.tcol-head p{margin:clamp(6px,2vh,20px) 0 0;font-size:clamp(12px,1.6vw,16px);opacity:.75}
+.tcol-cols{flex:1;min-height:0;width:100%;max-height:740px;margin-top:clamp(12px,4vh,40px);display:flex;justify-content:center;gap:24px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 25%,#000 75%,transparent);mask-image:linear-gradient(to bottom,transparent,#000 25%,#000 75%,transparent)}
+.tcol{flex:0 1 20rem;min-width:0}
+.tcol-track,.tcol-copy{display:flex;flex-direction:column;gap:24px}
+.tcol-track{padding-bottom:24px;animation:tcol-drift linear infinite}
+@keyframes tcol-drift{to{transform:translateY(-50%)}}
+.tcol-card{margin:0;padding:clamp(18px,3.2vw,40px);font-size:clamp(13px,1.5vw,16px);border:1px solid #2a3029;border-radius:24px;background:#111412;
+  box-shadow:0 10px 15px -3px color-mix(in srgb,var(--accent) 10%,transparent),0 4px 6px -4px color-mix(in srgb,var(--accent) 10%,transparent)}
+.tcol-card blockquote{margin:0;line-height:1.5}
+.tcol-card figcaption{display:flex;align-items:center;gap:8px;margin-top:20px}
+.tcol-avatar{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;color:#111412}
+.tcol-card b{display:block;font-weight:500;letter-spacing:-.02em;line-height:1.25}
+.tcol-card small{display:block;font-size:inherit;letter-spacing:-.02em;line-height:1.25;color:inherit;opacity:.6}
+@media(max-width:767px){.tcol-2{display:none}}
+@media(max-width:1023px){.tcol-3{display:none}}
+@media(max-height:320px){.tcol-head p{display:none}}`,
+    js: "",
   },
 ];

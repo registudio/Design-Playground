@@ -27,7 +27,7 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 
 ## The element catalogue
 
-- `src/elements/catalogue.ts` — `ELEMENTS` (105 authored originals), `elementOrigin(id)`
+- `src/elements/catalogue.ts` — `ELEMENTS` (106 authored originals), `elementOrigin(id)`
   for attribution, and `elementDocument(id, accent)`, which wraps an element's
   `{html, css, js}` into the standalone document every card, dialog and export runs.
   `INTERACTION_ONLY` names the elements whose script still runs under reduced motion
