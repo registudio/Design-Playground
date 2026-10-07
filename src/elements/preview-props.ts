@@ -27,7 +27,22 @@ const SERIES = `[
   { name: "Jun", label: "Jun", date: "2026-06", x: 6, value: 91, y: 91, total: 91, count: 91, amount: 91, open: 66, high: 94, low: 65, close: 91 }
 ]`;
 
-const IMAGE = `"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='260'%3E%3Crect width='400' height='260' fill='%23334423'/%3E%3C/svg%3E"`;
+/**
+ * Sample pictures: a colourful gradient scene each, so an image-led component has
+ * something to show. The first version was a flat dark-green rectangle, which nearly
+ * disappeared on the dark preview surface; image grids, orbits and posters measured
+ * as blank. Sized, so a WebGL texture loader can read their dimensions, and fully
+ * percent-encoded: Masonry puts them in an unquoted CSS url(), where a bare "(" or "'"
+ * ended the URL and the tile showed nothing.
+ */
+const IMAGES = [
+  `"data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27640%27%20height%3D%27480%27%20viewBox%3D%270%200%20640%20480%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%232b5876%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%234e4376%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%27640%27%20height%3D%27480%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%27470%27%20cy%3D%27150%27%20r%3D%27110%27%20fill%3D%27%23f7b267%27%20opacity%3D%27.85%27%2F%3E%3Cpath%20d%3D%27M0%20380%20Q160%20280%20320%20360%20T640%20330%20V480%20H0Z%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.22%27%2F%3E%3Crect%20x%3D%2770%27%20y%3D%2790%27%20width%3D%27190%27%20height%3D%2726%27%20rx%3D%2713%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%2F%3E%3C%2Fsvg%3E"`,
+  `"data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27640%27%20height%3D%27480%27%20viewBox%3D%270%200%20640%20480%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23134e5e%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%2371b280%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%27640%27%20height%3D%27480%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%27470%27%20cy%3D%27150%27%20r%3D%27110%27%20fill%3D%27%23f4e285%27%20opacity%3D%27.85%27%2F%3E%3Cpath%20d%3D%27M0%20380%20Q160%20280%20320%20360%20T640%20330%20V480%20H0Z%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.22%27%2F%3E%3Crect%20x%3D%2770%27%20y%3D%2790%27%20width%3D%27190%27%20height%3D%2726%27%20rx%3D%2713%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%2F%3E%3C%2Fsvg%3E"`,
+  `"data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27640%27%20height%3D%27480%27%20viewBox%3D%270%200%20640%20480%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23614385%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23516395%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%27640%27%20height%3D%27480%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%27470%27%20cy%3D%27150%27%20r%3D%27110%27%20fill%3D%27%23ff8fab%27%20opacity%3D%27.85%27%2F%3E%3Cpath%20d%3D%27M0%20380%20Q160%20280%20320%20360%20T640%20330%20V480%20H0Z%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.22%27%2F%3E%3Crect%20x%3D%2770%27%20y%3D%2790%27%20width%3D%27190%27%20height%3D%2726%27%20rx%3D%2713%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%2F%3E%3C%2Fsvg%3E"`,
+  `"data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27640%27%20height%3D%27480%27%20viewBox%3D%270%200%20640%20480%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23c94b4b%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%234b134f%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%27640%27%20height%3D%27480%27%20fill%3D%27url%28%23g%29%27%2F%3E%3Ccircle%20cx%3D%27470%27%20cy%3D%27150%27%20r%3D%27110%27%20fill%3D%27%23ffd166%27%20opacity%3D%27.85%27%2F%3E%3Cpath%20d%3D%27M0%20380%20Q160%20280%20320%20360%20T640%20330%20V480%20H0Z%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.22%27%2F%3E%3Crect%20x%3D%2770%27%20y%3D%2790%27%20width%3D%27190%27%20height%3D%2726%27%20rx%3D%2713%27%20fill%3D%27%23ffffff%27%20opacity%3D%27.55%27%2F%3E%3C%2Fsvg%3E"`,
+];
+const IMAGE = IMAGES[0];
+const IMAGE_LIST = `[${IMAGES.join(", ")}]`;
 
 /**
  * One item shape that satisfies as many list components as it can at once.
@@ -44,9 +59,9 @@ const IMAGE = `"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' wid
 const ICON_COMPONENT = `(props) => React.createElement("svg", { viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", ...props }, React.createElement("circle", { cx: 12, cy: 12, r: 8 }))`;
 const ICON_ELEMENT = `React.createElement("span", { "aria-hidden": true }, "✳")`;
 
-const card = (id: number, title: string, line: string, color: string, height: number, icon = ICON_COMPONENT) =>
+const card = (id: number, title: string, line: string, color: string, height: number, icon = ICON_COMPONENT, image = IMAGES[(id - 1) % IMAGES.length]) =>
   `{ id: ${id}, title: "${title}", label: "${title}", name: "${title}", text: "${title}", value: "${title.toLowerCase()}", description: "${line}", content: "${line}",
-    image: ${IMAGE}, src: ${IMAGE}, img: ${IMAGE}, url: "#", href: "#", height: ${height}, color: "${color}",
+    image: ${image}, src: ${image}, img: ${image}, url: "#", href: "#", link: "#", height: ${height}, color: "${color}",
     icon: ${icon}, node: React.createElement("span", null, "${title}"),
     onClick: () => {} }`;
 
@@ -68,6 +83,11 @@ const WORDS = `["Discover", "Compose", "Ship", "Refine", "Launch"]`;
 /** Props every component gets, whichever recipe matches. */
 const BASE = `{
   children: "Design Playground",
+  // Names that only ever mean one thing, so safe to give every component. CurvedLoop's
+  // text is marqueeText (default empty); GridDistortion, MetallicPaint and StickerPeel
+  // require imageSrc; MaskedHeading fills its letters from src; RippleDistortion's
+  // default src is an Unsplash photo the sandbox cannot be relied on to reach.
+  marqueeText: "Small details ✦ Big possibilities ✦ ", texts: ["Small details ✦", "Big possibilities ✦"], imageSrc: ${IMAGE}, imageUrl: ${IMAGE}, src: ${IMAGE},
   text: "Design Playground",
   title: "Small details",
   heading: "Small details",
@@ -111,6 +131,24 @@ const RECIPES: Recipe[] = [
     props: `{ data: ${SERIES}, series: ${SERIES}, chartData: ${SERIES},
       width: 380, height: 220, dataKey: "value", xKey: "name", yKey: "value",
       categories: ["value"], index: "name", colors: ["#cbe99a", "#a78bfa"] }`,
+  },
+  {
+    // The base props' count of 3 left a ball pit with three balls in it.
+    sources: ["react-bits"],
+    match: /^ballpit\b/,
+    props: `{ count: 120, followCursor: true }`,
+  },
+  {
+    // A trail of pictures behind the pointer: it needs the pictures, and a scene to
+    // move over.
+    sources: ["react-bits"],
+    match: /^image trail\b/,
+    props: `{ items: ${IMAGE_LIST}, __backdrop: true }`,
+  },
+  {
+    // Overlays act on what is beneath them; the preview supplies a scene to act on.
+    match: /\b(gradual blur|noise|grain|crosshair|splash cursor|ghost cursor|blob cursor|target cursor|text cursor|click spark|pixel trail)\b/,
+    props: `{ __backdrop: true }`,
   },
   {
     // These render each item as a child. The sequence recipe's card objects made React
@@ -160,11 +198,18 @@ const RECIPES: Recipe[] = [
       options: ${CARDS}, tabs: ${CARDS}, data: ${CARDS} }`,
   },
   {
+    // Laid out on a 1400px ellipse unless responsive, so on a card every picture orbited
+    // outside the frame. Sized as React Bits' own demo sizes it, to the card.
+    sources: ["react-bits"],
+    match: /^orbit images\b/,
+    props: `{ images: ${IMAGE_LIST}, responsive: true, baseWidth: 600, radiusX: 250, radiusY: 80, width: 340, height: 260, itemSize: 80, duration: 30 }`,
+  },
+  {
     // Plurals too: "OrbitImages" missed on \bimage\b and got no images at all. Image
     // trails and spirals take their pictures as plain `items` URLs.
-    match: /\b(images?|photos?|avatars?|media|video|thumbnails?|pictures?|spiral|orbit)\b/,
-    props: `{ src: ${IMAGE}, image: ${IMAGE}, images: [${IMAGE}, ${IMAGE}, ${IMAGE}],
-      items: [${IMAGE}, ${IMAGE}, ${IMAGE}, ${IMAGE}, ${IMAGE}],
+    match: /\b(images?|photos?|avatars?|media|video|thumbnails?|pictures?|spiral|orbit|posters?)\b/,
+    props: `{ src: ${IMAGE}, image: ${IMAGE}, images: ${IMAGE_LIST},
+      items: ${IMAGE_LIST},
       alt: "Placeholder", url: ${IMAGE}, poster: ${IMAGE} }`,
   },
   {
@@ -184,6 +229,12 @@ const RECIPES: Recipe[] = [
     match: /\b(input|form|field|search|textarea|combobox|select)\b/,
     props: `{ value: "", defaultValue: "", suggestions: ["One", "Two", "Three"],
       options: ${CARDS}, placeholder: "Type something…" }`,
+  },
+  {
+    // Menus that are a list of links rather than a closed popup: each item needs text,
+    // a link and an image. Before the dialog recipe, which matches "menu".
+    match: /\b(flowing|infinite|circular|stacked) menu\b/,
+    props: `{ items: ${CARDS} }`,
   },
   {
     // Otherwise a dialog renders nothing, since it is closed by default.

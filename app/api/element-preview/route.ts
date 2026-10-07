@@ -145,12 +145,12 @@ function fingerprint(): Promise<string> {
     // Function source rather than a list kept by hand: a hand-kept list is exactly what
     // went stale. Each of these decides something about what ends up in the document.
     const code = [
-      fetchItem, demonstrationOf, chooseEntry, compile, withAssets, previewAssets, withDefaultTextFont, virtualFiles, installedPackagePath, installedPath, normalize, resolveRelative, resolvePublished,
+      fetchItem, demonstrationOf, patched, chooseEntry, compile, withAssets, previewAssets, withDefaultTextFont, virtualFiles, installedPackagePath, installedPath, normalize, resolveRelative, resolvePublished,
       readImports, shimModule, hookShimModule, iconShimModule, fontShimModule, packageUrl, tailwindFor,
       harness, documentFor, generatedDocument,
     ].map(String);
     return createHash("sha256")
-      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), JSON.stringify(PREVIEW_ASSETS), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
+      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), JSON.stringify(PREVIEW_ASSETS), ...Object.values(PREVIEW_PATCHES).flat().map((patch) => `${patch?.file}|${patch?.when}|${patch?.apply}`), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
       .digest("hex")
       .slice(0, 16);
   })();
@@ -244,6 +244,9 @@ const installedPath = (file: RegistryFile) => normalize(file.target || file.path
 interface PublishedItem {
   files?: RegistryFile[];
   registryDependencies?: string[];
+  description?: string;
+  /** npm packages the item needs, as `name@range` (or a bare name). */
+  dependencies?: string[];
   /** CSS variables the item asks the consuming project to define. */
   cssVars?: { theme?: Record<string, string>; light?: Record<string, string>; dark?: Record<string, string> };
 }
@@ -267,6 +270,8 @@ async function fetchItem(source: SourceId, name: string) {
   const seen = new Set<string>();
   const files = new Map<string, RegistryFile>();
   const cssVars: Record<string, string> = {};
+  const versions: Record<string, string> = {};
+  let description: string | undefined;
   const queue = [name];
   while (queue.length && seen.size < 80) {
     const next = queue.shift()!;
@@ -281,7 +286,12 @@ async function fetchItem(source: SourceId, name: string) {
       // are supplied by the preview shim below.
       continue;
     }
+    if (next === name) description = item.description;
     for (const file of item.files ?? []) files.set(installedPath(file), file);
+    for (const dependency of item.dependencies ?? []) {
+      const at = dependency.lastIndexOf("@");
+      if (at > 0) versions[dependency.slice(0, at)] ??= dependency.slice(at + 1);
+    }
     // The preview surface is dark, so an item's dark values win over its light ones.
     Object.assign(cssVars, item.cssVars?.theme, item.cssVars?.dark);
     for (const dependency of item.registryDependencies ?? []) {
@@ -289,7 +299,7 @@ async function fetchItem(source: SourceId, name: string) {
       if (dependencyName && !seen.has(dependencyName)) queue.push(dependencyName);
     }
   }
-  return { files: [...files.values()], cssVars: { theme: cssVars } } satisfies PublishedItem;
+  return { files: [...files.values()], cssVars: { theme: cssVars }, versions, description } satisfies PublishedItem & { versions: Record<string, string> };
 }
 
 async function fetchPublishedItem(source: SourceId, name: string): Promise<PublishedItem> {
@@ -416,6 +426,49 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Corrections to bugs in a publisher's own demo code, so its preview shows what the
+ * component does rather than the bug.
+ *
+ * Each names the published file it corrects and applies only while the broken code is
+ * still there (`when`), so a fix upstream switches the patch off rather than fighting
+ * it. Kept to demos — a component's own source is never patched.
+ */
+const PREVIEW_PATCHES: Partial<Record<SourceId, { file: RegExp; when: RegExp; apply: (code: string) => Promise<string> | string }[]>> = {
+  bklit: [
+    {
+      // RadarArea reads row.values[metric.key]; the example passes flat rows, so the
+      // chart threw "Cannot read properties of undefined (reading 'speed')".
+      file: /examples\/radar-chart\.tsx$/,
+      when: /\{ id: "[^"]+", (?!values:)\w+: \d/,
+      apply: (code) => code.replace(/\{ id: ("[^"]+"), ((?:\w+: [\d.]+,? ?)+) \}/g, "{ id: $1, values: { $2 } }"),
+    },
+    {
+      // ChoroplethChart takes a GeoJSON FeatureCollection; the example passes three
+      // plain rows and the chart threw on data.features.map. Given the world map Bklit's
+      // own dashboard block loads (vendored, see data/preview-assets/bklit).
+      file: /examples\/choropleth-chart\.tsx$/,
+      when: /data=\{features\}/,
+      apply: async (code) => {
+        const world = await readFile(/* turbopackIgnore: true */ path.join(process.cwd(), "data/preview-assets/bklit/world-countries.json"), "utf-8");
+        return `import { feature as __dpFeature } from "topojson-client";\nconst __dpWorld = ${world.trim()};\n${code.replace(/data=\{features\}/, "data={__dpFeature(__dpWorld, __dpWorld.objects.countries)}")}`;
+      },
+    },
+  ],
+};
+
+async function patched(source: SourceId, files: RegistryFile[]): Promise<RegistryFile[]> {
+  const patches = PREVIEW_PATCHES[source];
+  if (!patches) return files;
+  return Promise.all(files.map(async (file) => {
+    let content = file.content!;
+    for (const patch of patches) {
+      if (patch.file.test(file.path) && patch.when.test(content)) content = await patch.apply(content);
+    }
+    return content === file.content ? file : { ...file, content };
+  }));
+}
+
 /** Files a component imports or fetches that are models, textures or media. */
 const ASSET_FILE = /\.(?:glb|gltf|png|jpe?g|webp|avif|gif|hdr|exr|ktx2|bin|mp4|webm|mp3|wav)$/i;
 
@@ -483,7 +536,7 @@ async function demonstrationOf(source: SourceId, name: string) {
 async function compile(source: SourceId, name: string): Promise<string> {
   const { item, entryName } = await demonstrationOf(source, name);
   const assets = await previewAssets(source);
-  const files = (item.files ?? []).filter((file) => typeof file.content === "string");
+  const files = await patched(source, (item.files ?? []).filter((file) => typeof file.content === "string"));
   if (!files.length) return generatedDocument(name, "This registry entry publishes no source files");
 
   const entry = chooseEntry(files, entryName);
@@ -497,7 +550,10 @@ async function compile(source: SourceId, name: string): Promise<string> {
     // Next inlines process.env at build time, so registry code reads it freely at module
     // scope (kokonut's v0-button does) and threw "process is not defined" here before
     // anything mounted. An empty environment is the honest answer in a sandbox.
-    banner: { js: 'var process = { env: { NODE_ENV: "production" }, browser: true };' },
+    // Shaped like the browser polyfill bundlers ship: code that finds a `process` goes on
+    // to call emitWarning, nextTick or cwd (Ballpit's dependencies do), and a bare
+    // { env } stub threw "process.emitWarning is not a function".
+    banner: { js: 'var process = { env: { NODE_ENV: "production" }, browser: true, version: "", versions: {}, platform: "browser", argv: [], cwd: () => "/", emitWarning: () => {}, nextTick: (fn, ...args) => queueMicrotask(() => fn(...args)), on: () => {}, off: () => {} };' },
     // Production React, to match everything esm.sh serves (its default build). Bundled
     // unminified, esbuild picked React's development build, and React 19.2's dev
     // createElement calls dispatcher.getOwner(), which only a dev renderer provides — so
@@ -507,7 +563,7 @@ async function compile(source: SourceId, name: string): Promise<string> {
     target: "es2020",
     jsx: "automatic",
     logLevel: "silent",
-    plugins: [virtualFiles(files, assets)],
+    plugins: [virtualFiles(files, assets, (item as { versions?: Record<string, string> }).versions ?? {})],
   });
 
   const code = bundle.outputFiles?.find((file) => file.path.endsWith(".js"))?.text;
@@ -519,7 +575,12 @@ async function compile(source: SourceId, name: string): Promise<string> {
     .map(([key, value]) => `${key.startsWith("--") ? key : `--${key}`}:${value}`).join(";");
   // Theme defaults first, then the item's own variables, then its utilities and styles,
   // so anything the component defines for itself still wins.
-  return documentFor(name, code, `${THEME_CSS}\n${itemVars ? `:root{${itemVars}}` : ""}\n${utilityCss}\n${bundledCss}`);
+  // An item that describes itself as shared helpers (Bklit's chart-series and
+  // chart-animation) draws nothing alone by design; if so, the card says that plainly
+  // instead of "painted nothing". Read from the item's own words, not guessed from its
+  // source: a component that really does draw nothing must still be reported as such.
+  const part = /\bshared\b[^.]*\bhelpers?\b/i.test(item.description ?? "");
+  return documentFor(name, code, `${THEME_CSS}\n${itemVars ? `:root{${itemVars}}` : ""}\n${utilityCss}\n${bundledCss}`, part);
 }
 
 /**
@@ -585,9 +646,23 @@ function withStatus(html: string): string {
     const root = document.getElementById("root");
     if (!root) return false;
     for (const node of [root, ...root.querySelectorAll("*")]) {
+      if (node.closest("[data-dp-backdrop]")) continue;
       if (inks(node)) return true;
     }
     return false;
+  };
+
+  // A component whose outer element holds only positioned children (a canvas laid
+  // absolutely over its box, say) has no size of its own; centred in #root it shrank to
+  // 0x0 and drew into nothing. Given the frame instead, once, it draws.
+  const expandCollapsed = () => {
+    const first = document.getElementById("root")?.firstElementChild;
+    if (!first || first.dataset.dpExpanded || !first.children.length) return;
+    const box = first.getBoundingClientRect();
+    if (box.width >= 4 && box.height >= 4) return;
+    first.dataset.dpExpanded = "";
+    first.style.width = "100%";
+    first.style.height = "100%";
   };
 
   const started = Date.now();
@@ -620,14 +695,19 @@ function withStatus(html: string): string {
   const reason = () => document.body.dataset.reason
     || thrown
     || (document.body.dataset.generated ? "This item could not be compiled." : "")
+    || (document.body.dataset.part !== undefined ? "Shared helpers other components are built from: they draw nothing on their own, so there is no preview." : "")
     || "The component mounted but painted nothing in this frame.";
 
   const evaluate = () => {
+    expandCollapsed();
     if (painted()) {
       if (layer) { layer.remove(); layer = null; }
       return document.querySelector(".dp-auto-visual") ? "fallback" : "ready";
     }
     if (document.querySelector(".dp-auto-visual")) return "fallback";
+    // A cursor or hover effect on its sample scene draws nothing until a pointer moves
+    // over it. The scene is what the card should show meanwhile, unless it threw.
+    if (!errored && document.querySelector("[data-dp-backdrop]") && Date.now() >= started + 1500) return "ready";
     // Components legitimately render late — a transition, a timer, an effect that
     // measures first. Only after that grace is an empty surface really empty.
     if (errored || Date.now() - started > ${BLANK_GRACE_MS}) { fallBack(); return "fallback"; }
@@ -677,7 +757,7 @@ function withStatus(html: string): string {
  * copy: the component and the renderer sharing a React instance is the difference
  * between a preview and an invariant violation.
  */
-function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new Map()): esbuild.Plugin {
+function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new Map(), versions: Record<string, string> = {}): esbuild.Plugin {
   const byPath = new Map(files.map((file) => [installedPath(file), file.content!]));
   // The published path still answers, for the imports a publisher wrote against its own
   // repository instead — but as an alias, so one file is never bundled twice.
@@ -731,7 +811,7 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
         if (args.path in NEXT_SHIMS) return { path: args.path, namespace: "next-shim" };
         const installed = installedPackagePath(args.path);
         if (installed) return { path: installed };
-        return { path: packageUrl(args.path), namespace: "remote" };
+        return { path: packageUrl(args.path, versions), namespace: "remote" };
       };
 
       // Every bare import, wherever it comes from, goes through here. The shims and the
@@ -743,7 +823,7 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
       // package its own gsap or motion, whose plugins and contexts then never meet.
       const bare = (specifier: string) => {
         const installed = installedPackagePath(specifier);
-        return installed ? { path: installed } : { path: packageUrl(specifier), namespace: "remote" };
+        return installed ? { path: installed } : { path: packageUrl(specifier, versions), namespace: "remote" };
       };
 
       build.onResolve({ filter: /.*/, namespace: "file" }, resolveRegistryImport);
@@ -999,7 +1079,18 @@ function fontShimModule(requested = { names: new Set<string>(), hasDefault: fals
  */
 const PACKAGE_BASE = (process.env.DP_PACKAGE_BASE ?? "https://esm.sh").replace(/\/$/, "");
 
-function packageUrl(specifier: string): string {
+/**
+ * The esm.sh URL for a bare import, at the version the item declared.
+ *
+ * Every package used to be fetched at its latest version, whatever the component was
+ * written against. Ballpit declares three@^0.180.0 — on a 0.x line that means 0.180.x —
+ * and was served 0.186, whose shader chunks had changed shape; its material failed to
+ * compile ("cannot convert from vec4 to vec3"). Bklit pins visx 4 alphas and was getting
+ * visx 3. The ranges come from the items' own `dependencies`, across the whole closure,
+ * and apply to imports from inside esm.sh modules too, so shared libraries still meet a
+ * single copy at the declared version.
+ */
+function packageUrl(specifier: string, versions: Record<string, string> = {}): string {
   const options = "?bundle&target=es2020";
   if (specifier === "react") return `${PACKAGE_BASE}/react@19.2.0${options}`;
   if (specifier.startsWith("react/")) return `${PACKAGE_BASE}/react@19.2.0/${specifier.slice(6)}${options}`;
@@ -1009,8 +1100,15 @@ function packageUrl(specifier: string): string {
   // with: drei's hooks threw outside fiber's Canvas, postprocessing passes rejected the
   // component's three.js objects, @gsap/react registered plugins on a gsap no one else
   // used. Kept bare, they come back through the resolver and meet the document's one copy.
-  const own = SINGLETONS.filter((name) => specifier !== name && !specifier.startsWith(`${name}/`));
-  return `${PACKAGE_BASE}/${specifier}${options}&external=${own.join(",")}`;
+  // Only the package itself is left out of its own externals. A subpath keeps its
+  // parent external: `three/examples/jsm/...` bundled with three's core inside it was a
+  // second three.js in the document ("Multiple instances of Three.js being imported").
+  const own = SINGLETONS.filter((name) => specifier !== name);
+  const parts = specifier.split("/");
+  const name = parts.slice(0, specifier.startsWith("@") ? 2 : 1).join("/");
+  const range = versions[name];
+  const versioned = range ? `${name}@${range}${specifier.slice(name.length)}` : specifier;
+  return `${PACKAGE_BASE}/${versioned}${options}&external=${own.join(",")}`;
 }
 
 /** Libraries a document must hold exactly one instance of. */
@@ -1095,11 +1193,26 @@ class Boundary extends React.Component {
   }
 }
 
+// Overlay effects (a blur edge, film grain, cursor trails) act on whatever is under
+// them, and a preview has nothing under them, so they showed an empty frame. A recipe
+// asks for a sample scene behind them with __backdrop; the reporter ignores the scene
+// when deciding whether the component painted.
+const { __backdrop, ...props } = PROPS;
+const app = React.createElement(Boundary, null, React.createElement(Component, props));
 const root = createRoot(document.getElementById("root"));
 root.render(
-  Component
-    ? React.createElement(Boundary, null, React.createElement(Component, PROPS))
-    : React.createElement(VisualFallback)
+  !Component
+    ? React.createElement(VisualFallback)
+    : __backdrop
+      ? React.createElement("div", { className: "dp-backdrop-stage" },
+          React.createElement("div", { className: "dp-backdrop", "data-dp-backdrop": "", "aria-hidden": true },
+            React.createElement("small", null, "Design Playground"),
+            // cursor-target: what TargetCursor and its kind lock onto.
+            React.createElement("strong", { className: "cursor-target" }, "Small details. Big possibilities."),
+            React.createElement("p", null, "Motion, interactions and a little unexpected delight."),
+            React.createElement("span", { className: "dp-backdrop-button cursor-target" }, "Explore")),
+          app)
+      : app
 );
 `;
 
@@ -1135,6 +1248,10 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;back
 #root{width:100%;height:calc(100vh - 36px);overflow:hidden;display:grid;place-items:center}
 img,svg,canvas,video{max-width:100%;height:auto}
 button{font:inherit;cursor:pointer}
+.dp-backdrop-stage{position:relative;width:100%;height:100%}
+.dp-backdrop{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:10px;padding:24px;text-align:center;background:radial-gradient(120% 90% at 20% 10%,#3b2d6b 0,transparent 55%),radial-gradient(90% 80% at 85% 90%,#1f5f4a 0,transparent 60%),#15131c;color:#f3f1ea}
+.dp-backdrop-button{margin-top:6px;padding:8px 16px;border-radius:999px;background:#f3f1ea;color:#15131c;font-size:13px;font-weight:600}
+.dp-backdrop small{font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.7}.dp-backdrop strong{font-size:clamp(22px,6vw,44px);line-height:1.05;letter-spacing:-.02em}.dp-backdrop p{margin:0;opacity:.75;font-size:14px}
 .dp-auto-visual{position:relative;width:min(178px,70vw);height:min(178px,70vw);display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#29401f 0,#151d12 48%,transparent 70%)}
 .dp-auto-orbit{position:absolute;inset:18px;border:1px solid #a8d47b88;border-radius:50%;animation:dp-spin 7s linear infinite}.dp-auto-orbit:before,.dp-auto-orbit:after{content:"";position:absolute;inset:18px;border:1px solid #75985766;border-radius:50%}.dp-auto-orbit:after{inset:43px;background:#cbe99a2b;box-shadow:0 0 32px #b8e78b44}
 .dp-auto-orbit i{position:absolute;width:9px;height:9px;border-radius:50%;background:#d8f6ae;box-shadow:0 0 13px #d8f6ae}.dp-auto-orbit i:nth-child(1){left:8px;top:21px}.dp-auto-orbit i:nth-child(2){right:-4px;top:63px;width:6px;height:6px}.dp-auto-orbit i:nth-child(3){left:63px;bottom:-4px;width:7px;height:7px}
@@ -1158,12 +1275,12 @@ const CSP =
   "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline'; " +
   "img-src data: blob: https:; font-src data: https:; connect-src data: blob:; worker-src blob:";
 
-function documentFor(name: string, code: string, componentCss: string): string {
+function documentFor(name: string, code: string, componentCss: string, part = false): string {
   return `<!doctype html><html lang="en" class="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <title>${escapeHtml(name)}</title><style>${componentCss.replace(/<\/style/gi, "<\\/style")}\n${BASE_CSS}</style></head>
-<body><div id="root"></div><script type="module">${safeForScript(code)}</script></body></html>`;
+<body${part ? ' data-part=""' : ""}><div id="root"></div><script type="module">${safeForScript(code)}</script></body></html>`;
 }
 
 /** Shown when the component could not be compiled at all. */

@@ -357,6 +357,15 @@ describe("compiling real registry shapes", () => {
       files: [{ path: "Lettering/Lettering.tsx",
         content: 'import { font } from "fixture-text"; export default function Lettering() { return <i data-font={String(font()).slice(0, 20)}>Aa</i>; }' }],
     },
+    "pinned": {
+      dependencies: ["fixture-hooks@^1.2.0"],
+      files: [{ path: "pinned.tsx",
+        content: 'import { useCount } from "fixture-hooks"; export default function Pinned() { return <b>{useCount()}</b>; }' }],
+    },
+    "radar-demo": {
+      files: [{ path: "registry/examples/radar-chart.tsx", type: "registry:page", target: "app/page.tsx",
+        content: 'const data = [\n  { id: "a", speed: 80, comfort: 60 },\n]; export default function Page() { return <pre>{JSON.stringify(data)}</pre>; }' }],
+    },
     "links-out": {
       files: [{ path: "links-out.tsx",
         content: 'import Link from "next/link"; import Image from "next/image"; export default function LinksOut() { return <Link href="/x" prefetch={false}><Image src="/a.png" alt="" width={4} height={4}/>Go</Link>; }' }],
@@ -475,6 +484,20 @@ describe("compiling real registry shapes", () => {
   it("gives troika a default font so text never waits on a CDN", async () => {
     const { html } = await compileWith("Lettering-TS-TW", "react-bits");
     expect(html).toMatch(/defaultFontURL:\s*"data:font\/ttf;base64,/);
+  }, 30_000);
+
+  it("fetches a package at the version the item declares, not the latest", async () => {
+    // Ballpit declares three@^0.180.0 and broke on the latest three's shader chunks.
+    const { html, requests } = await compileWith("pinned");
+    expect(html).not.toContain('data-generated="true"');
+    expect(requests.some((url) => url.startsWith("/pkg/fixture-hooks@^1.2.0?"))).toBe(true);
+  }, 30_000);
+
+  it("corrects a known bug in a publisher's demo, and only while the bug is there", async () => {
+    // Bklit's radar example passes flat rows; its RadarArea reads row.values[key].
+    const { html } = await compileWith("radar-demo", "bklit");
+    expect(html).not.toContain('data-generated="true"');
+    expect(html).toMatch(/values:\s*\{\s*speed:\s*80/);
   }, 30_000);
 
   it("stands in for next/link and next/image instead of fetching Next", async () => {

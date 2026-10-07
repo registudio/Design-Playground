@@ -85,6 +85,18 @@ arranged and which parts are easy to break. Keep it current when a part moves.
     a class on `<html>` (always dark), not the viewer's OS setting.
   - `next/link`, `next/image` and `next/navigation` are shimmed; `process` exists.
   - Bklit chart roots are previewed through the `-example` item Bklit publishes.
+  - Packages are fetched at the versions items declare in `dependencies`, not latest
+    (Ballpit broke on a newer three.js), and singletons (three, fiber, drei, gsap,
+    motion…) stay external everywhere, subpaths included, so a document holds one copy.
+  - Files a demo needs but its registry does not publish (models, a world map, a font)
+    are vendored under `data/preview-assets` and inlined as data: URLs; the sandbox
+    still has no network. `PREVIEW_PATCHES` corrects known bugs in publishers' demos,
+    each keyed to the file and applied only while the bug is still there.
+  - Overlay and cursor effects get a sample scene (`__backdrop`) to act on; a wrapper
+    that collapses to 0x0 is given the frame; sample images are colourful and fully
+    percent-encoded (an unquoted CSS url() broke on "(").
+  - The bundle defines a browser-polyfill-shaped `process`: code that finds one goes on
+    to call emitWarning, nextTick or cwd.
   `DP_PACKAGE_BASE` points esm.sh lookups at a local stand-in, like `DP_REGISTRY_BASE`.
   `DP_REGISTRY_BASE` points every source at one origin, for the stand-in registry.
 - `src/components/RegistryPreview.tsx` — a registry card's live preview. `previewSrc()`
