@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collapseVariants,
   inferEngines,
+  keepComponents,
   normalizeDocument,
   packageName,
   parseVariant,
@@ -16,6 +17,8 @@ import {
 } from "@/registry/query";
 import { emptyIndex, RegistryIndex, type DesignElement } from "@/registry/schema";
 import { installCommand, REGISTRY_SOURCES, sourceById } from "@/registry/sources";
+import { CURATED_ITEMS } from "@/registry/curated";
+import { fetchRegistryIndex } from "@/registry/fetch";
 
 const VERIFIED = "2026-09-21T00:00:00.000Z";
 const reactBits = sourceById("react-bits")!;
@@ -212,9 +215,58 @@ describe("normalizing a registry document (§2, §3)", () => {
 });
 
 describe("registry sources", () => {
-  it("covers the five sources in §1a, each with its own category", () => {
-    expect(REGISTRY_SOURCES).toHaveLength(5);
-    expect(new Set(REGISTRY_SOURCES.map((s) => s.category)).size).toBe(5);
+  it("covers the five sources in §1a, each with its own category, then the ones added since", () => {
+    const spec = REGISTRY_SOURCES.slice(0, 5);
+    expect(spec.map((s) => s.id)).toEqual(["bklit", "kokonutui", "soralabs", "componentry", "react-bits"]);
+    expect(new Set(spec.map((s) => s.category)).size).toBe(5);
+    expect(REGISTRY_SOURCES).toHaveLength(16);
+    expect(new Set(REGISTRY_SOURCES.map((s) => s.id)).size).toBe(REGISTRY_SOURCES.length);
+  });
+
+  it("keeps only the components a source publishes, not its demos, themes or helpers", () => {
+    const magic = sourceById("magicui")!;
+    const kept = normalizeDocument(magic, { items: [
+      { name: "marquee", type: "registry:ui" },
+      { name: "marquee-demo", type: "registry:example" },
+      { name: "utils", type: "registry:lib" },
+      { name: "magicui", type: "registry:style" },
+    ] }, VERIFIED);
+    expect(kept.elements.map((e) => e.name)).toEqual(["marquee"]);
+    // Filtered is not malformed: nothing here was skipped.
+    expect(kept.status.skipped).toBe(0);
+  });
+
+  it("drops the sub-parts of a larger component where a source publishes them as items", () => {
+    expect(keepComponents([
+      { name: "data-grid", type: "registry:ui", dependencies: [], registryDependencies: [], files: [] },
+      { name: "data-grid-pagination", type: "registry:ui", dependencies: [], registryDependencies: [], files: [] },
+      { name: "tree", type: "registry:ui", dependencies: [], registryDependencies: [], files: [] },
+    ], { types: ["registry:ui"], topLevelOnly: true }).map((item) => item.name)).toEqual(["data-grid", "tree"]);
+  });
+
+  it("indexes a source with no published index from its hand-kept list, without a fetch", async () => {
+    const previous = globalThis.fetch;
+    const calls: string[] = [];
+    globalThis.fetch = (async (url: string) => { calls.push(String(url)); throw new Error("offline"); }) as typeof fetch;
+    try {
+      const index = await fetchRegistryIndex();
+      for (const id of ["aceternity", "21st"] as const) {
+        const status = index.sources.find((s) => s.id === id)!;
+        expect(status.ok, id).toBe(true);
+        expect(status.itemCount, id).toBe(CURATED_ITEMS[id]!.length);
+      }
+      expect(calls.some((url) => url.includes("21st.dev") || url.includes("aceternity"))).toBe(false);
+    } finally {
+      globalThis.fetch = previous;
+    }
+  });
+
+  it("installs 21st.dev items by their URL, and a namespaced source by its own namespace", () => {
+    expect(installCommand("21st", "kedhareswer/lens-zoom-carousel")).toBe(
+      'npx shadcn@latest add "https://21st.dev/r/kedhareswer/lens-zoom-carousel"',
+    );
+    expect(installCommand("tailark", "dusk-hero-section-1")).toBe("npx shadcn@latest add @tailark-oss/dusk-hero-section-1");
+    expect(installCommand("magicui", "marquee")).toBe("npx shadcn@latest add @magicui/marquee");
   });
 
   it("marks exactly Componentry as reference-only", () => {

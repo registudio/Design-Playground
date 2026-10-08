@@ -16,7 +16,8 @@ describe("registry licences", () => {
   it("points every stated licence at the file it was read from", () => {
     for (const [id, licence] of Object.entries(SOURCE_LICENCES)) {
       if (!licence) continue;
-      expect(licence.url, id).toMatch(/^https:\/\/github\.com\/.+\/LICENSE/);
+      // Publishers spell the file LICENSE, LICENCE or license; the link is to whichever they ship.
+      expect(licence.url, id).toMatch(/^https:\/\/github\.com\/.+\/licen[cs]e/i);
       expect(licence.checked, id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
   });

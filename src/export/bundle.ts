@@ -8,7 +8,7 @@ import { stableStringify, assertDeterministic } from "./serialize";
 import { generateCss } from "./css";
 import { buildHandoff, elementsHandoff } from "./handoff";
 import { ELEMENTS, elementDocument } from "@/elements/catalogue";
-import { REGISTRY_SOURCES, sourceById } from "@/registry/sources";
+import { REGISTRY_SOURCES, namespaceTemplate, sourceById } from "@/registry/sources";
 import { licenceFor } from "@/registry/licences";
 import { toHex } from "@/color/oklch";
 import { resolveSemantic } from "@/color/semantic";
@@ -222,7 +222,8 @@ export function buildExport(
   const accent = toHex(resolveSemantic(project.tokens.colors, "light", "primary"));
   const chosen = (project.recipe.elements ?? []).filter(element => ELEMENTS.some(item => item.id === element.id));
   const registryFiles = (): ExportFile[] => project.selections.length ? [
-    { path: "components.registries.json", content: stableStringify({ registries: Object.fromEntries(REGISTRY_SOURCES.map(source => [`@${source.id}`, source.endpoint.replace("registry.json", "{name}.json")])) }) },
+    // Namespaced sources only: a 21st.dev pick installs by its own URL, which the install command carries.
+    { path: "components.registries.json", content: stableStringify({ registries: Object.fromEntries(REGISTRY_SOURCES.filter(source => !source.installByUrl).map(source => [`@${source.namespace ?? source.id}`, namespaceTemplate(source)])) }) },
     { path: "design-playground-selection.json", content: stableStringify(toSelectionDocument(project.selections)) },
     { path: "THIRD-PARTY-LICENCES.md", content: thirdPartyLicences(project.selections) },
   ] : [];

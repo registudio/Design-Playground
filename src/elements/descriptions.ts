@@ -18,6 +18,25 @@
  * drawn from the name, not from having run each one.
  */
 const CURATED: Record<string, string> = {
+  // Published with no description; written from each component's source, 2026-10-08.
+  "magicui:interactive-hover-button": "A pill button whose dot grows to fill it on hover while the label slides out and an arrow slides in.",
+  "reui:alert": "Alert banners in several tones, with an icon, title, description and optional action.",
+  "reui:autocomplete": "A text input that suggests matching options in a dropdown as you type.",
+  "reui:badge": "Status and label badges in solid, outline and soft variants.",
+  "reui:cascader": "A multi-level picker that narrows through nested columns, virtualised for long lists.",
+  "reui:data-grid": "A full data table: sorting, filtering, column resizing and reordering, row selection, drag-and-drop and virtual scrolling.",
+  "reui:date-selector": "A date and date-range selector with a calendar and quick presets.",
+  "reui:filters": "A filter builder: pick a field, an operator and a value, combine conditions and drag to regroup them.",
+  "reui:frame": "A bordered frame for grouping a panel of content with a header and footer.",
+  "reui:kanban": "A kanban board with columns and cards you drag between them.",
+  "reui:number-field": "A numeric input with step buttons, limits and formatting.",
+  "reui:phone-input": "A phone number field with a country picker and international formatting.",
+  "reui:rating": "A star rating that can be read-only or picked, with half steps.",
+  "reui:scrollspy": "Navigation that highlights the section currently scrolled into view.",
+  "reui:sortable": "A list whose items are reordered by dragging.",
+  "reui:stepper": "A step-by-step progress indicator for multi-stage flows, horizontal or vertical.",
+  "reui:timeline": "A vertical timeline of events with markers, dates and content.",
+  "reui:tree": "A tree view of nested items that expand, collapse and can be selected.",
   "componentry:animated-gradient": "A gradient that drifts continuously behind its content.",
   "componentry:annotated-text": "Handwritten-looking marks — circles, underlines, arrows — drawn over a line of text.",
   "componentry:ascii-effect": "Imagery rendered as ASCII characters.",

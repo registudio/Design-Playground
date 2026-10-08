@@ -3,7 +3,7 @@ import { mkdir, readFile, readdir, stat, unlink, writeFile } from "node:fs/promi
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { compile as compileTailwind } from "tailwindcss";
-import { REGISTRY_SOURCES, type SourceId } from "@/registry/sources";
+import { REGISTRY_SOURCES, itemUrl, type RegistrySource, type SourceId } from "@/registry/sources";
 import { fetchTextWithRetry } from "@/preview/fetch-retry";
 import {
   BROWSER_FRESH_SECONDS,
@@ -11,7 +11,7 @@ import {
   DISK_CACHE_ENTRIES,
   DOCUMENT_CACHE_ENTRIES,
 } from "@/elements/preview-budget";
-import { propRecipe, RECIPES_FINGERPRINT } from "@/elements/preview-props";
+import { inferredDataProps, propRecipe, RECIPES_FINGERPRINT, SAMPLE_DATA } from "@/elements/preview-props";
 
 /**
  * Compiles one published registry component into a self-contained preview document.
@@ -33,7 +33,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** Conservative: registry item names are plain identifiers, never paths. */
-const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
+// One optional `author/` segment, for 21st.dev, whose item names carry their author.
+const SAFE_NAME = /^(?:[A-Za-z0-9][A-Za-z0-9._-]{0,63}\/)?[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
 /**
  * Registry item documents are small JSON files. Twenty seconds meant a source that had
@@ -161,7 +162,7 @@ function fingerprint(): Promise<string> {
       harness, documentFor, generatedDocument,
     ].map(String);
     return createHash("sha256")
-      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), JSON.stringify(PREVIEW_ASSETS), ...Object.values(PREVIEW_PATCHES).flat().map((patch) => `${patch?.file}|${patch?.when}|${patch?.apply}`), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
+      .update([CACHE_VERSION, ...versions, RECIPES_FINGERPRINT, SAMPLE_DATA, BASE_CSS, CSP, JSON.stringify(KNOWN_TAGS), JSON.stringify(NEXT_SHIMS), JSON.stringify(SINGLETONS), JSON.stringify(PREVIEW_ASSETS), ...Object.values(PREVIEW_PATCHES).flat().map((patch) => `${patch?.file}|${patch?.when}|${patch?.apply}`), THEME_CSS, TAILWIND_PROJECT, ...code].join("\n"))
       .digest("hex")
       .slice(0, 16);
   })();
@@ -306,7 +307,9 @@ async function fetchItem(source: SourceId, name: string) {
     // The preview surface is dark, so an item's dark values win over its light ones.
     Object.assign(cssVars, item.cssVars?.theme, item.cssVars?.dark);
     for (const dependency of item.registryDependencies ?? []) {
-      const dependencyName = dependency.split("/").pop();
+      // `@ns/name`, a bare `name`, or a full item URL (`https://smoothui.dev/r/name.json`,
+      // as SmoothUI and Cult UI publish them). The URL's `.json` is not part of the name.
+      const dependencyName = dependency.split("/").pop()?.replace(/\.json$/, "");
       if (dependencyName && !seen.has(dependencyName)) queue.push(dependencyName);
     }
   }
@@ -333,10 +336,10 @@ async function fetchPublishedItem(source: SourceId, name: string): Promise<Publi
  * actually produces are only reproducible by compiling something, and depending on five
  * third-party hosts to reproduce a bug makes the bug untestable.
  */
-function itemEndpoint(endpoint: string, item: string): string {
+function itemEndpoint(registry: RegistrySource, item: string): string {
   const base = process.env.DP_REGISTRY_BASE;
-  if (!base) return endpoint.replace(/registry\.json$/, `${item}.json`);
-  const source = new URL(endpoint).hostname.split(".")[0];
+  if (!base) return itemUrl(registry, item);
+  const source = new URL(registry.endpoint).hostname.split(".")[0];
   return `${base.replace(/\/$/, "")}/${source}/${item}.json`;
 }
 
@@ -349,7 +352,7 @@ async function fetchPublishedItemUncached(source: SourceId, name: string): Promi
     : [name];
   let lastFailure = `${registry.label} did not publish "${name}"`;
   for (const candidate of candidates) {
-    const url = itemEndpoint(registry.endpoint, candidate);
+    const url = itemEndpoint(registry, candidate);
     const response = await fetch(url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Accept: "application/json" },
@@ -554,7 +557,7 @@ async function compile(source: SourceId, name: string): Promise<string> {
   if (!entry) return generatedDocument(name, "This registry entry is a helper rather than a React component");
 
   const bundle = await esbuild.build({
-    stdin: { contents: withAssets(harness(installedPath(entry), propRecipe(source, name)), assets), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
+    stdin: { contents: withAssets(harness(installedPath(entry), propRecipe(source, name), inferredDataProps(entry.content ?? "")), assets), resolveDir: "/", loader: "tsx", sourcefile: "preview.tsx" },
     bundle: true,
     write: false,
     outdir: "out",
@@ -966,7 +969,17 @@ const LOCAL_PACKAGES = ["react", "react-dom", "motion", "framer-motion", "gsap"]
 const isLocalPackage = (specifier: string) =>
   LOCAL_PACKAGES.some((name) => specifier === name || specifier.startsWith(`${name}/`));
 
-const normalize = (path: string) => path.replace(/^(?:\.|~)?\//, "");
+/**
+ * Also shadcn's alias forms for a target, which Tailark writes: `@components/x` installs
+ * to components/x, `@ui/x` to components/ui/x, `@lib` and `@hooks` to lib and hooks —
+ * the places `@/components/...` imports then look for them.
+ */
+const TARGET_ALIASES: Record<string, string> = { "@components/": "components/", "@ui/": "components/ui/", "@lib/": "lib/", "@hooks/": "hooks/" };
+const normalize = (path: string) => {
+  const stripped = path.replace(/^(?:\.|~|@)?\//, "");
+  const alias = Object.keys(TARGET_ALIASES).find((prefix) => stripped.startsWith(prefix));
+  return alias ? TARGET_ALIASES[alias] + stripped.slice(alias.length) : stripped;
+};
 
 function resolveRelative(importer: string, request: string, byPath: Map<string, string>): string | null {
   const from = normalize(importer).split("/").slice(0, -1);
@@ -1002,7 +1015,10 @@ function readImports(source: string, request: string): { names: Set<string>; has
   const names = new Set<string>();
   let hasDefault = false;
   const escaped = request.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`import\\s+([^;]+?)\\s+from\\s+["']${escaped}["']`, "g");
+  // The clause stops at a quote as well as a semicolon. Code written without semicolons
+  // (Tailark's) otherwise let one match run from the file's first import across the
+  // lines before it, reading { Card } from an earlier line instead of the icons asked for.
+  const pattern = new RegExp(`import\\s+([^;'"]+?)\\s+from\\s+["']${escaped}["']`, "g");
   for (const match of source.matchAll(pattern)) {
     const clause = match[1]!.trim();
     if (!clause.startsWith("{") && !clause.startsWith("*")) hasDefault = true;
@@ -1162,7 +1178,7 @@ async function tailwindFor(files: RegistryFile[]): Promise<string> {
  * items, a progress value, and no-op callbacks. An error boundary keeps a component
  * that rejects this environment inside its own card.
  */
-const harness = (entryPath: string, props: string) => `
+const harness = (entryPath: string, props: string, dataProps: string[] = []) => `
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import * as mod from ${JSON.stringify(`./${normalize(entryPath)}`)};
@@ -1170,6 +1186,11 @@ import * as mod from ${JSON.stringify(`./${normalize(entryPath)}`)};
 const Component = mod.default ?? Object.values(mod).find((v) => typeof v === "function");
 
 const PROPS = ${props};
+
+// Content props the component reads that the recipe did not supply (see inferredDataProps),
+// given a sample only on a second attempt, after the first render threw.
+const DATA_NAMES = ${JSON.stringify(dataProps)};
+const SAMPLE = ${dataProps.length ? SAMPLE_DATA : "null"};
 
 function VisualFallback() {
   return React.createElement("div", { className: "dp-auto-visual", "aria-label": "Generated visual fallback" },
@@ -1185,15 +1206,21 @@ class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
   componentDidCatch(error) {
+    // A first failure with content props to fill is retried with them, not reported.
+    if (this.props.retry) { setTimeout(this.props.retry); return; }
     // Recorded where the status reporter can read it. A component that rejects this
     // environment is the most common reason a card shows a stand-in, and swallowing the
     // message left every one of those looking identical to a failed download.
     const message = error && error.message ? error.message : String(error);
-    // A part that needs its parent (a chart's axis, a menu's item) throws a context
-    // error by design. Said in plain words: on a card the raw message read as a bug.
+    // Said in plain words: on a card a raw JavaScript error read as a bug in the
+    // playground, when it is a component asking for something a preview cannot know.
+    const missing = message.match(/reading '([^']+)'|undefined is not an object \\(evaluating '[^']*?\\.?([A-Za-z_$][\\w$]*)'\\)|(\\w+) is not iterable|Cannot read properties of (?:undefined|null)/);
     document.body.dataset.reason = /must be (?:used|wrapped|rendered) (?:within|inside|in)|outside (?:of )?(?:a|an|the) .*(?:Provider|context)|within a .*Provider/i.test(message)
+      // A part that needs its parent (a chart's axis, a menu's item) throws by design.
       ? "Part of a larger component: it only renders inside its parent, so it has no preview of its own."
-      : "The component threw while rendering: " + message;
+      : missing
+        ? "It needs content of its own to show (it looked for " + (missing[1] || missing[2] || missing[3] ? "\u201c" + (missing[1] || missing[2] || missing[3]) + "\u201d" : "a value") + " in data it was not given), and a preview cannot know what that content is."
+        : "The component stopped while rendering: " + message;
   }
   render() {
     if (this.state.error) {
@@ -1208,7 +1235,16 @@ class Boundary extends React.Component {
 // asks for a sample scene behind them with __backdrop; the reporter ignores the scene
 // when deciding whether the component painted.
 const { __backdrop, ...props } = PROPS;
-const app = React.createElement(Boundary, null, React.createElement(Component, props));
+const filled = SAMPLE ? Object.fromEntries(DATA_NAMES.filter((name) => !(name in props)).map((name) => [name, SAMPLE])) : {};
+function Demo() {
+  const [attempt, setAttempt] = React.useState(0);
+  const second = attempt > 0;
+  // A retry that renders clears the first attempt's reason, so the card reports ready.
+  React.useEffect(() => { if (second) delete document.body.dataset.reason; }, [second]);
+  return React.createElement(Boundary, { key: attempt, retry: !second && Object.keys(filled).length ? () => setAttempt(1) : null },
+    React.createElement(Component, second ? { ...props, ...filled } : props));
+}
+const app = React.createElement(Demo);
 const root = createRoot(document.getElementById("root"));
 root.render(
   !Component

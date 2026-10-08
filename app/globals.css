@@ -524,3 +524,4 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .selection-sidebar.minimised .tray-toggle{align-self:center;margin:-12px 0 16px}
 }
 @media(max-width:680px){.tray-toggle{display:none}}
+.element-score{font-weight:600;color:#cbe99a;font-variant-numeric:tabular-nums}

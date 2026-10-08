@@ -69,11 +69,15 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 
 ## The registries
 
-- `src/registry/sources.ts` — the five `REGISTRY_SOURCES` with endpoints and routing
-  metadata. `src/registry/licences.ts` — each source's licence, read from its licence
-  file with the date (two are `null`: none could be found).
-- `data/registry-snapshot.json` — the committed index (436 entries on 22 Sep 2026),
-  refreshed weekly by `.github/workflows/refresh-registry.yml` as a PR.
+- `src/registry/sources.ts` — the sixteen `REGISTRY_SOURCES` with endpoints and routing
+  metadata. A source may carry an `include` rule (which published items are components,
+  not demos, themes or helpers), an `itemUrl` template, a `namespace` other than its id,
+  `curated` (no published index: its items are listed in `src/registry/curated.ts`) and
+  `installByUrl` (21st.dev). `src/registry/licences.ts` — each source's licence, read
+  from its licence file with the date (four are `null`: none could be verified).
+- `data/registry-snapshot.json` — the committed index (1,489 entries: 436 on 22 Sep
+  2026, 1,053 added 8 Oct 2026), refreshed weekly by
+  `.github/workflows/refresh-registry.yml` as a PR. The curated lists do not refresh.
 - `app/api/element-preview/route.ts` — compiles a registry item's published source with
   esbuild into a sandboxed document, reporting `ready` / `fallback` / `blank` /
   `failed`. Two cache tiers: memory, and `.next/cache/element-preview` on disk
@@ -111,6 +115,17 @@ arranged and which parts are easy to break. Keep it current when a part moves.
   `DP_REGISTRY_BASE` points every source at one origin, for the stand-in registry.
 - `src/components/RegistryPreview.tsx` — a registry card's live preview. `previewSrc()`
   is the one URL builder for card and full screen alike.
+
+## Scores
+
+- `src/elements/score.ts` — the rubric: `scoreElement()` adds six parts to 0–100, and
+  `signalsIn()` reads the accessibility signals from source. Pure, and tested.
+- `src/elements/scores.ts` — applies it to an original (`originalScore`) or a registry
+  entry (`registryScore`), with the evidence; `sourceRank` is the tie order.
+- `data/element-evidence.json` — per element, the preview outcome (`p`) and the four
+  signals as digits (`s`). Written by `scripts/score-evidence.mjs` from a render report
+  and the sources' item documents; partial runs update only what they measured. Its
+  signal patterns and `signalsIn()` are held together by a test.
 
 ## The library UI
 

@@ -91,6 +91,17 @@ const SOURCE_DEFAULT: Record<string, BrowseCategory> = {
   soralabs: "Scroll effects",
   componentry: "Signature effects",
   "react-bits": "Signature effects",
+  magicui: "Signature effects",
+  aceternity: "Signature effects",
+  "motion-primitives": "Hover effects",
+  "animate-ui": "Buttons & inputs",
+  tailark: "Layout blocks",
+  "kibo-ui": "Layout blocks",
+  reui: "Layout blocks",
+  "cult-ui": "Signature effects",
+  eldoraui: "Signature effects",
+  smoothui: "Buttons & inputs",
+  "21st": "Signature effects",
 };
 
 /**

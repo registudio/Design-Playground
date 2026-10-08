@@ -19,7 +19,13 @@ export const ENGINE_SOURCES = [
   { id: "vanta", label: "Vanta", url: "https://www.vantajs.com/", runtime: "Vanta", split: true },
   { id: "shader", label: "ShaderGradient", url: "https://shadergradient.co/", runtime: "WebGL" },
 ] as const;
-export function engineFor(id: string) { return ENGINE_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
+/**
+ * Prefix matches below apply to authored ids only. A registry entry's id is
+ * `source:name`, and `motion-primitives:…` or `cult-ui:…` would otherwise be taken
+ * for a Motion demo or a cult-ui port.
+ */
+const authored = (id: string) => !id.includes(":");
+export function engineFor(id: string) { return authored(id) ? ENGINE_SOURCES.find(s => id.startsWith(`${s.id}-`)) : undefined; }
 
 /**
  * The files under /engine-demos/ an element's document loads, in order.
@@ -50,10 +56,19 @@ export function engineOfBundle(bundle: string) {
  * Matched by id prefix, the same way engines are.
  */
 export const PORT_SOURCES = [
-  { id: "cult", label: "cult-ui", url: "https://www.cult-ui.com/docs/components" },
-  { id: "21st", label: "21st.dev", url: "https://21st.dev" },
+  { id: "cult", label: "cult-ui", url: "https://www.cult-ui.com/docs/components", registry: "cult-ui" },
+  { id: "21st", label: "21st.dev", url: "https://21st.dev", registry: "21st" },
 ] as const;
-export function portFor(id: string) { return PORT_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
+
+/**
+ * The registry a port belongs with when browsing by source. A port is this project's
+ * code, so it stays a Playground port in its credit; but someone choosing "21st.dev" in
+ * the library wants every 21st.dev design, the ports rebuilt here among them.
+ */
+export function browseSourceOf(id: string): string | undefined {
+  return engineFor(id)?.id ?? portFor(id)?.registry;
+}
+export function portFor(id: string) { return authored(id) ? PORT_SOURCES.find(s => id.startsWith(`${s.id}-`)) : undefined; }
 
 /**
  * Publishers whose components run here as published.
@@ -65,7 +80,7 @@ export function portFor(id: string) { return PORT_SOURCES.find(s => id.startsWit
 export const COMPONENT_SOURCES = [
   { id: "shipnotes", label: "Ship Notes", url: "https://github.com/aqualang89/shipnotes-components", licence: "MIT" },
 ] as const;
-export function componentSourceFor(id: string) { return COMPONENT_SOURCES.find(s => id.startsWith(`${s.id}-`)); }
+export function componentSourceFor(id: string) { return authored(id) ? COMPONENT_SOURCES.find(s => id.startsWith(`${s.id}-`)) : undefined; }
 
 const palettes = ["#e5bcb0", "#c6d9a4", "#b5c6ef", "#d7b4eb"];
 const art = (i: number) => `<svg viewBox="0 0 300 200" role="img" aria-label="Abstract landscape ${i + 1}"><rect width="300" height="200" fill="${palettes[i]}"/><circle cx="${75 + i * 35}" cy="65" r="42" fill="#fff8"/><path d="M0 170 Q80 ${i * 20} 160 140 T300 100 V200 H0Z" fill="#25372f"/><path d="M0 190 Q140 90 300 175 V200 H0Z" fill="#587764"/></svg>`;

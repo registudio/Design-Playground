@@ -64,6 +64,17 @@ export const SourceIdEnum = z.enum([
   "soralabs",
   "componentry",
   "react-bits",
+  "magicui",
+  "aceternity",
+  "motion-primitives",
+  "animate-ui",
+  "tailark",
+  "kibo-ui",
+  "reui",
+  "cult-ui",
+  "eldoraui",
+  "smoothui",
+  "21st",
 ]);
 
 export const DesignElement = z.object({

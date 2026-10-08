@@ -182,9 +182,11 @@ properties it animates, and export fails if two engines would drive the same one
 
 ## Elements
 
-The visual collection contains authored CSS/JavaScript effects, credited as Playground Originals. Each has an interactive preview and exports its runnable document. The registry browser additionally indexes Bklit, KokonutUI, Sora UI, Componentry and React Bits. Choosing a registry item records its source, install command and intended-use note. These third-party selections export installation references rather than vendored source.
+The visual collection contains authored CSS/JavaScript effects, credited as Playground Originals. Each has an interactive preview and exports its runnable document. The registry browser additionally indexes sixteen registries: Bklit, KokonutUI, Sora UI, Componentry and React Bits, then Magic UI, Aceternity UI, Motion Primitives, Animate UI, Tailark, Kibo UI, ReUI, Cult UI, Eldora UI, SmoothUI and 21st.dev. The ten added later were read from their own source repositories, and each keeps only what it publishes as components — not the demos, themes and helpers published beside them (Magic UI is 78 components in 250 entries). Aceternity UI and 21st.dev publish no index, so their entries are a list kept in `src/registry/curated.ts`; 21st.dev's holds the components given to the playground with their authors credited, and every public component by Kedhareswer Naidu, read from the repository behind that 21st.dev profile. Choosing a registry item records its source, install command and intended-use note. These third-party selections export installation references rather than vendored source.
 
-**The index includes a verified snapshot.** It contains 436 entries fetched from all five published registries on 22 September 2026. Refresh retrieves current metadata; failed sources retain their last known entries. No component names or install commands are invented.
+**The index includes a verified snapshot.** It contains 1,489 entries: 436 fetched from the first five registries on 22 September 2026, and 1,053 from the ten added on 8 October 2026, read from their own source repositories and the two hand-kept lists. Refresh retrieves current metadata; failed sources retain their last known entries. No component names or install commands are invented.
+
+**The library is ordered by a score, best first.** Every element, original or from a registry, gets a 0–100 score for how professional and usable it is likely to be in a client's site, shown on its card (hover it for the parts). The rubric is in `src/elements/score.ts` and is the same for everyone: whether its preview actually rendered (30), accessibility and robustness signals in its source — ARIA and roles, keyboard handling, reduced motion, semantic elements (20), how often a real site needs that kind of element (15), what installing it costs (15), licence clarity (10) and whether it is described and installable rather than reference-only (10). The measured part, which previews rendered and what each source contains, is in `data/element-evidence.json`, written by `scripts/score-evidence.mjs`; an entry without evidence scores midpoints, between the proven and the broken. Equal scores list Playground originals first, then the registries in order.
 
 **Refresh is server-side.** Registry hosts do not reliably send permissive CORS headers,
 and fetching from the browser would also expose the whole index to the page. The route
@@ -234,7 +236,7 @@ head, credited as "Ship Notes · original component". Only the demo around each 
 
 **The library is keyboard-navigable and linkable.** The grid is one tab stop: arrow keys move between cards, Enter opens one full screen, Space adds it, and ← → step through the results in full screen. The view — search, filters, and the element open full screen — lives in the URL, so a link reproduces it and Back closes a full-screen view.
 
-**Registry licences are recorded per publisher**, in `src/registry/licences.ts`, each read from the publisher's own licence file with the date it was read. Bklit UI and KokonutUI are MIT; React Bits is MIT + Commons Clause (fine inside a client's site, not for reselling the components). Sora UI and Componentry state no licence anywhere that could be found — recorded as unknown, not guessed — and a pick from either exports with a warning to confirm terms with the publisher.
+**Registry licences are recorded per publisher**, in `src/registry/licences.ts`, each read from the publisher's own licence file with the date it was read. Bklit UI, KokonutUI, Magic UI, Motion Primitives, Tailark, Kibo UI, ReUI, Cult UI, Eldora UI and SmoothUI are MIT; React Bits and Animate UI are MIT + Commons Clause (fine inside a client's site, not for reselling the components). Sora UI, Componentry and Aceternity UI (which has no public repository) state no licence anywhere that could be found — recorded as unknown, not guessed. On 21st.dev each component carries its own author's terms, so there is no one licence to record: 21st.dev picks state no licence here either. A pick from any of these exports with a warning to confirm terms with the publisher.
 
 **Reading a brand from a website.** On Brand assets, a client's current site can be read for its colours, typefaces and logo (`/api/brand-from-url`); each is offered, never applied until chosen. The server fetch refuses anything that is not the public internet, checking the address each socket connects to rather than the name beforehand. `DP_BRAND_ALLOW_ADDRESSES` exempts named addresses for tests; never set it on a deployment.
 
@@ -266,9 +268,13 @@ The three gaps this section used to record — no keyboard navigation in the ele
 grid, hooks and utilities occupying preview tiles, and no licence information for
 registry components — are closed (see "Elements" above). What remains:
 
-**Two registries state no licence.** Sora UI and Componentry publish no licence that
-could be found. Picks from them export with a warning; the terms need confirming with
-the publishers, and `src/registry/licences.ts` updating when they are.
+**Four registries state no licence.** Sora UI and Componentry publish no licence that
+could be found, Aceternity UI has no public repository to read one from, and 21st.dev's
+terms are per component. Picks from them export with a warning; the terms need
+confirming with the publishers, and `src/registry/licences.ts` updating when they are.
+
+**Two lists are kept by hand.** Aceternity UI and 21st.dev publish no index, so the
+weekly refresh cannot update them; add to `src/registry/curated.ts` as they publish.
 
 **Licences are read by hand.** The weekly refresh updates the registry index but not the
 licences, which are checked against each publisher's licence file with a date recorded.

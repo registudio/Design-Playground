@@ -5,7 +5,7 @@ import {
   type ElementVariant,
   type SourceStatus,
 } from "./schema";
-import { installCommand, type RegistrySource } from "./sources";
+import { installCommand, type ItemRule, type RegistrySource } from "./sources";
 
 /**
  * Turns a fetched `registry.json` into normalized `DesignElement` records (spec §3).
@@ -111,8 +111,9 @@ export function normalizeDocument(
     else skipped++;
   }
 
-  const elements = source.id === "react-bits" ? collapseVariants(source, items, lastVerified)
-    : items.map((item) => toElement(source, item, item.name, undefined, [], lastVerified));
+  const kept = source.include ? keepComponents(items, source.include) : items;
+  const elements = source.id === "react-bits" ? collapseVariants(source, kept, lastVerified)
+    : kept.map((item) => toElement(source, item, item.name, undefined, [], lastVerified));
 
   // Stable order, so a refresh that changes nothing produces a byte-identical snapshot.
   elements.sort((a, b) => a.id.localeCompare(b.id));
@@ -127,6 +128,22 @@ export function normalizeDocument(
       lastVerified,
     },
   };
+}
+
+/**
+ * Applies a source's `ItemRule`: the components, without the demos, themes and helpers
+ * published beside them. Not counted as `skipped`, which means malformed.
+ */
+export function keepComponents(items: RegistryItem[], rule: ItemRule): RegistryItem[] {
+  let kept = items.filter((item) =>
+    (!rule.types || rule.types.includes(item.type ?? "")) &&
+    (!rule.namePrefix || item.name.startsWith(rule.namePrefix)) &&
+    !rule.exclude?.includes(item.name));
+  if (rule.topLevelOnly) {
+    const names = kept.map((item) => item.name);
+    kept = kept.filter((item) => !names.some((other) => other !== item.name && item.name.startsWith(`${other}-`)));
+  }
+  return kept;
 }
 
 /**

@@ -507,3 +507,56 @@ describe("compiling real registry shapes", () => {
     expect(html).not.toContain("__NEXT_ROUTER_BASEPATH");
   }, 30_000);
 });
+
+describe("publishers' own layouts", () => {
+  /**
+   * Tailark writes install targets as shadcn aliases (`@components/x.tsx`) and its code
+   * without semicolons. The first left a block's own sibling unresolvable; the second
+   * made the icon shim read an earlier line's imports instead of the icons asked for
+   * ("No matching export ... for import Shield").
+   */
+  const BLOCK = {
+    files: [
+      { path: "veil/header.tsx", target: "@components/hero-header.tsx", content: "export function Header() { return <header>Header</header> }" },
+      { path: "veil/hero.tsx", target: "@components/hero.tsx", content: [
+        "import { Header } from '@/components/hero-header'",
+        "import { Shield, Users } from 'lucide-react'",
+        "export default function Hero() { return <section><Header /><Shield /><Users /><h1>Hero</h1></section> }",
+      ].join("\n") },
+    ],
+  };
+
+  it("compiles a block laid out with alias targets and written without semicolons", async () => {
+    const { vi } = await import("vitest");
+    const { createServer } = await import("node:http");
+    const { mkdtemp } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const server = createServer((request, response) => {
+      if (request.url === "/oss/hero.json") response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(BLOCK));
+      else response.writeHead(404).end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as { port: number };
+    try {
+      vi.stubEnv("DP_PREVIEW_CACHE", await mkdtemp(path.join(tmpdir(), "dp-preview-")));
+      vi.stubEnv("DP_REGISTRY_BASE", `http://127.0.0.1:${port}`);
+      vi.resetModules();
+      const { GET: route } = await import("../app/api/element-preview/route");
+      const html = await (await route(new Request("http://localhost/api/element-preview?source=tailark&name=hero"))).text();
+      expect(html).toContain('<div id="root">');
+      expect(html).not.toContain('data-generated="true"');
+      expect(html).not.toContain("No matching export");
+    } finally {
+      vi.unstubAllEnvs();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }, 30_000);
+
+  it("accepts a 21st.dev name with its author, and nothing that climbs out of it", async () => {
+    const { GET: route } = await import("../app/api/element-preview/route");
+    const status = async (name: string) => (await route(new Request(`http://localhost/api/element-preview?source=21st&name=${encodeURIComponent(name)}`))).status;
+    expect(await status("../etc/passwd")).toBe(400);
+    expect(await status("a/b/c")).toBe(400);
+  });
+});

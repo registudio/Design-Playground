@@ -287,3 +287,47 @@ export function recipeIndexFor(source: string, name: string): number | null {
   );
   return index === -1 ? null : index;
 }
+
+/**
+ * Data props a component reads that no recipe supplied, inferred from its own source.
+ *
+ * The recipes cover names that mean one thing everywhere (`title`, `items`, `data`), but
+ * many components take their content under a name of their own — `timelineData`,
+ * `testimonials`, `features` — and map over it straight away. Given nothing there they
+ * threw "Cannot read properties of undefined (reading 'title')", and the card showed that
+ * raw message over a stand-in. The names are read from the component's parameter
+ * destructuring and from `props.x` uses; callbacks, flags, styling props and anything
+ * with a default of its own are left alone, since a sample there would change behaviour
+ * rather than fill a gap.
+ */
+const NOT_DATA = /^(?:children|className|style|ref|key|as|asChild|id|variant|size|theme|color|colors?|duration|delay|speed|direction|orientation|position|side|align|mode)$|^(?:on|is|has|show|should|can|enable|disable|hide|use|render|get|set|handle)[A-Z]|^(?:open|loop|disabled|autoplay|autoPlay|reverse|vertical|horizontal|pause\w*|animate\w*)$/;
+
+export function inferredDataProps(source: string): string[] {
+  const names = new Set<string>();
+  // ({ a, b = 1, c: d, ...rest }) — the parameter list of a function or arrow function.
+  for (const match of source.matchAll(/(?:function\s*[A-Za-z0-9_$]*|=>?|\bforwardRef\s*(?:<[^>]*>)?)\s*\(\s*\{([^}]*)\}\s*(?::[^)]*)?\)/g)) {
+    for (const part of match[1]!.split(",")) {
+      const entry = part.trim();
+      if (!entry || entry.startsWith("...") || entry.includes("=")) continue;
+      const name = entry.split(":")[0]!.trim();
+      if (/^[A-Za-z_$][\w$]*$/.test(name)) names.add(name);
+    }
+  }
+  for (const match of source.matchAll(/\bprops\??\.([A-Za-z_$][\w$]*)/g)) names.add(match[1]!);
+  return [...names].filter((name) => !NOT_DATA.test(name)).sort();
+}
+
+/**
+ * One sample for any of those props: a list of rich items that is also, through its own
+ * properties, the first item. `testimonials.map(t => t.name)` and `data.title` both find
+ * what they look for, which is what lets one value stand in for names never seen before.
+ */
+export const SAMPLE_DATA = `(() => {
+  const Icon = ${ICON_COMPONENT};
+  const items = [
+    { id: 1, title: "Discover", name: "Alex Rivera", label: "Discover", heading: "Discover", description: "Find what matters first.", content: "Research and requirements, gathered in one place.", text: "Small details make the difference.", quote: "Small details make the difference.", role: "Product designer", category: "Design", date: "Jan 2026", status: "completed", energy: 90, value: 42, relatedIds: [2], tags: ["design"], image: ${IMAGE}, img: ${IMAGE}, src: ${IMAGE}, avatar: ${IMAGE}, href: "#", url: "#", icon: Icon },
+    { id: 2, title: "Design", name: "Sam Okafor", label: "Design", heading: "Design", description: "Shape it with intent.", content: "Systems and screens, built to last.", text: "Clear, quick and on our side.", quote: "Clear, quick and on our side.", role: "Engineering lead", category: "Build", date: "Feb 2026", status: "in-progress", energy: 60, value: 58, relatedIds: [1, 3], tags: ["build"], image: ${IMAGES[1]}, img: ${IMAGES[1]}, src: ${IMAGES[1]}, avatar: ${IMAGES[1]}, href: "#", url: "#", icon: Icon },
+    { id: 3, title: "Deliver", name: "Priya Nair", label: "Deliver", heading: "Deliver", description: "Ship it, then refine.", content: "Launch, measure and improve.", text: "The best launch we have had.", quote: "The best launch we have had.", role: "Founder", category: "Launch", date: "Mar 2026", status: "pending", energy: 30, value: 73, relatedIds: [2], tags: ["launch"], image: ${IMAGES[2]}, img: ${IMAGES[2]}, src: ${IMAGES[2]}, avatar: ${IMAGES[2]}, href: "#", url: "#", icon: Icon },
+  ];
+  return Object.assign(items, items[0]);
+})()`;

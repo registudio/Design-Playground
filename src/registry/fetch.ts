@@ -1,13 +1,14 @@
 import { normalizeDocument } from "./normalize";
 import { REGISTRY_INDEX_SCHEMA_ID, type RegistryIndex, type SourceStatus } from "./schema";
+import { CURATED_ITEMS } from "./curated";
 import { REGISTRY_SOURCES, type RegistrySource } from "./sources";
 
 /**
- * Fetches and merges the five registries (spec §3).
+ * Fetches and merges the registries (spec §3).
  *
  * Server-side by design. §4 walks through the hosting decision and lands on this
  * being the version without a staleness problem at all: a Claude Artifact cannot
- * reach any of the five hosts because none is on the Artifact sandbox's CSP
+ * reach any of these hosts because none is on the Artifact sandbox's CSP
  * allowlist, but a Next.js route handler has no such restriction. Since the
  * playground is already a real Next.js app, live fetch is simply available, and the
  * committed snapshot degrades to an offline fallback rather than the primary source.
@@ -23,6 +24,8 @@ async function fetchSource(
   source: RegistrySource,
   lastVerified: string,
 ): Promise<{ elements: RegistryIndex["elements"]; status: SourceStatus }> {
+  // No index to fetch: the list is kept here, and each item is fetched when previewed.
+  if (source.curated) return normalizeDocument(source, { items: CURATED_ITEMS[source.id] ?? [] }, lastVerified);
   try {
     const response = await fetch(source.endpoint, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),

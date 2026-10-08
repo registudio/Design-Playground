@@ -3,7 +3,7 @@ import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
 import { CULT_ELEMENTS } from "@/elements/cult-elements";
 import { SHADER_ELEMENTS } from "@/elements/shader-elements";
 import { TWENTYFIRST_ELEMENTS } from "@/elements/twentyfirst-elements";
-import { COMPONENT_SOURCES, ENGINE_SOURCES, PORT_SOURCES } from "@/elements/extended-catalogue";
+import { COMPONENT_SOURCES, ENGINE_SOURCES, PORT_SOURCES, browseSourceOf, engineFor, portFor } from "@/elements/extended-catalogue";
 import { SHIPNOTES_ELEMENTS } from "@/elements/shipnotes-elements";
 import { readFile } from "node:fs/promises";
 import { shipnotesModule } from "../scripts/vendor-shipnotes.mjs";
@@ -41,6 +41,20 @@ describe("attribution", () => {
     for (const engine of ENGINE_SOURCES.filter(source => source.id !== "shader")) {
       expect(engine.runtime, engine.id).toBe(engine.label);
     }
+  });
+
+  it("browses each port under its registry, so 21st.dev shows the designs rebuilt here too", () => {
+    const twentyFirst = ELEMENTS.filter(element => browseSourceOf(element.id) === "21st").map(element => element.id);
+    expect(twentyFirst).toEqual(expect.arrayContaining(["21st-container-scroll", "21st-radial-orbital-timeline", "21st-testimonials-columns", "21st-lens-zoom-carousel", "21st-features-block"]));
+    for (const element of CULT_ELEMENTS) expect(browseSourceOf(element.id), element.id).toBe("cult-ui");
+    expect(browseSourceOf("motion-stagger")).toBe("motion");
+  });
+
+  it("never takes a registry entry for an engine demo or a port", () => {
+    // Registry ids are `source:name`; `motion-primitives:…` starts with `motion-`.
+    expect(engineFor("motion-primitives:text-effect")).toBeUndefined();
+    expect(portFor("cult-ui:dock")).toBeUndefined();
+    expect(engineFor("motion-stagger")?.id).toBe("motion");
   });
 
   it("keeps engine and port prefixes from colliding", () => {

@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
-import { ENGINE_SOURCES, engineFor } from "@/elements/extended-catalogue";
+import { ENGINE_SOURCES, browseSourceOf, engineFor } from "@/elements/extended-catalogue";
+import { originalScore, registryScore, sourceRank } from "@/elements/scores";
+import type { Score } from "@/elements/score";
+
+/** The score's parts, for the hover title on a card. */
+const scoreTitle = (score: Score) =>
+  `Score ${score.score}/100 — works ${score.parts.works}/30, accessibility & robustness ${score.parts.robustness}/20, production fit ${score.parts.fit}/15, weight ${score.parts.weight}/15, licence ${score.parts.licence}/10, completeness ${score.parts.complete}/10`;
 import { useProjectStore } from "@/store/project-store";
 import { ElementsBrowser } from "./ElementsBrowser";
 import { pageSections, SECTION_LABELS } from "@/schema/composition";
@@ -45,6 +51,8 @@ type LibraryItem = {
   /** Curated entries carry a tag; registry entries carry their source. */
   tag?: string;
   registry?: DesignElement;
+  /** How professional and usable it is likely to be, 0–100; see elements/score.ts. */
+  score: Score;
 };
 
 /** Source id for the authored elements, which have no registry behind them. */
@@ -196,7 +204,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
 
   const items = useMemo<LibraryItem[]>(() => {
     const all: LibraryItem[] = [
-      ...ELEMENTS.map(e => ({ id: e.id, title: e.title, description: e.description, category: e.category, tag: e.tag, preview: true })),
+      ...ELEMENTS.map(e => ({ id: e.id, title: e.title, description: e.description, category: e.category, tag: e.tag, preview: true, score: originalScore(e.id) })),
       ...registry.elements.map(e => ({
         id: e.id,
         title: e.title,
@@ -206,15 +214,15 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         category: browseCategory(e),
         preview: false,
         registry: e,
+        score: registryScore(e),
       })),
     ];
-    // Grouped by category, originals leading each group. Listing all the originals
-    // first instead would mean scrolling past 54 cards before meeting a single registry
-    // component, which made "All elements" look like a gallery of our own work.
-    const rank = new Map(BROWSE_CATEGORIES.map((c, i) => [c as string, i]));
+    // Most professional and usable first (see elements/score.ts). Equal scores keep the
+    // sources in order — Playground originals, then each registry as listed — and then
+    // go alphabetically, so the order is stable from one load to the next.
     return all.sort((a, b) =>
-      (rank.get(a.category) ?? 99) - (rank.get(b.category) ?? 99) ||
-      Number(b.preview) - Number(a.preview) ||
+      b.score.score - a.score.score ||
+      sourceRank(a.registry?.source) - sourceRank(b.registry?.source) ||
       a.title.localeCompare(b.title));
   }, [registry.elements]);
 
@@ -237,7 +245,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
         (collection === "CSS-only originals" && item.preview && elementOrigin(item.id).runtime === "CSS") ||
         (collection === "Text & feedback originals" && item.preview && ["Text animations", "Loaders & feedback"].includes(item.category))) &&
       (category === ALL_TYPES || category === item.category) &&
-      (!source || (source === ORIGINALS ? !item.registry && !engineFor(item.id) : item.registry?.source === source || engineFor(item.id)?.id === source)) &&
+      (!source || (source === ORIGINALS ? !item.registry && !engineFor(item.id) : item.registry?.source === source || browseSourceOf(item.id) === source)) &&
       (!text || `${item.title} ${item.description} ${item.category} ${item.registry?.name ?? ""} ${item.registry?.installCommand ?? ""} ${item.registry?.npmDependencies.join(" ") ?? ""}`.toLowerCase().includes(text)) &&
       (!(onlySelected || compact) || isSelected(item)));
     // Asked for by name — a search, or their own type — they show regardless.
@@ -484,7 +492,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const stepRef = useRef(step);
   stepRef.current = step;
 
-  const toggle = (item: LibraryItem) => {
+  const toggle = (item: Omit<LibraryItem, "score">) => {
     if (exploring || !project) { onCreate?.(); return; }
     if (item.registry) {
       if (picked.some(s => s.id === item.id)) deselectElement(item.id);
@@ -503,7 +511,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
   const sourceLabel = (id: string) => id === ORIGINALS ? "Playground originals" : sources.find(s => s.id === id)?.label ?? id;
   const sourceCount = (id: string) => id === ORIGINALS
     ? ELEMENTS.filter(e => !engineFor(e.id)).length
-    : registry.elements.filter(e => e.source === id).length + ELEMENTS.filter(e => engineFor(e.id)?.id === id).length;
+    : registry.elements.filter(e => e.source === id).length + ELEMENTS.filter(e => browseSourceOf(e.id) === id).length;
   const utilityCount = items.filter(i => i.category === UTILITIES).length;
   const typeCount = (c: string) => c === ALL_TYPES ? items.length - (utilities ? 0 : utilityCount) : items.filter(i => i.category === c).length;
   /** Each filter that is narrowing the grid, as a removable chip. */
@@ -582,7 +590,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
             : <RegistryPreview element={withVariant(item.registry!)} paused={paused || covered} eager={!paused && settled && results.length <= NARROW_SEARCH_LIMIT} onExpand={() => openFull(item.id)}/>}
           {item.preview && <button className="expand-demo" aria-label={`Expand ${item.title}`} onClick={() => openFull(item.id)}>↗</button>}
         </div>
-        <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category}</span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>
+        <div className="element-caption"><div><h3>{item.title}</h3><span>{item.category} · <b className="element-score" title={scoreTitle(item.score)}>{item.score.score}</b></span></div><button className={`add-element ${chosen ? "added" : ""}`} aria-label={`${chosen ? "Remove" : "Add"} ${item.title}`} onClick={() => toggle(item)}>{chosen ? "✓" : "+"}</button></div>
         {item.registry
           ? <div className="element-origin"><span className="registry-source-badge" title="Installed from a third-party registry at build time">↗ {sourceById(item.registry.source)?.label}</span>{advanced && <small>{item.registry.referenceOnly ? "REFERENCE ONLY" : item.registry.engineDependency.length ? item.registry.engineDependency.join(" + ").toUpperCase() : "NO ENGINE"}</small>}</div>
           : <div className="element-origin">{elementOrigin(item.id).url ? <a href={elementOrigin(item.id).url} target="_blank" rel="noreferrer noopener">↗ {elementOrigin(item.id).name}</a> : <span title="Authored for this playground; included as source in your export">✳ {elementOrigin(item.id).name}</span>}{advanced && <small>{elementOrigin(item.id).runtime}</small>}</div>}

@@ -191,7 +191,7 @@ export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
     title: "Radial orbital timeline",
     category: "Charts & data viz",
     description:
-      "Project phases orbit a pulsing core. Open one and the orbit turns it to the top, shows its status, date and energy level, and lights up the phases it connects to. After the Radial Orbital Timeline on 21st.dev.",
+      "Project phases orbit a pulsing core. Open one and the orbit turns it to the top, shows its status, date and energy level, and lights up the phases it connects to. After Jatin Yadav's Radial Orbital Timeline on 21st.dev.",
     tag: "21st.dev",
     html: `<div class="rot">
 <div class="rot-orbit">
@@ -306,7 +306,7 @@ place();requestAnimationFrame(frame);`,
     title: "Container scroll tilt",
     category: "Scroll effects",
     description:
-      "A device frame tipped back 20° lowers itself flat as you scroll, while the headline lifts away above it. After Aceternity UI's ContainerScroll on 21st.dev.",
+      "A device frame tipped back 20° lowers itself flat as you scroll, while the headline lifts away above it. After Aceternity UI's ContainerScroll by Manu Arora, on 21st.dev.",
     tag: "21st.dev",
     html: `<div class="cscroll"><div class="cscroll-viewport"><section class="cscroll-track"><div class="cscroll-stage"><div class="cscroll-title"><small>SCROLL INSIDE ↓</small><h1>Unleash the power of<br><span>Scroll Animations</span></h1></div><div class="cscroll-card"><div class="cscroll-screen">${DASHBOARD}</div></div></div></section><div class="cscroll-end">END OF SECTION</div></div></div>`,
     css: `body{display:block!important}.cscroll{height:100vh}.cscroll-viewport{position:relative;height:100vh;overflow:auto;overscroll-behavior:contain}.cscroll-track{height:220vh}
@@ -365,7 +365,7 @@ paint();
     title: "Testimonial columns",
     category: "Layout blocks",
     description:
-      "Three columns of testimonials drift upward at different speeds and fade at the edges, a wall of social proof that never lines up. After the Testimonials Columns on 21st.dev.",
+      "Three columns of testimonials drift upward at different speeds and fade at the edges, a wall of social proof that never lines up. After Efferd's Testimonials Columns on 21st.dev.",
     tag: "21st.dev",
     html: `<section class="tcol-wrap" aria-label="Testimonials"><header class="tcol-head"><span class="tcol-badge">Testimonials</span><h2>What our users say</h2><p>See what our customers have to say about us.</p></header><div class="tcol-cols">${testimonialColumn(0, 15, 1)}${testimonialColumn(3, 19, 2)}${testimonialColumn(6, 17, 3)}</div></section>`,
     css: `body{display:block!important}
@@ -403,7 +403,7 @@ paint();
     title: "Lens zoom carousel",
     category: "Carousels",
     description:
-      "A full-bleed carousel where the next picture rushes in like a fast zoom pull, landing out of a magnified blur with two ghost copies trailing it while the old one falls back and darkens. Going back zooms out. After the Lens Zoom Carousel on 21st.dev.",
+      "A full-bleed carousel where the next picture rushes in like a fast zoom pull, landing out of a magnified blur with two ghost copies trailing it while the old one falls back and darkens. Going back zooms out. After Kedhareswer Naidu's Zoom Blur Image Carousel (lens-zoom-carousel) on 21st.dev.",
     tag: "21st.dev",
     html: `<div class="lz-root" role="region" aria-roledescription="carousel" aria-label="Image carousel" tabindex="0" data-moving="0" data-paused="0">
 <div class="lz-base"><img class="lz-img" alt="" draggable="false"></div>
