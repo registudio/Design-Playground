@@ -839,9 +839,14 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
         // Once a local package has been admitted, let esbuild resolve its own relative
         // and transitive imports normally rather than treating them as registry files.
         if (args.namespace === "file" && args.importer.includes("node_modules")) return;
-        const local = localTarget(args.path, args.importer);
+        // Kibo UI publishes its files as they sit in its monorepo, importing the shadcn
+        // layer as `@repo/shadcn-ui/components/ui/button`: that is `@/components/ui/button`
+        // in an installed project, and is resolved (or shimmed) as such. The shim still
+        // reads the import under the name the source wrote.
+        const request = args.path.startsWith("@repo/shadcn-ui/") ? `@/${args.path.slice("@repo/shadcn-ui/".length)}` : args.path;
+        const local = localTarget(request, args.importer);
         if (local) return { path: local, namespace: "virtual" };
-        if (args.path.startsWith("@/") || args.path.startsWith("~/") || args.path.startsWith(".") || args.path.startsWith("/")) {
+        if (request.startsWith("@/") || request.startsWith("~/") || request.startsWith(".") || request.startsWith("/")) {
           if (/\.(css|scss|sass|less)$/.test(args.path)) return { path: args.path, namespace: "empty-style" };
           if (ASSET_FILE.test(args.path)) return { path: args.path.split("/").pop()!, namespace: "asset" };
           return shim(args.path, args.importer);
