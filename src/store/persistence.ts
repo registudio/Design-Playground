@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import { DesignProject, Snapshot, type ProjectMeta } from "@/schema/project";
+import { DesignProject, ProjectMeta, Snapshot } from "@/schema/project";
 import type { CustomPreset } from "@/schema/customPreset";
 
 /**
@@ -75,7 +75,21 @@ export async function loadProject(id: string): Promise<DesignProject | null> {
 /** Every project's metadata, most recently updated first. */
 export async function listProjects(): Promise<ProjectMeta[]> {
   const all = await (await db()).getAllFromIndex("meta", "updatedAt");
-  return all.reverse();
+  return normaliseMeta(all.reverse());
+}
+
+/**
+ * Validates metadata on read, like loadProject does for projects. Records written
+ * before tags and archiving existed have neither field, and the project directory
+ * calls `meta.tags.map` — so one old record crashed the whole page, but only on a
+ * domain that had stored projects from back then. Parsing fills the defaults; a record
+ * too broken to parse is left out of the list rather than taking the directory down.
+ */
+export function normaliseMeta(records: unknown[]): ProjectMeta[] {
+  return records.flatMap((raw) => {
+    const parsed = ProjectMeta.safeParse({ client: "", ...(raw as object) });
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 export async function deleteProject(id: string): Promise<void> {
