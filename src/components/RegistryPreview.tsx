@@ -51,16 +51,24 @@ export function RegistryPreview({
    */
   paused = false,
   onExpand,
+  standalone = false,
 }: {
   element: Pick<DesignElement, "id" | "source" | "name" | "title" | "category" | "variant">;
   eager?: boolean;
   paused?: boolean;
   /** Opens this preview full size. Registry cards had no way to do that at all. */
   onExpand?: () => void;
+  /**
+   * The full-screen view: one preview someone asked for, so it starts at once rather
+   * than waiting in the cards' queue. It used to be a bare iframe, which showed an empty
+   * box for as long as a cold compile took — and for good if it failed, with no reason
+   * and no way to retry. The card's status, reason and Retry now come with it.
+   */
+  standalone?: boolean;
 }) {
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(standalone);
   const [loaded, setLoaded] = useState(false);
-  const [status, setStatus] = useState<PreviewStatus>("queued");
+  const [status, setStatus] = useState<PreviewStatus>(standalone ? "rendering" : "queued");
   /**
    * Why a stand-in is showing. A failed download, a component that threw on mount and
    * one that painted nothing all put the same visual on the card, so without this the
@@ -77,9 +85,11 @@ export function RegistryPreview({
   /** True once the document has reported something final — ready, blank, fallback, failed. */
   const settled = useRef(false);
 
-  useLiveSlot(host, `${element.id}|${observationKey}`, { paused, eager }, { startedAt, settled, interested }, {
-    start: () => { setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); },
-    stop: () => { setActive(false); setLoaded(false); setStatus("queued"); },
+  // Standalone holds no slot: passing it as paused keeps it out of the queue, and its
+  // start and stop do nothing, so the frame stays up from the first render.
+  useLiveSlot(host, `${element.id}|${observationKey}`, { paused: paused || standalone, eager }, { startedAt, settled, interested }, {
+    start: () => { if (standalone) return; setActive(true); setStatus("rendering"); recordPreview(observationKey, "rendering"); },
+    stop: () => { if (standalone) return; setActive(false); setLoaded(false); setStatus("queued"); },
   });
 
   useEffect(() => {
@@ -144,14 +154,14 @@ export function RegistryPreview({
         />
       )}
       {!loaded && (
-        <div className="registry-placeholder" data-category={element.category} aria-label={paused ? "Preview paused" : "Preparing visual preview"}>
+        <div className="registry-placeholder" data-category={element.category} aria-label={paused && !standalone ? "Preview paused" : "Preparing visual preview"}>
           <div className="placeholder-orbit"><i/><i/><i/></div>
           <div className="placeholder-bars"><i/><i/><i/><i/><i/></div>
         </div>
       )}
       <div className="preview-status" role="status" title={reason || undefined}>
-        {paused ? "Paused" : STATUS_LABEL[status]}
-        {!paused && (status === "failed" || status === "fallback" || status === "blank") && (
+        {paused && !standalone ? "Paused" : STATUS_LABEL[status]}
+        {(!paused || standalone) && (status === "failed" || status === "fallback" || status === "blank") && (
           <button
             onClick={() => {
               settled.current = false;
@@ -166,7 +176,7 @@ export function RegistryPreview({
           </button>
         )}
       </div>
-      {reason && !paused && (status === "fallback" || status === "failed") && (
+      {reason && (!paused || standalone) && (status === "fallback" || status === "failed") && (
         <p className="preview-reason">{reason}</p>
       )}
       {onExpand && (

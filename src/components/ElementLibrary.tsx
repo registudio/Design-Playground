@@ -616,7 +616,7 @@ export function ElementLibrary({ exploring = false, onCreate }: { exploring?: bo
       </header>
       {/* The same compiled document the card shows, at a size where the component can
           actually lay itself out — several only make sense above a card's height. */}
-      <iframe key={expanded.id} title={`${expanded.title} expanded preview`} sandbox="allow-scripts" src={previewSrc(expanded)}/>
+      <RegistryPreview key={previewSrc(expanded)} element={expanded} standalone/>
       <footer>
         <a className="quiet-button" href={sourceById(expanded.source)?.homepage ?? "#"} target="_blank" rel="noreferrer noopener">Open {sourceById(expanded.source)?.label} ↗</a>
         <button className="primary-button" onClick={() => toggle({ id: expanded.id, title: expanded.title, description: expanded.description, category: browseCategory(expanded), preview: false, registry: expanded })}>{picked.some(s => s.id === expanded.id) ? "Remove from project" : exploring ? "Create a project to use this →" : "Add to project +"}</button>
