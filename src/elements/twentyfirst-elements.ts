@@ -36,6 +36,10 @@ const LUCIDE = {
   zap: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
   arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  barChart: '<line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/>',
+  shieldCheck: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
 } as const;
 const icon = (name: keyof typeof LUCIDE, size: number) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LUCIDE[name]}</svg>`;
@@ -126,6 +130,60 @@ const LENS_SLIDES = [
   { title: "Blue Hour", caption: "Pines going dark against the snow.", palette: "alpine", seed: 55 },
 ] as const;
 const CHEVRON = (d: string) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="${d}" stroke="currentColor" stroke-width="1.4"/></svg>`;
+
+/**
+ * The three preview panels in the feature block. Upstream shows a photo in each; these
+ * draw what each caption says the photo is (a shared workspace, a funnel dashboard, an
+ * audit log) in the block's own greys, so they read as part of it and paint offline.
+ */
+const FEATURE_ART = {
+  collaboration: `<div class="ft-art ft-doc"><i style="width:62%"></i><i style="width:88%"></i><i style="width:74%"></i><i style="width:81%"></i><i style="width:46%"></i><span class="ft-cursor" style="left:58%;top:30%">Sarah</span><span class="ft-cursor ft-cursor-b" style="left:24%;top:58%">Marcus</span><span class="ft-comment"><b>PN</b>Can we tighten this intro?</span></div>`,
+  analytics: `<div class="ft-art ft-funnel">${[["Visited", 100], ["Signed up", 64], ["Activated", 41], ["Retained", 27]].map(([label, value]) => `<div><span>${label}</span><i style="width:${value}%"></i><em>${value}%</em></div>`).join("")}</div>`,
+  security: `<div class="ft-art ft-audit">${[["09:41", "SSO sign-in", "okta"], ["09:38", "Role changed", "admin"], ["09:12", "Export created", "csv"], ["08:57", "MFA verified", "totp"], ["08:30", "Policy updated", "eu-1"]].map(([time, event, detail]) => `<div><time>${time}</time><span>${event}</span><em>${detail}</em></div>`).join("")}</div>`,
+};
+
+/** Upstream's rows, unchanged apart from the photos. */
+const FEATURE_ROWS = [
+  {
+    eyebrow: "Collaboration", icon: "users", art: "collaboration",
+    title: "Work as one, ship faster together",
+    body: "One shared workspace where roles, live presence, and threaded comments keep everyone aligned.",
+    bullets: ["Granular roles: viewer, editor, admin", "Real-time presence and inline comments", "Version history with one-click restore", "Guest access with expiring links"],
+    cta: "Explore Collaboration", imgAlt: "Team collaboration interface showing shared workspace",
+    avatars: [["Sarah Kim", "SK"], ["Marcus Webb", "MW"], ["Priya Nair", "PN"]],
+    stat: ["4.2×", "Faster Review Cycles"],
+  },
+  {
+    eyebrow: "Analytics", icon: "barChart", art: "analytics",
+    title: "Decisions grounded in real data",
+    body: "Turn raw events into clear, actionable dashboards in minutes, with no SQL or data-engineering bottleneck.",
+    bullets: ["Sub-second query engine for large datasets", "Funnel, retention, and cohort views built-in", "Scheduled email and Slack reports", "CSV and REST API export"],
+    cta: "See Analytics In Action", imgAlt: "Analytics dashboard with funnel and retention charts",
+    avatars: [["James Okafor", "JO"], ["Lena Strauss", "LS"]],
+    stat: ["98%", "Query Success Rate"],
+  },
+  {
+    eyebrow: "Security", icon: "shieldCheck", art: "security",
+    title: "Enterprise-grade protection, zero friction",
+    body: "Controls your compliance team will love and developers barely notice, with SSO, MFA, audit logs, and data residency built in.",
+    bullets: ["SOC 2 Type II and ISO 27001 certified", "SSO via SAML 2.0 and OIDC", "Immutable audit log with SIEM export", "EU and US data-residency regions"],
+    cta: "Review Security Docs", imgAlt: "Security controls panel with audit log",
+    avatars: [["Diana Reyes", "DR"], ["Tom Eriksen", "TE"], ["Aiko Tanaka", "AT"]],
+    stat: ["0", "Reported Breaches"],
+  },
+] as const;
+
+const featureRow = (row: (typeof FEATURE_ROWS)[number]) => `<div class="ft-row">
+  <div class="ft-copy">
+    <div class="ft-eyebrow"><span class="ft-chip">${icon(row.icon, 14)}</span><span>${row.eyebrow}</span></div>
+    <h3>${row.title}</h3>
+    <p>${row.body}</p>
+    <ul>${row.bullets.map(bullet => `<li><span class="ft-tick">${icon("check", 10)}</span>${bullet}</li>`).join("")}</ul>
+    <div class="ft-proof"><div class="ft-avatars">${row.avatars.map(([name, initials]) => `<span class="ft-avatar" role="img" aria-label="${name}">${initials}</span>`).join("")}</div><div class="ft-stat"><b>${row.stat[0]}</b><span>${row.stat[1]}</span></div></div>
+    <div><button type="button" class="ft-cta">${row.cta}${icon("arrowRight", 16)}</button></div>
+  </div>
+  <div class="ft-media"><figure class="ft-frame" role="img" aria-label="${row.imgAlt}">${FEATURE_ART[row.art]}<figcaption><span class="ft-chip ft-chip-sm">${icon(row.icon, 12)}</span>${row.eyebrow} Preview</figcaption></figure></div>
+</div>`;
 
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
@@ -495,5 +553,70 @@ let down=null;
 root.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY}});
 root.addEventListener('pointerup',e=>{const s=down;down=null;if(!s)return;const dx=e.clientX-s.x;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(e.clientY-s.y))go(dx<0?1:-1)});
 caption(0);restartFill();`,
+  },
+  {
+    // After the Features block (features-2) on 21st.dev: the badge and intro, three rows
+    // that alternate sides from 768px, the eyebrow chip, tick list, avatar stack with its
+    // stat, outline button and captioned preview are upstream's, in shadcn's dark neutral
+    // tokens. The section is taller than any frame, so the frame scrolls inside itself.
+    id: "21st-features-block",
+    title: "Alternating features block",
+    category: "Layout blocks",
+    description:
+      "A product features section: three rows that alternate sides, each with an eyebrow, a tick list, an avatar stack beside a headline stat, a call to action and a captioned preview. After the Features block on 21st.dev.",
+    tag: "21st.dev",
+    html: `<section class="ft"><div class="ft-inner">
+<header class="ft-head"><span class="ft-badge">Platform</span><h2>Built for every part of your workflow</h2><p>Acme brings collaboration, analytics, and security into one cohesive platform, so nothing falls between the cracks.</p></header>
+${FEATURE_ROWS.map(featureRow).join('\n<hr class="ft-rule">\n')}
+</div></section>`,
+    css: `.ft{--bg:#09090b;--fg:#fafafa;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--primary:#fafafa;--primary-fg:#18181b;
+  position:fixed;inset:0;overflow:auto;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:clamp(32px,8vh,96px) 24px}
+.ft-inner{max-width:64rem;margin:0 auto}
+.ft-head{max-width:36rem;margin:0 auto clamp(24px,8vh,80px);text-align:center}
+.ft-badge{display:inline-flex;margin-bottom:20px;padding:2px 10px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600}
+.ft-head h2{margin:0;font-size:clamp(26px,4.4vw,36px);font-weight:700;letter-spacing:-.025em;line-height:1.15}
+.ft-head p{margin:16px 0 0;font-size:16px;line-height:1.625;color:var(--muted-fg)}
+.ft-row{display:flex;flex-direction:column;gap:40px;padding:64px 0}
+.ft-copy{flex:1;display:flex;flex-direction:column;gap:24px}
+.ft-eyebrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-fg)}
+.ft-chip{flex:none;width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--border);border-radius:6px;background:var(--muted);color:var(--muted-fg)}
+.ft-chip-sm{width:20px;height:20px;background:var(--bg)}
+.ft-copy h3{margin:0;font-size:clamp(24px,3vw,28px);font-weight:700;letter-spacing:-.025em;line-height:1.375}
+.ft-copy p{margin:0;line-height:1.625;color:var(--muted-fg)}
+.ft-copy ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.ft-copy li{display:flex;align-items:center;gap:12px;font-size:14px}
+.ft-tick{flex:none;width:18px;height:18px;display:grid;place-items:center;border-radius:6px;background:var(--primary);color:var(--primary-fg)}
+.ft-proof{display:flex;align-items:center;gap:16px;padding-top:20px;border-top:1px solid var(--border)}
+.ft-avatars{display:flex}
+.ft-avatar{width:28px;height:28px;margin-left:-8px;display:grid;place-items:center;border:2px solid var(--bg);border-radius:50%;background:var(--muted);font-size:10px;color:var(--fg)}
+.ft-avatar:first-child{margin-left:0}
+.ft-stat{display:flex;align-items:baseline;gap:6px}
+.ft-stat b{font-size:18px;font-variant-numeric:tabular-nums}
+.ft-stat span{font-size:12px;color:var(--muted-fg)}
+.ft-cta{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:14px;font-weight:500;transition:background .15s}
+.ft-cta:hover{background:var(--muted)}
+.ft-media{flex:1;display:flex;align-items:center;justify-content:center}
+.ft-frame{position:relative;width:100%;aspect-ratio:4/3;margin:0;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--muted)}
+.ft-frame figcaption{position:absolute;inset:auto 0 0 0;display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border);
+  background:rgba(9,9,11,.8);backdrop-filter:blur(4px);font-size:11px;font-weight:500;letter-spacing:.025em;color:var(--muted-fg)}
+.ft-rule{height:1px;margin:0;border:0;background:var(--border)}
+.ft-art{position:absolute;inset:0 0 41px;padding:8%;background:linear-gradient(160deg,#1c1c20,#121214)}
+.ft-doc{display:flex;flex-direction:column;gap:10px;padding-top:10%}
+.ft-doc i{display:block;height:8px;border-radius:4px;background:#3f3f46}
+.ft-cursor{position:absolute;padding:2px 7px;border-radius:4px 4px 4px 0;background:#e4e4e7;color:#18181b;font-size:10px;font-weight:600}
+.ft-cursor::before{content:'';position:absolute;left:-9px;top:-13px;width:11px;height:15px;background:inherit;clip-path:polygon(0 0,100% 68%,52% 66%,34% 100%)}
+.ft-cursor-b{background:#71717a;color:#fafafa}
+.ft-comment{position:absolute;right:7%;bottom:12%;display:flex;align-items:center;gap:8px;max-width:70%;padding:8px 10px;border:1px solid #3f3f46;border-radius:8px;background:#18181b;font-size:11px;color:#d4d4d8}
+.ft-comment b{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:#3f3f46;font-size:8px}
+.ft-funnel{display:flex;flex-direction:column;justify-content:center;gap:12px}
+.ft-funnel div{display:grid;grid-template-columns:5.5em 1fr 2.6em;align-items:center;gap:10px;font-size:11px;color:#a1a1aa}
+.ft-funnel i{display:block;height:14px;border-radius:3px;background:linear-gradient(90deg,#d4d4d8,#71717a)}
+.ft-funnel em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:#e4e4e7}
+.ft-audit{display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:11px}
+.ft-audit div{display:grid;grid-template-columns:3.4em 1fr auto;gap:10px;padding:6px 8px;border-bottom:1px solid #27272a;color:#d4d4d8}
+.ft-audit time,.ft-audit em{font-family:ui-monospace,monospace;font-style:normal;color:#71717a}
+@media(min-width:640px){.ft-copy h3{line-height:1.375}}
+@media(min-width:768px){.ft-row{flex-direction:row;align-items:center;gap:80px}.ft-row:nth-of-type(even){flex-direction:row-reverse}.ft-frame{max-width:24rem}}`,
+    js: "",
   },
 ];
