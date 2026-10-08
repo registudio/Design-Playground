@@ -4,6 +4,7 @@ import path from "node:path";
 import * as esbuild from "esbuild";
 import { compile as compileTailwind } from "tailwindcss";
 import { REGISTRY_SOURCES, type SourceId } from "@/registry/sources";
+import { fetchTextWithRetry } from "@/preview/fetch-retry";
 import {
   BROWSER_FRESH_SECONDS,
   BROWSER_STALE_SECONDS,
@@ -28,6 +29,8 @@ import { propRecipe, RECIPES_FINGERPRINT } from "@/elements/preview-props";
  */
 
 export const runtime = "nodejs";
+/** Two package attempts at PACKAGE_TIMEOUT_MS plus the pause between them must fit. */
+export const maxDuration = 60;
 
 /** Conservative: registry item names are plain identifiers, never paths. */
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
@@ -39,6 +42,14 @@ const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
  * outcome while still tolerating an ordinary cold response.
  */
 const TIMEOUT_MS = 9_000;
+
+/**
+ * Packages get a longer budget than registry documents, and a second attempt. esm.sh
+ * builds a package on first request, and a large one (vgpu, three.js wrappers) takes far
+ * longer than 9s cold — see src/preview/fetch-retry.ts.
+ */
+const PACKAGE_TIMEOUT_MS = 25_000;
+const PACKAGE_ATTEMPTS = 2;
 
 /**
  * How long a surface may stay empty before the generated visual is laid over it.
@@ -920,9 +931,7 @@ function virtualFiles(files: RegistryFile[], assets: Map<string, string> = new M
           args.path,
           REMOTE_MODULE_CACHE_ENTRIES,
           async () => {
-            const response = await fetch(args.path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-            if (!response.ok) throw new Error(`Could not fetch ${args.path} (HTTP ${response.status})`);
-            return response.text();
+            return fetchTextWithRetry(args.path, { timeoutMs: PACKAGE_TIMEOUT_MS, attempts: PACKAGE_ATTEMPTS });
           },
         );
         return { contents: await withDefaultTextFont(fetched), loader: "js" };

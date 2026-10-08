@@ -17,6 +17,7 @@ const complete: ViewPreferences = {
   theme: "dark",
   advanced: true,
   collapsedPanels: ["Elements", "Imagery"],
+  collapsedTrays: ["nav", "selection"],
 };
 
 function useMemoryStorage() {
@@ -61,6 +62,16 @@ describe("validation", () => {
   it("ignores a wrongly typed advanced flag rather than coercing it", () => {
     localStorage.setItem(KEY, JSON.stringify({ advanced: "yes" }));
     expect(loadPreferences().advanced).toBeUndefined();
+  });
+
+  it("keeps only known, distinct tray names in collapsedTrays", () => {
+    localStorage.setItem(KEY, JSON.stringify({ collapsedTrays: ["nav", "bogus", 3, "nav", "selection"] }));
+    expect(loadPreferences().collapsedTrays).toEqual(["nav", "selection"]);
+  });
+
+  it("notices a tray being minimised or restored", () => {
+    expect(samePreferences(complete, { ...complete, collapsedTrays: ["nav"] })).toBe(false);
+    expect(samePreferences(complete, { ...complete, collapsedTrays: [...complete.collapsedTrays] })).toBe(true);
   });
 
   it("keeps only the string entries of collapsedPanels", () => {

@@ -25,7 +25,13 @@ export interface ViewPreferences {
   theme: Theme;
   advanced: boolean;
   collapsedPanels: string[];
+  /** Which side trays are minimised to a slim strip. */
+  collapsedTrays: Tray[];
 }
+
+/** The two side trays: the step list on the left, the composition on the right. */
+export type Tray = "nav" | "selection";
+const TRAYS: Tray[] = ["nav", "selection"];
 
 const SECTIONS: Section[] = ["components", "animations", "elements"];
 const PREVIEW_MODES: PreviewMode[] = ["system", "components", "sample"];
@@ -62,6 +68,10 @@ export function loadPreferences(): Partial<ViewPreferences> {
     if (typeof source.advanced === "boolean") preferences.advanced = source.advanced;
     if (Array.isArray(source.collapsedPanels)) {
       preferences.collapsedPanels = source.collapsedPanels.filter((p): p is string => typeof p === "string");
+    }
+    if (Array.isArray(source.collapsedTrays)) {
+      const trays = source.collapsedTrays.filter((t): t is Tray => (TRAYS as unknown[]).includes(t));
+      preferences.collapsedTrays = [...new Set(trays)];
     }
     return preferences;
   } catch {
@@ -112,6 +122,8 @@ export function samePreferences(a: ViewPreferences, b: ViewPreferences): boolean
     a.theme === b.theme &&
     a.advanced === b.advanced &&
     a.collapsedPanels.length === b.collapsedPanels.length &&
-    a.collapsedPanels.every((panel, i) => panel === b.collapsedPanels[i])
+    a.collapsedPanels.every((panel, i) => panel === b.collapsedPanels[i]) &&
+    a.collapsedTrays.length === b.collapsedTrays.length &&
+    a.collapsedTrays.every((tray, i) => tray === b.collapsedTrays[i])
   );
 }
