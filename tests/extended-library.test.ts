@@ -12,9 +12,9 @@ import snapshot from '../data/registry-snapshot.json';
 
 afterEach(()=>{previewStatuses.clear();vi.unstubAllGlobals();});
 describe('extended library regression checks',()=>{
-  it('separates carousels and media while keeping ten and seven curated designs',()=>{
+  it('separates carousels and media while keeping ten and eight curated designs',()=>{
     expect(ELEMENTS.filter(e=>e.category==='Carousels')).toHaveLength(10);
-    expect(ELEMENTS.filter(e=>e.category==='Galleries & media')).toHaveLength(7);
+    expect(ELEMENTS.filter(e=>e.category==='Galleries & media')).toHaveLength(8);
     expect(browseCategory({name:'ImageCarousel'})).toBe('Carousels');
     expect(browseCategory({name:'MasonryGallery'})).toBe('Galleries & media');
     expect(new Set(ELEMENTS.map(e=>e.id)).size).toBe(ELEMENTS.length);

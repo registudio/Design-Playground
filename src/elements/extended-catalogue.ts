@@ -2,6 +2,7 @@ import { CHART_ELEMENTS } from "./chart-elements";
 import { CULT_ELEMENTS } from "./cult-elements";
 import { ENGINE_ELEMENTS } from "./engine-elements";
 import { SHADER_ELEMENTS } from "./shader-elements";
+import { DQNAMO_ELEMENTS } from "./dqnamo-elements";
 import { SHIPNOTES_ELEMENTS } from "./shipnotes-elements";
 import { TWENTYFIRST_ELEMENTS } from "./twentyfirst-elements";
 /**
@@ -58,6 +59,7 @@ export function engineOfBundle(bundle: string) {
 export const PORT_SOURCES = [
   { id: "cult", label: "cult-ui", url: "https://www.cult-ui.com/docs/components", registry: "cult-ui" },
   { id: "21st", label: "21st.dev", url: "https://21st.dev", registry: "21st" },
+  { id: "dqnamo", label: "dqnamo", url: "https://www.dqnamo.com/kitchen", registry: undefined },
 ] as const;
 
 /**
@@ -108,6 +110,7 @@ export const EXTENDED_ELEMENTS = [
   ...CULT_ELEMENTS,
   ...TWENTYFIRST_ELEMENTS,
   ...SHIPNOTES_ELEMENTS,
+  ...DQNAMO_ELEMENTS,
   ...CHART_ELEMENTS,
   { id: "gallery-lightbox", title: "Landscape lightbox", category: "Galleries & media", description: "An illustrated gallery with keyboard-accessible, enlarged artwork.", tag: "INTERACTIVE", html: `<div class="art-grid">${palettes.map((_, i) => `<button aria-label="Open landscape ${i + 1}">${art(i)}</button>`).join("")}</div><dialog><button class="close">Close ×</button><div class="large"></div></dialog>`, css: '.art-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:85%}.art-grid button{padding:0;border:0;background:none;border-radius:10px;overflow:hidden}.art-grid svg{display:block;width:100%}dialog{background:#172019;border:1px solid var(--accent);color:white;width:min(90%,700px)}dialog::backdrop{background:#000b}.large svg{width:100%;max-height:70vh}.close{float:right;margin-bottom:12px}', js: "const dialog=document.querySelector('dialog');document.querySelectorAll('.art-grid button').forEach(b=>b.onclick=()=>{document.querySelector('.large').innerHTML=b.innerHTML;dialog.showModal()});document.querySelector('.close').onclick=()=>dialog.close();" },
   { id: "motion-spring", title: "Spring playground", category: "Hover effects", description: "A real Motion spring follows your click with a gentle bounce. Authored by Playground using Motion.dev.", tag: "Motion.dev", html: '<div class="spring-stage"><button class="spring-ball" aria-label="Move spring">✳</button><small>CLICK ANYWHERE TO MOVE</small></div>', css: '.spring-stage{position:relative;width:90%;height:80%;border:1px dashed #586b47;border-radius:18px}.spring-ball{position:absolute;left:20px;top:20px;width:62px;height:62px;background:var(--accent);border:0;border-radius:18px;color:#192013;font-size:36px}.spring-stage small{position:absolute;bottom:12px;width:100%;text-align:center}', js: '' },

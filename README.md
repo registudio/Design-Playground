@@ -19,7 +19,7 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets — or read them off the client's current website — and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image and the brand's own uploaded typeface. Decide whether the site has a dark theme. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 114 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+5. Browse 129 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes, light, dark or side by side, with a contrast lens that outlines failing text in place. Return to editing as often as needed.
 7. Download the ZIP handoff or a restorable project backup; a client rationale page and a standalone sample page are under More options.
 
@@ -226,7 +226,10 @@ pull in React Three Fiber and a `three` upgrade that breaks the four working Van
 fields that must not collapse into one. The eight cult-ui cards are ports: cult-ui's
 React components rebuilt as plain documents, shown as "cult-ui · Playground port" and
 linked to their docs. Components taken from 21st.dev are ported the same way and shown
-as "21st.dev · Playground port". None of these sets ships the library it credits, and
+as "21st.dev · Playground port", and the fifteen studies from dqnamo's Kitchen
+(dqnamo.com/kitchen), whose repository states no licence, are rebuilt rather than copied
+and shown as "dqnamo · Playground port"; where a study shows dqnamo's own marks (his
+logo, signature or audio clip), one of this project's own stands in. None of these sets ships the library it credits, and
 none is presented as a Playground Original. The six Ship Notes cards are the third
 relationship: plain web components that run here as published, so their own script
 ships inside each element document, unchanged and minified with its MIT notice at the
