@@ -418,6 +418,216 @@ new ResizeObserver(function(){if(Math.round(stage.clientWidth)!==W)relayout()}).
 reduceMq.addEventListener('change',function(){reduced=reduceMq.matches;kick()});
 })();`;
 
+/* ── Morph gallery ──────────────────────────────────────────────────────────── */
+
+/**
+ * After Kedhareswer Naidu's Morph Gallery on 21st.dev. The dissolve is upstream's
+ * shader, unchanged: an fbm noise threshold biased by the incoming frame's brightness,
+ * swept by a quintic-eased progress, with both frames drifting against each other and
+ * mirrored at the edges. So are the 1500ms default, the 4.5s autoplay of its demo, the
+ * shortest-way-round direction, swipe, arrow keys, pause on hover, focus or a hidden tab,
+ * and the cross-fade fallback when WebGL is missing. What differs: the demo's photos are
+ * on a CDN this sandbox cannot reach, so the six scenes it captions are painted on
+ * canvases here and uploaded from those, which also makes them CORS-clean.
+ */
+const MORPH_SCENES = [
+  { kind: "forest", alt: "Sun rays through a forest" },
+  { kind: "night", alt: "Snow-capped mountain peak at night" },
+  { kind: "lake", alt: "Mountain reflected in a still lake" },
+  { kind: "hills", alt: "Aerial view of green hills" },
+  { kind: "field", alt: "Orange wildflower field" },
+  { kind: "beach", alt: "Tropical beach with clear water" },
+] as const;
+
+const MORPH_VERT = `attribute vec2 a_position;
+varying vec2 v_uv;
+void main() {
+  v_uv = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+
+const MORPH_FRAG = `precision highp float;
+uniform sampler2D u_from;
+uniform sampler2D u_to;
+uniform float u_progress;
+uniform vec2 u_resolution;
+uniform float u_fromAspect;
+uniform float u_toAspect;
+uniform float u_scale;
+uniform float u_direction;
+uniform float u_edge;
+uniform float u_drift;
+varying vec2 v_uv;
+vec3 permute(vec3 x) { return mod(((x * 34.0) + 1.0) * x, 289.0); }
+float snoise(vec2 v) {
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+  m = m * m;
+  m = m * m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+  vec3 g;
+  g.x = a0.x * x0.x + h.x * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+float fbm(vec2 v) {
+  float value = 0.0;
+  float amplitude = 0.5;
+  for (int i = 0; i < 5; i++) { value += amplitude * snoise(v); v *= 2.0; amplitude *= 0.5; }
+  return value;
+}
+vec2 mirror(vec2 uv) { return 1.0 - abs(1.0 - mod(uv, 2.0)); }
+vec2 coverUV(vec2 uv, float imgAspect) {
+  float canvasAspect = u_resolution.x / u_resolution.y;
+  vec2 scale = (canvasAspect > imgAspect) ? vec2(1.0, imgAspect / canvasAspect) : vec2(canvasAspect / imgAspect, 1.0);
+  return mirror((uv - 0.5) * scale + 0.5);
+}
+void main() {
+  float adjusted = u_progress * (1.0 + 2.0 * u_edge) - u_edge;
+  float noise = fbm(v_uv * u_scale + vec2(0.0, u_progress * u_direction)) * 0.5 + 0.5;
+  noise = smoothstep(0.0, 2.0, length(texture2D(u_to, coverUV(v_uv, u_toAspect)).rgb) + noise);
+  float mixFactor = 1.0 - smoothstep(adjusted - u_edge, adjusted + u_edge, noise);
+  vec2 fromUV = coverUV(v_uv + vec2(0.0, noise * u_progress * u_drift * u_direction), u_fromAspect);
+  vec2 toUV = coverUV(v_uv + vec2(0.0, noise * (1.0 - u_progress) * -0.5 * u_drift * u_direction), u_toAspect);
+  gl_FragColor = mix(texture2D(u_from, fromUV), texture2D(u_to, toUV), mixFactor);
+}`;
+
+const MORPH_CHEVRON = (points: string) =>
+  `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="${points}"/></svg>`;
+
+const MORPH_HTML = `<section class="mg" role="region" aria-roledescription="carousel" aria-label="Image gallery" tabindex="0">
+<canvas class="mg-canvas" aria-hidden="true"></canvas><div class="mg-fallback" hidden></div><div class="mg-shade" aria-hidden="true"></div>
+<button type="button" class="mg-arrow mg-prev" aria-label="Previous image">${MORPH_CHEVRON("15 18 9 12 15 6")}</button>
+<button type="button" class="mg-arrow mg-next" aria-label="Next image">${MORPH_CHEVRON("9 18 15 12 9 6")}</button>
+<ul class="mg-thumbs"></ul><span class="mg-sr" aria-live="polite"></span></section>`;
+
+const MORPH_CSS = `body{display:block!important}
+.mg{position:fixed;inset:0;overflow:hidden;background:#000;outline:none;touch-action:pan-y}
+.mg:focus-visible{box-shadow:inset 0 0 0 2px #fff}
+.mg-canvas,.mg-fallback,.mg-fallback img{position:absolute;inset:0;display:block;width:100%;height:100%}
+.mg-canvas{opacity:0;transition:opacity .4s ease}.mg-canvas.is-ready{opacity:1}
+.mg-fallback img{object-fit:cover;max-width:none;opacity:0;transition:opacity .7s}.mg-fallback img.is-on{opacity:1}
+.mg-shade{position:absolute;inset:auto 0 0;z-index:5;height:14rem;pointer-events:none;background:linear-gradient(to bottom,transparent,rgba(0,0,0,.65))}
+.mg-arrow{position:absolute;top:50%;z-index:10;display:flex;align-items:center;justify-content:center;width:44px;height:44px;transform:translateY(-50%);border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:background-color .15s;cursor:pointer}
+.mg-arrow:hover{background:rgba(255,255,255,.25)}.mg-arrow:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.mg-prev{left:16px}.mg-next{right:16px}@media(min-width:640px){.mg-prev{left:32px}.mg-next{right:32px}}
+.mg-thumbs{position:absolute;left:0;right:0;bottom:32px;z-index:10;display:flex;gap:8px;width:max-content;max-width:calc(100% - 2rem);margin:0 auto;padding:0 0 10px;list-style:none;overflow-x:auto;scroll-behavior:smooth}
+.mg-thumbs::-webkit-scrollbar{height:6px}.mg-thumbs::-webkit-scrollbar-track{border-radius:4px;background:rgba(255,255,255,.1)}.mg-thumbs::-webkit-scrollbar-thumb{border-radius:4px;background:rgba(255,255,255,.3)}
+@media(max-width:639px){.mg-thumbs{display:none}}
+.mg-thumbs li{flex:none}
+.mg-thumbs button{display:block;padding:0;overflow:hidden;border-radius:4px;border:2px solid transparent;background:none;opacity:.55;cursor:pointer;transition:opacity .15s,border-color .15s}
+.mg-thumbs button:hover{opacity:.85}.mg-thumbs button[aria-current=true]{border-color:#fff;opacity:1}.mg-thumbs button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.mg-thumbs img{display:block;width:80px;height:50px;max-width:none;object-fit:cover}
+.mg-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}`;
+
+const MORPH_JS = `(function(){
+var ITEMS=${JSON.stringify(MORPH_SCENES)},VERT=${JSON.stringify(MORPH_VERT)},FRAG=${JSON.stringify(MORPH_FRAG)};
+var DURATION=1500,NOISE=3.5,EDGE=0.15,DRIFT=0.5,LOOP=true,AUTOPLAY=4500;
+var wrapIndex=function(i,n,loop){if(n<=0)return 0;return loop?((i%n)+n)%n:Math.min(Math.max(i,0),n-1)};
+var easeInOutQuint=function(t){var x=Math.min(Math.max(t,0),1);return x<0.5?16*Math.pow(x,5):1-Math.pow(-2*x+2,5)/2};
+
+/* The six scenes the demo captions, painted. */
+var rng=function(seed){var a=seed>>>0;return function(){a=(a+0x6d2b79f5)>>>0;var t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}};
+var W=1200,H=750;
+var paint=function(kind,seed){var c=document.createElement('canvas');c.width=W;c.height=H;var g=c.getContext('2d'),r=rng(seed);
+var vgrad=function(y0,y1,stops){var gr=g.createLinearGradient(0,y0,0,y1);stops.forEach(function(s,i){gr.addColorStop(i/(stops.length-1),s)});return gr};
+var sky=function(stops,hz){g.fillStyle=vgrad(0,hz,stops);g.fillRect(0,0,W,H)};
+var ridge=function(base,amp,fill,f){var ph=[r()*6,r()*6,r()*6],fr=f||[2+r()*2,5+r()*3,13+r()*6];g.beginPath();g.moveTo(0,H);
+for(var x=0;x<=W;x+=6){var u=x/W;g.lineTo(x,base-amp*(0.6*Math.sin(u*fr[0]+ph[0])+0.3*Math.sin(u*fr[1]+ph[1])+0.1*Math.sin(u*fr[2]+ph[2])))}g.lineTo(W,H);g.closePath();g.fillStyle=fill;g.fill()};
+var glow=function(x,y,rad,col){var gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,W,H)};
+if(kind==='forest'){sky(['#fff4d1','#cfd9a4','#6f8b52'],H);
+var TR=[[16,8,8,'rgba(80,100,66,.4)'],[9,18,16,'rgba(44,60,36,.8)'],[5,38,30,'#182214']];TR.forEach(function(T){for(var i=0;i<T[0];i++){var x=r()*W,w=T[1]+r()*T[2];g.fillStyle=T[3];g.fillRect(x,0,w,H);g.fillStyle='rgba(255,240,190,.08)';g.fillRect(x+w*0.7,0,w*0.12,H)}})
+g.globalCompositeOperation='lighter';for(var k=0;k<7;k++){var sx=W*(0.55+r()*0.35),sw=30+r()*70;g.beginPath();g.moveTo(sx,-10);g.lineTo(sx+sw,-10);g.lineTo(sx+sw-W*0.5,H);g.lineTo(sx-W*0.62,H);g.closePath();g.fillStyle='rgba(255,236,170,'+(0.05+r()*0.07)+')';g.fill()}
+g.globalCompositeOperation='source-over';glow(W*0.82,0,W*0.5,'rgba(255,245,200,.7)');g.fillStyle=vgrad(H*0.78,H,['rgba(30,44,22,0)','#24331b']);g.fillRect(0,H*0.78,W,H*0.22)}
+else if(kind==='night'){sky(['#03060f','#0d1838','#26386a'],H*0.8);for(var s=0;s<360;s++){g.fillStyle='rgba(255,255,255,'+(0.2+r()*0.8)+')';var z=r()*1.6+0.3;g.fillRect(r()*W,r()*H*0.7,z,z)}
+g.fillStyle='#f4f1e3';g.beginPath();g.arc(W*0.8,H*0.18,26,0,7);g.fill();glow(W*0.8,H*0.18,180,'rgba(200,215,255,.25)');
+var peak=[[W*0.08,H],[W*0.3,H*0.52],[W*0.42,H*0.38],[W*0.5,H*0.24],[W*0.58,H*0.36],[W*0.68,H*0.33],[W*0.86,H*0.6],[W,H*0.66],[W,H]];
+g.beginPath();peak.forEach(function(p,i){i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])});g.closePath();g.fillStyle=vgrad(H*0.24,H,['#5d6f99','#1b2440']);g.fill();
+g.save();g.clip();g.beginPath();g.moveTo(0,0);g.lineTo(W,0);for(var x2=W;x2>=0;x2-=20)g.lineTo(x2,H*0.47+Math.sin(x2*0.05)*14+r()*16);g.closePath();g.fillStyle=vgrad(H*0.24,H*0.5,['#f6f8ff','#b8c5e6']);g.fill();g.restore();
+ridge(H*0.84,H*0.05,'#05070d')}
+else if(kind==='lake'){var hz=H*0.56;sky(['#f7c59f','#f0d7c4','#a9c3df'],hz);glow(W*0.3,hz*0.8,W*0.4,'rgba(255,214,170,.5)');
+g.beginPath();g.moveTo(0,hz);[[0.12,0.78],[0.3,0.5],[0.44,0.2],[0.52,0.28],[0.6,0.16],[0.78,0.52],[1,0.7]].forEach(function(p){g.lineTo(W*p[0],hz*p[1])});g.lineTo(W,hz);g.closePath();g.fillStyle=vgrad(hz*0.16,hz,['#8a98b8','#5b6b8c']);g.fill();ridge(hz-H*0.02,H*0.05,'#2c3a33');g.fillStyle='#2c3a33';g.fillRect(0,hz-4,W,H-hz+4);
+g.save();g.translate(0,2*hz);g.scale(1,-1);g.drawImage(c,0,0,W,hz,0,0,W,hz);g.restore();g.fillStyle='rgba(40,70,110,.35)';g.fillRect(0,hz,W,H-hz);
+for(var q=0;q<90;q++){g.fillStyle='rgba(255,255,255,'+(0.04+r()*0.08)+')';g.fillRect(r()*W,hz+r()*(H-hz),40+r()*160,1.2)}}
+else if(kind==='hills'){sky(['#bfe0f5','#e7f2ee'],H*0.4);var greens=['#9fc58b','#7fb06a','#5d9a4e','#3f7d3a','#2b5f2b'];
+for(var h=0;h<5;h++){ridge(H*(0.32+h*0.13),H*(0.06+h*0.02),greens[h],[1.5+r(),3+r()*2,7+r()*3])}
+for(var tr=0;tr<60;tr++){var tx=r()*W,ty=H*(0.5+r()*0.5);g.fillStyle='rgba(20,60,25,.8)';g.beginPath();g.arc(tx,ty,4+r()*7,0,7);g.fill()}}
+else if(kind==='field'){var fz=H*0.5;sky(['#f9935a','#ffd29a','#fff1cf'],fz);g.fillStyle='#fff3c4';g.beginPath();g.arc(W*0.62,fz-30,46,0,7);g.fill();glow(W*0.62,fz-30,W*0.4,'rgba(255,220,150,.6)');
+ridge(fz+6,H*0.03,'#8b6a52');g.fillStyle=vgrad(fz,H,['#6f7432','#3d4a1c']);g.fillRect(0,fz+4,W,H-fz);
+for(var f=0;f<3200;f++){var dpt=Math.pow(r(),1.6),fy=fz+8+dpt*(H-fz),fr2=0.6+dpt*7;g.fillStyle=['#ff7a1a','#ff9a2e','#f05a14','#ffb347'][f%4];g.globalAlpha=0.55+dpt*0.45;g.beginPath();g.arc(r()*W,fy,fr2,0,7);g.fill()}g.globalAlpha=1}
+else{var sz=H*0.48,bz=H*0.74;sky(['#5fc3ef','#bfe9fb','#eefaff'],sz);g.fillStyle='rgba(255,255,255,.85)';for(var cl=0;cl<5;cl++){var cx=r()*W,cy=H*(0.1+r()*0.2);for(var b=0;b<6;b++){g.beginPath();g.arc(cx+b*26,cy+Math.sin(b)*8,20+r()*18,0,7);g.fill()}}
+g.fillStyle=vgrad(sz,bz,['#0f8fb3','#25c0c9','#8be6d8']);g.fillRect(0,sz,W,bz-sz);g.fillStyle=vgrad(bz,H,['#f6e7c1','#e7cf98']);g.beginPath();g.moveTo(0,bz);for(var x3=0;x3<=W;x3+=10)g.lineTo(x3,bz+Math.sin(x3*0.012)*10);g.lineTo(W,H);g.lineTo(0,H);g.closePath();g.fill();
+g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=3;g.beginPath();for(var x4=0;x4<=W;x4+=10)g.lineTo(x4,bz-4+Math.sin(x4*0.012)*10+Math.sin(x4*0.08)*2);g.stroke();
+g.strokeStyle='#3a2a1a';g.lineWidth=14;g.lineCap='round';g.beginPath();g.moveTo(W*0.14,H);g.quadraticCurveTo(W*0.12,H*0.55,W*0.2,H*0.3);g.stroke();
+g.strokeStyle='#1f4a2a';g.lineWidth=9;for(var fd=0;fd<8;fd++){var a=fd/8*Math.PI*2;g.beginPath();g.moveTo(W*0.2,H*0.3);g.quadraticCurveTo(W*0.2+Math.cos(a)*90,H*0.3+Math.sin(a)*40-50,W*0.2+Math.cos(a)*170,H*0.3+Math.sin(a)*70+40);g.stroke()}}
+var vg=g.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,W*0.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.35)');g.fillStyle=vg;g.fillRect(0,0,W,H);
+var img=g.getImageData(0,0,W,H),d=img.data;for(var p=0;p<d.length;p+=4){var v=(r()-0.5)*10;d[p]+=v;d[p+1]+=v;d[p+2]+=v}g.putImageData(img,0,0);return c};
+var shrink=function(src,w,h){var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(src,0,0,w,h);return c.toDataURL('image/jpeg',0.82)};
+
+var root=document.querySelector('.mg'),canvas=root.querySelector('.mg-canvas'),fallback=root.querySelector('.mg-fallback'),list=root.querySelector('.mg-thumbs'),sr=root.querySelector('.mg-sr');
+var prev=root.querySelector('.mg-prev'),next=root.querySelector('.mg-next');
+var reducedMq=matchMedia('(prefers-reduced-motion: reduce)'),reduced=reducedMq.matches;reducedMq.addEventListener('change',function(){reduced=reducedMq.matches;schedule()});
+var n=ITEMS.length,active=0,pictures=ITEMS.map(function(it,i){return paint(it.kind,11+i*7)});
+ITEMS.forEach(function(it,i){var li=document.createElement('li'),b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Show '+it.alt);
+b.innerHTML='<img alt="" width="80" height="50" src="'+shrink(pictures[i],160,100)+'">';b.addEventListener('click',function(){go(i)});li.appendChild(b);list.appendChild(li)});
+var thumbs=list.querySelectorAll('button');
+
+/* WebGL, or the cross-fade without it. */
+var gl=null,failed=false,uniforms={},textures=[],from=0,to=0,progress=1,startedAt=0,direction=1,raf=0;
+var useFallback=function(){failed=true;canvas.hidden=true;fallback.hidden=false;fallback.innerHTML=pictures.map(function(p,i){return '<img alt="'+ITEMS[i].alt+'" src="'+p.toDataURL('image/jpeg',0.9)+'"'+(i===active?' class="is-on"':' aria-hidden="true"')+'>'}).join('')};
+var compile=function(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s};
+try{gl=canvas.getContext('webgl',{alpha:false,antialias:false})||canvas.getContext('experimental-webgl');if(!gl)throw new Error('no webgl');
+var prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,VERT));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FRAG));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error('link');gl.useProgram(prog);
+var buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);var loc=gl.getAttribLocation(prog,'a_position');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+['from','to','progress','resolution','fromAspect','toAspect','scale','direction','edge','drift'].forEach(function(nm){uniforms[nm]=gl.getUniformLocation(prog,'u_'+nm)});
+gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+textures=pictures.map(function(p){var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,p);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t});
+canvas.addEventListener('webglcontextlost',function(e){e.preventDefault();cancelAnimationFrame(raf);useFallback()});
+}catch(e){useFallback()}
+
+var resize=function(){if(failed)return;var dpr=Math.min(devicePixelRatio||1,2),w=Math.round(canvas.clientWidth*dpr),h=Math.round(canvas.clientHeight*dpr);if(!w||!h)return;if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h)}draw()};
+var draw=function(){if(failed)return;if(progress<1){var span=reduced?0:DURATION;progress=span===0?1:easeInOutQuint(Math.min((performance.now()-startedAt)/span,1))}
+gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,textures[from]);gl.uniform1i(uniforms.from,0);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,textures[to]);gl.uniform1i(uniforms.to,1);
+gl.uniform1f(uniforms.progress,progress);gl.uniform2f(uniforms.resolution,canvas.width,canvas.height);gl.uniform1f(uniforms.fromAspect,W/H);gl.uniform1f(uniforms.toAspect,W/H);
+gl.uniform1f(uniforms.scale,NOISE);gl.uniform1f(uniforms.direction,direction);gl.uniform1f(uniforms.edge,Math.max(EDGE,0.001));gl.uniform1f(uniforms.drift,DRIFT);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)};
+/* Frames are drawn while a dissolve runs, not forever: a grid of cards should idle. */
+var loop=function(){raf=0;draw();if(progress<1)raf=requestAnimationFrame(loop)};
+var schedule=function(){if(!raf&&!failed)raf=requestAnimationFrame(loop)};
+
+var paint2=function(){thumbs.forEach(function(b,i){b.setAttribute('aria-current',String(i===active))});
+var cur=thumbs[active];if(cur&&cur.parentElement)list.scrollTo({left:cur.parentElement.offsetLeft-list.clientWidth/2+44,behavior:reduced?'auto':'smooth'});
+prev.disabled=!LOOP&&active===0;next.disabled=!LOOP&&active===n-1;sr.textContent=ITEMS[active].alt+' — '+(active+1)+' of '+n;
+if(failed)fallback.querySelectorAll('img').forEach(function(im,i){im.classList.toggle('is-on',i===active);if(i===active)im.removeAttribute('aria-hidden');else im.setAttribute('aria-hidden','true')})};
+var go=function(target){var nextIndex=wrapIndex(target,n,LOOP);if(nextIndex===active)return;var was=active;active=nextIndex;
+if(!failed){from=was;to=active;progress=0;startedAt=performance.now();direction=LOOP?(((active-was+n)%n)*2<=n?1:-1):(active>was?1:-1);schedule()}paint2();restart()};
+
+/* Autoplay, paused on hover, focus or a hidden tab, and off under reduced motion. */
+var timer=0,hovering=false,focused=false;
+var restart=function(){clearInterval(timer);if(!AUTOPLAY||reduced||hovering||focused||document.hidden||n<2)return;timer=setInterval(function(){go(active+1)},Math.max(AUTOPLAY,600))};
+root.addEventListener('mouseenter',function(){hovering=true;restart()});root.addEventListener('mouseleave',function(){hovering=false;restart()});
+root.addEventListener('focusin',function(){focused=true;restart()});root.addEventListener('focusout',function(e){if(!root.contains(e.relatedTarget)){focused=false;restart()}});
+document.addEventListener('visibilitychange',restart);
+prev.addEventListener('click',function(){go(active-1)});next.addEventListener('click',function(){go(active+1)});
+root.addEventListener('keydown',function(e){if(e.key==='ArrowLeft'){e.preventDefault();go(active-1)}else if(e.key==='ArrowRight'){e.preventDefault();go(active+1)}});
+var swipeX=null;root.addEventListener('pointerdown',function(e){swipeX=e.clientX});root.addEventListener('pointerup',function(e){if(swipeX===null)return;var dx=e.clientX-swipeX;swipeX=null;if(Math.abs(dx)>48)go(active+(dx<0?1:-1))});
+
+new ResizeObserver(resize).observe(canvas);
+if(!failed){resize();canvas.classList.add('is-ready')}
+paint2();restart();
+})();`;
+
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
     id: "21st-radial-orbital-timeline",
@@ -862,5 +1072,16 @@ ${FEATURE_ROWS.map(featureRow).join('\n<hr class="ft-rule">\n')}
     html: SKYLINE_HTML,
     css: SKYLINE_CSS,
     js: SKYLINE_JS,
+  },
+  {
+    id: "21st-morph-gallery",
+    title: "Morph gallery",
+    category: "Galleries & media",
+    description:
+      "A full-bleed photo gallery whose slides dissolve into each other through noise instead of cutting or fading: one WebGL shader tears the old picture away in drifting tatters while the new one's bright areas burn through first. Arrows, swipe, arrow keys, thumbnails and autoplay that pauses on hover. After Kedhareswer Naidu's Morph Gallery on 21st.dev.",
+    tag: "21st.dev",
+    html: MORPH_HTML,
+    css: MORPH_CSS,
+    js: MORPH_JS,
   },
 ];
