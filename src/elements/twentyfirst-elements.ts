@@ -628,6 +628,158 @@ if(!failed){resize();canvas.classList.add('is-ready')}
 paint2();restart();
 })();`;
 
+/* ── Scroll timeline ────────────────────────────────────────────────────────── */
+
+/**
+ * After the Timeline on 21st.dev, built with Hyperiux Vault. Upstream scrubs it with
+ * GSAP's ScrollTrigger and splits its copy with SplitText; a port ships no library, so
+ * the same triggers are worked out by hand here: each tween's progress is where the
+ * scroll sits between its start and end (`"6% 30%"` is the moment 6% of the section
+ * reaches 30% down the view), and the copy is split into masked lines by measuring
+ * where its words wrap. The proportions, the start and end marks for desktop and
+ * phone, the stem-then-copy order and the power2.out rise are upstream's. The demo's
+ * photo is on a CDN this sandbox cannot reach, so a drawn studio stands in for it.
+ * The page scrolls inside the card, between the demo's lead-in and closing screens.
+ */
+type JourneyMonth = "March" | "July" | "April" | "May" | "November" | "October" | "September";
+interface JourneyItem { id: string; year: string; month: JourneyMonth; content: string }
+
+const JOURNEY_TOP: JourneyItem[] = [
+  { id: "2020-march", year: "2020", month: "March", content: "Signal research turns scattered notes into a clear product thesis" },
+  { id: "2021-july", year: "2021", month: "July", content: "Founding release ships with the first live customer journeys" },
+  { id: "2023-april", year: "2023", month: "April", content: "Automation layer connects insight, publishing, and sales motion" },
+  { id: "2026-may", year: "2026", month: "May", content: "New markets open with localized launches and faster onboarding" },
+];
+const JOURNEY_BOTTOM: JourneyItem[] = [
+  { id: "2020-november", year: "2020", month: "November", content: "Prototype sprint validates the experience with real operators" },
+  { id: "2022-october", year: "2022", month: "October", content: "Community feedback reshapes the roadmap into sharper releases" },
+  { id: "2025-september", year: "2025", month: "September", content: "Companion mobile workflows make the timeline travel-ready" },
+];
+const MONTH_ORDER: Record<JourneyMonth, number> = { March: 3, April: 4, May: 5, July: 7, September: 9, October: 10, November: 11 };
+/** Chronological, which is the order the reveal positions are handed out in. */
+const JOURNEY_ORDER = [...JOURNEY_TOP, ...JOURNEY_BOTTOM]
+  .sort((a, b) => Number(a.year) - Number(b.year) || MONTH_ORDER[a.month] - MONTH_ORDER[b.month])
+  .map(item => ({ id: item.id, top: JOURNEY_TOP.includes(item) }));
+
+/** A bright studio, drawn: tall windows, a long desk, screens and two people at work. */
+const STUDIO_ART = `<svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Team at work in a bright studio">
+<defs><linearGradient id="tl-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4efe6"/><stop offset="1" stop-color="#e2d9ca"/></linearGradient>
+<linearGradient id="tl-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe6f7"/><stop offset="1" stop-color="#f6f1e2"/></linearGradient>
+<linearGradient id="tl-beam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff8e6" stop-opacity=".75"/><stop offset="1" stop-color="#fff8e6" stop-opacity="0"/></linearGradient></defs>
+<rect width="600" height="400" fill="url(#tl-wall)"/>
+<g>${[0, 1, 2].map(i => `<rect x="${60 + i * 170}" y="30" width="140" height="210" rx="4" fill="url(#tl-sky)"/><path d="M${130 + i * 170} 30v210M${60 + i * 170} 135h140" stroke="#cbbfae" stroke-width="5"/><rect x="${60 + i * 170}" y="30" width="140" height="210" rx="4" fill="none" stroke="#b9ab97" stroke-width="7"/>`).join("")}</g>
+<path d="M60 240 230 240 330 400 0 400 0 330Z M400 240 540 240 600 330 600 400 470 400Z" fill="url(#tl-beam)"/>
+<rect y="300" width="600" height="100" fill="#cdb79a"/><path d="M0 300h600" stroke="#b49c7d" stroke-width="3"/>
+<g><path d="M512 300c-6-40 4-70 20-92M520 300c4-34 20-56 44-70" stroke="#3f6b45" stroke-width="5" fill="none"/>
+<ellipse cx="530" cy="210" rx="24" ry="12" fill="#5d8f5a" transform="rotate(-30 530 210)"/><ellipse cx="562" cy="232" rx="26" ry="11" fill="#4f804e" transform="rotate(-15 562 232)"/><ellipse cx="514" cy="246" rx="22" ry="10" fill="#6a9c63" transform="rotate(30 514 246)"/>
+<path d="M500 300h50l-6 38h-38z" fill="#e9e1d3"/></g>
+<rect x="70" y="262" width="400" height="12" rx="3" fill="#8a6a4b"/><path d="M90 274v70M450 274v70" stroke="#6e5238" stroke-width="7"/>
+<rect x="120" y="206" width="92" height="56" rx="4" fill="#24262b"/><rect x="126" y="212" width="80" height="44" rx="2" fill="#ff8a3d"/><path d="M134 226h40M134 236h56M134 246h30" stroke="#fff" stroke-opacity=".7" stroke-width="3"/>
+<rect x="300" y="206" width="92" height="56" rx="4" fill="#24262b"/><rect x="306" y="212" width="80" height="44" rx="2" fill="#3a6ea5"/><path d="M314 244l14-12 12 8 16-16 18 14" stroke="#fff" stroke-opacity=".8" stroke-width="3" fill="none"/>
+<path d="M160 262v-6M346 262v-6" stroke="#24262b" stroke-width="6"/>
+<g><circle cx="232" cy="190" r="17" fill="#3b2a22"/><path d="M204 262c0-40 12-58 28-58s28 18 28 58z" fill="#2f4d6b"/><rect x="214" y="262" width="36" height="40" rx="6" fill="#1f2e3f"/></g>
+<g><circle cx="418" cy="194" r="16" fill="#7a4b33"/><path d="M392 262c0-36 11-54 26-54s26 18 26 54z" fill="#c4532c"/><rect x="400" y="262" width="34" height="40" rx="6" fill="#7d2f17"/></g>
+<rect x="270" y="252" width="20" height="10" rx="2" fill="#f2f2ef"/><circle cx="460" cy="254" r="6" fill="#f2f2ef"/>
+</svg>`;
+
+const timelineItem = (item: JourneyItem, top: boolean) => {
+  const stem = `<div class="tl-stem jl-${item.id}"></div>`;
+  const dot = `<div class="tl-dot jd-${item.id}"></div>`;
+  const copy = `<h4 class="tl-title title-${item.id}">${item.year} ${item.month}</h4><p class="tl-desc description-${item.id}">${item.content}</p>`;
+  return top
+    ? `<div class="tl-item tl-item-top"><div class="tl-marks">${dot}${stem}</div><div class="tl-copy">${copy}</div></div>`
+    : `<div class="tl-item tl-item-bottom"><div class="tl-marks">${stem}${dot}</div><div class="tl-copy">${copy}</div></div>`;
+};
+
+const TIMELINE_HTML = `<div class="tl-viewport" tabindex="0" aria-label="Product roadmap, scrollable">
+<section class="tl-intro"><p class="tl-kicker">PRODUCT ROADMAP</p><h1>Six years, one horizontal scroll.</h1><p class="tl-lede">Keep scrolling — the section pins, the track slides sideways, and each milestone draws its stem and reveals its copy as it reaches centre.</p><span class="tl-arrow" aria-hidden="true">↓</span></section>
+<section class="tl" id="journey"><div class="tl-stage"><div class="tl-slider">
+<div class="tl-image">${STUDIO_ART}</div>
+<div class="tl-body">
+<div class="tl-axis" aria-hidden="true"><div class="tl-cap"></div><div class="tl-line journey-line"></div><div class="tl-cap"></div></div>
+<div class="tl-half tl-upper"><div class="tl-head"><h2>Product Storyline</h2></div><div class="tl-row tl-row-top">${JOURNEY_TOP.map(item => timelineItem(item, true)).join("")}</div></div>
+<div class="tl-half tl-lower"><div class="tl-period"><p>2020 — 2026</p></div><div class="tl-row tl-row-bottom">${JOURNEY_BOTTOM.map(item => timelineItem(item, false)).join("")}</div></div>
+</div></div></div></section>
+<section class="tl-outro">From the first research note to a multi-market launch.</section></div>`;
+
+const TIMELINE_CSS = `body{display:block!important}
+.tl-viewport{--fg:#ffffff;--muted:#a1a1aa;--active:#ff5f00;--bg:#0a0a0a;position:fixed;inset:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;outline:none}
+.tl-viewport h1,.tl-viewport h2,.tl-viewport h4,.tl-viewport p{margin:0;font-weight:400;letter-spacing:normal}
+.tl-intro{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 24px;text-align:center}
+.tl-kicker{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.3em;color:var(--muted)}
+.tl-intro h1{max-width:18ch;font-size:36px;font-weight:600;line-height:1.25;letter-spacing:-.025em}@media(min-width:640px){.tl-intro h1{font-size:60px}}
+.tl-lede{max-width:28rem;font-size:14px;line-height:1.625;color:var(--muted)}
+.tl-arrow{margin-top:8px;color:var(--muted);animation:tl-bounce 1s infinite}
+@keyframes tl-bounce{0%,100%{transform:translateY(-25%);animation-timing-function:cubic-bezier(.8,0,1,1)}50%{transform:none;animation-timing-function:cubic-bezier(0,0,.2,1)}}
+.tl-outro{height:100vh;display:flex;align-items:center;justify-content:center;padding:0 24px;text-align:center;font-size:14px;color:var(--muted)}
+.tl{position:relative;width:100%;height:200vw}
+.tl-stage{position:sticky;top:0;width:100vw;height:100vh;padding-top:10%;overflow:hidden}
+.tl-slider{display:flex;align-items:center;gap:5vw;width:240vw;height:30vw;margin-right:2vw;padding:0 5vw;will-change:transform}
+.tl-image{height:100%;width:30vw;overflow:hidden;border-radius:1vw}.tl-image svg{display:block;width:100%;height:100%}
+.tl-body{position:relative;width:100%;height:100%}
+.tl-axis{position:absolute;left:0;top:49%;display:flex;align-items:center;width:100%}
+.tl-cap{flex:none;width:.8vw;height:.8vw;border-radius:50%;background:var(--active)}
+.tl-line{height:1px;width:0;border-radius:9999px;background:var(--active)}
+.tl-half{display:flex;align-items:center;justify-content:flex-start;width:100%;height:50%}
+.tl-upper{gap:.5vw}
+.tl-head{width:20%;height:100%;padding-top:2vw}.tl-head h2{width:65%;font-size:3vw;line-height:.95}
+.tl-period{width:34%;height:100%;padding-top:2vw}.tl-period p{font-size:1.65vw;line-height:1;color:var(--muted)}
+.tl-row{display:flex;width:100%;height:100%}.tl-row-top{column-gap:15vw}.tl-row-bottom{column-gap:20vw;margin-left:7vw}
+.tl-item{position:relative;height:100%;padding:0 3vw}.tl-item-top{width:30vw}.tl-item-bottom{width:25vw}
+.tl-marks{position:absolute;left:0;width:100%;height:100%}.tl-item-top .tl-marks{top:0;bottom:0}.tl-item-bottom .tl-marks{bottom:-1%}
+.tl-dot{position:relative;width:1vw;height:1vw;border-radius:50%;background:var(--active);translate:-50% 0}
+.tl-stem{width:1px;height:94%;border-radius:9999px;background:var(--active)}.tl-item-top .tl-stem{transform-origin:bottom}.tl-item-bottom .tl-stem{transform-origin:top}
+.tl-item-top .tl-copy{margin-top:-1vw}.tl-item-bottom .tl-copy{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:100%}
+.tl-copy>*+*{margin-top:1vw}
+.tl-title{font-size:2.5vw;line-height:1}.tl-desc{width:90%;font-size:1.5vw;line-height:1.15;color:var(--muted)}
+.tl-mask{display:block;overflow:hidden}.tl-ln{display:block;will-change:transform}
+@media(max-width:600px){
+.tl{height:400vh}.tl-stage{top:5%}
+.tl-slider{width:800vw;height:80vh;padding:0 7vw}
+.tl-image{height:65vw;width:85vw;border-radius:5vw}
+.tl-cap{width:2vw;height:2vw}
+.tl-head{height:auto;padding-top:5vw}.tl-head h2{font-size:8.5vw}
+.tl-period{width:30%;padding-top:5vw}.tl-period p{font-size:4.2vw}
+.tl-row-top,.tl-row-bottom{column-gap:40vw}.tl-row-bottom{margin-left:7vw}
+.tl-item{width:70vw!important;padding:0 7vw}.tl-item-top{display:flex;flex-direction:column}
+.tl-dot{width:2.5vw;height:2.5vw}.tl-item-bottom .tl-stem{height:100%}
+.tl-item-top .tl-copy{margin-top:-2vw}
+.tl-title{font-size:6.4vw}.tl-desc{font-size:4.8vw}}`;
+
+const TIMELINE_JS = `(function(){
+var ORDER=${JSON.stringify(JOURNEY_ORDER)},DURATION=1.4;
+var vp=document.querySelector('.tl-viewport'),section=vp.querySelector('.tl'),slider=vp.querySelector('.tl-slider'),line=vp.querySelector('.journey-line');
+var reducedMq=matchMedia('(prefers-reduced-motion: reduce)'),reduced=reducedMq.matches;
+var clamp=function(v){return v<0?0:v>1?1:v};
+var easeOut=function(t){return 1-(1-t)*(1-t)};
+/* SplitText's lines, by hand: wrap the words, group them by where they wrap, mask each line. */
+var split=function(el){if(!el.dataset.text)el.dataset.text=el.textContent;var words=el.dataset.text.split(' ');
+el.innerHTML=words.map(function(w){return '<span class="tl-w">'+w+'</span>'}).join(' ');var lines=[],top=null;
+el.querySelectorAll('.tl-w').forEach(function(w){if(top===null||Math.abs(w.offsetTop-top)>2){lines.push([]);top=w.offsetTop}lines[lines.length-1].push(w.textContent)});
+el.innerHTML=lines.map(function(l){return '<span class="tl-mask"><span class="tl-ln">'+l.join(' ')+'</span></span>'}).join('');el.setAttribute('aria-label',el.dataset.text)};
+var items=ORDER.map(function(o){return{top:o.top,stem:vp.querySelector('.jl-'+o.id),dot:vp.querySelector('.jd-'+o.id),title:vp.querySelector('.title-'+o.id),desc:vp.querySelector('.description-'+o.id)}});
+var mobile=false,lines=[];
+var layout=function(){mobile=innerWidth<600;items.forEach(function(it){split(it.title);split(it.desc);it.lines=Array.prototype.slice.call(it.title.querySelectorAll('.tl-ln')).concat(Array.prototype.slice.call(it.desc.querySelectorAll('.tl-ln')));it.tl=it.title.querySelectorAll('.tl-ln').length});update()};
+/* ScrollTrigger's "<section point> <view point>" marks, as a progress between two of them. */
+var range=function(a,av,b,bv){var top=section.offsetTop,H=section.offsetHeight,vh=vp.clientHeight,s=top+a*H-av*vh,e=top+b*H-bv*vh;return clamp((vp.scrollTop-s)/Math.max(1,e-s))};
+var POS_DESKTOP=[[6,26],[16,36],[26,46],[35,55],[45,65],[55,75],[65,85]],POS_MOBILE=[[22,32],[28,38],[36,46],[45,55],[52,62],[60,70],[69,79]];
+var update=function(){raf=0;
+var slide=range(0,0,mobile?0.82:0.92,mobile?0.5:1);slider.style.transform='translateX('+(slide*(mobile?-57:-65))+'%)';
+var full=mobile?65:98;line.style.width=(reduced?full:range(0,mobile?0.3:0.25,mobile?0.8:0.92,mobile?0.5:1)*full)+'%';
+var pos=mobile?POS_MOBILE:POS_DESKTOP;
+items.forEach(function(it,i){var p=reduced?1:range(pos[i][0]/100,0.3,pos[i][1]/100,0.5);
+/* The stem and dot take the first 0.4 of the item's timeline; its lines rise over the
+   whole of it, title then description together, 0.02 apart. */
+var total=DURATION+0.02*Math.max(it.tl,it.lines.length-it.tl),grow=clamp(p*total/(DURATION*0.4));
+it.stem.style.transform='scaleY('+grow+')';it.dot.style.scale=String(grow);
+it.lines.forEach(function(ln,j){var k=j<it.tl?j:j-it.tl,t=clamp((p*total-0.02*k)/DURATION);ln.style.transform='translateY('+(100*(1-easeOut(t))).toFixed(2)+'px)'})})};
+var raf=0,schedule=function(){if(!raf)raf=requestAnimationFrame(update)};
+vp.addEventListener('scroll',schedule,{passive:true});
+var resizeTimer=0;addEventListener('resize',function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120)});
+reducedMq.addEventListener('change',function(){reduced=reducedMq.matches;update()});
+(document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(layout);layout();
+})();`;
+
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
     id: "21st-radial-orbital-timeline",
@@ -1083,5 +1235,16 @@ ${FEATURE_ROWS.map(featureRow).join('\n<hr class="ft-rule">\n')}
     html: MORPH_HTML,
     css: MORPH_CSS,
     js: MORPH_JS,
+  },
+  {
+    id: "21st-scroll-timeline",
+    title: "Scroll timeline",
+    category: "Scroll effects",
+    description:
+      "A product roadmap that pins as you scroll and slides sideways: an orange line draws along the track and each milestone grows its stem, pops its dot and lifts its date and copy into place line by line as it reaches the middle. After the Timeline on 21st.dev, built with Hyperiux Vault.",
+    tag: "21st.dev",
+    html: TIMELINE_HTML,
+    css: TIMELINE_CSS,
+    js: TIMELINE_JS,
   },
 ];
