@@ -418,6 +418,56 @@ new ResizeObserver(function(){if(Math.round(stage.clientWidth)!==W)relayout()}).
 reduceMq.addEventListener('change',function(){reduced=reduceMq.matches;kick()});
 })();`;
 
+/**
+ * Scenes painted on a canvas, for ports whose demo photos sit on a CDN this sandbox
+ * cannot reach: `paintScene(kind, seed, width, height)` returns a canvas. The kinds are
+ * forest, night, lake, hills, field, dunes, city, aurora and beach (anything else).
+ */
+const SCENE_PAINTER = `var rng=function(seed){var a=seed>>>0;return function(){a=(a+0x6d2b79f5)>>>0;var t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}};
+var paintScene=function(kind,seed,W,H){var c=document.createElement('canvas');c.width=W;c.height=H;var g=c.getContext('2d'),r=rng(seed);
+var vgrad=function(y0,y1,stops){var gr=g.createLinearGradient(0,y0,0,y1);stops.forEach(function(s,i){gr.addColorStop(i/(stops.length-1),s)});return gr};
+var sky=function(stops,hz){g.fillStyle=vgrad(0,hz,stops);g.fillRect(0,0,W,H)};
+var ridge=function(base,amp,fill,f){var ph=[r()*6,r()*6,r()*6],fr=f||[2+r()*2,5+r()*3,13+r()*6];g.beginPath();g.moveTo(0,H);
+for(var x=0;x<=W;x+=6){var u=x/W;g.lineTo(x,base-amp*(0.6*Math.sin(u*fr[0]+ph[0])+0.3*Math.sin(u*fr[1]+ph[1])+0.1*Math.sin(u*fr[2]+ph[2])))}g.lineTo(W,H);g.closePath();g.fillStyle=fill;g.fill()};
+var glow=function(x,y,rad,col){var gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,W,H)};
+if(kind==='forest'){sky(['#fff4d1','#cfd9a4','#6f8b52'],H);
+var TR=[[16,8,8,'rgba(80,100,66,.4)'],[9,18,16,'rgba(44,60,36,.8)'],[5,38,30,'#182214']];TR.forEach(function(T){for(var i=0;i<T[0];i++){var x=r()*W,w=T[1]+r()*T[2];g.fillStyle=T[3];g.fillRect(x,0,w,H);g.fillStyle='rgba(255,240,190,.08)';g.fillRect(x+w*0.7,0,w*0.12,H)}})
+g.globalCompositeOperation='lighter';for(var k=0;k<7;k++){var sx=W*(0.55+r()*0.35),sw=30+r()*70;g.beginPath();g.moveTo(sx,-10);g.lineTo(sx+sw,-10);g.lineTo(sx+sw-W*0.5,H);g.lineTo(sx-W*0.62,H);g.closePath();g.fillStyle='rgba(255,236,170,'+(0.05+r()*0.07)+')';g.fill()}
+g.globalCompositeOperation='source-over';glow(W*0.82,0,W*0.5,'rgba(255,245,200,.7)');g.fillStyle=vgrad(H*0.78,H,['rgba(30,44,22,0)','#24331b']);g.fillRect(0,H*0.78,W,H*0.22)}
+else if(kind==='night'){sky(['#03060f','#0d1838','#26386a'],H*0.8);for(var s=0;s<360;s++){g.fillStyle='rgba(255,255,255,'+(0.2+r()*0.8)+')';var z=r()*1.6+0.3;g.fillRect(r()*W,r()*H*0.7,z,z)}
+g.fillStyle='#f4f1e3';g.beginPath();g.arc(W*0.8,H*0.18,26,0,7);g.fill();glow(W*0.8,H*0.18,180,'rgba(200,215,255,.25)');
+var peak=[[W*0.08,H],[W*0.3,H*0.52],[W*0.42,H*0.38],[W*0.5,H*0.24],[W*0.58,H*0.36],[W*0.68,H*0.33],[W*0.86,H*0.6],[W,H*0.66],[W,H]];
+g.beginPath();peak.forEach(function(p,i){i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])});g.closePath();g.fillStyle=vgrad(H*0.24,H,['#5d6f99','#1b2440']);g.fill();
+g.save();g.clip();g.beginPath();g.moveTo(0,0);g.lineTo(W,0);for(var x2=W;x2>=0;x2-=20)g.lineTo(x2,H*0.47+Math.sin(x2*0.05)*14+r()*16);g.closePath();g.fillStyle=vgrad(H*0.24,H*0.5,['#f6f8ff','#b8c5e6']);g.fill();g.restore();
+ridge(H*0.84,H*0.05,'#05070d')}
+else if(kind==='lake'){var hz=H*0.56;sky(['#f7c59f','#f0d7c4','#a9c3df'],hz);glow(W*0.3,hz*0.8,W*0.4,'rgba(255,214,170,.5)');
+g.beginPath();g.moveTo(0,hz);[[0.12,0.78],[0.3,0.5],[0.44,0.2],[0.52,0.28],[0.6,0.16],[0.78,0.52],[1,0.7]].forEach(function(p){g.lineTo(W*p[0],hz*p[1])});g.lineTo(W,hz);g.closePath();g.fillStyle=vgrad(hz*0.16,hz,['#8a98b8','#5b6b8c']);g.fill();ridge(hz-H*0.02,H*0.05,'#2c3a33');g.fillStyle='#2c3a33';g.fillRect(0,hz-4,W,H-hz+4);
+g.save();g.translate(0,2*hz);g.scale(1,-1);g.drawImage(c,0,0,W,hz,0,0,W,hz);g.restore();g.fillStyle='rgba(40,70,110,.35)';g.fillRect(0,hz,W,H-hz);
+for(var q=0;q<90;q++){g.fillStyle='rgba(255,255,255,'+(0.04+r()*0.08)+')';g.fillRect(r()*W,hz+r()*(H-hz),40+r()*160,1.2)}}
+else if(kind==='hills'){sky(['#bfe0f5','#e7f2ee'],H*0.4);var greens=['#9fc58b','#7fb06a','#5d9a4e','#3f7d3a','#2b5f2b'];
+for(var h=0;h<5;h++){ridge(H*(0.32+h*0.13),H*(0.06+h*0.02),greens[h],[1.5+r(),3+r()*2,7+r()*3])}
+for(var tr=0;tr<60;tr++){var tx=r()*W,ty=H*(0.5+r()*0.5);g.fillStyle='rgba(20,60,25,.8)';g.beginPath();g.arc(tx,ty,4+r()*7,0,7);g.fill()}}
+else if(kind==='field'){var fz=H*0.5;sky(['#f9935a','#ffd29a','#fff1cf'],fz);g.fillStyle='#fff3c4';g.beginPath();g.arc(W*0.62,fz-30,46,0,7);g.fill();glow(W*0.62,fz-30,W*0.4,'rgba(255,220,150,.6)');
+ridge(fz+6,H*0.03,'#8b6a52');g.fillStyle=vgrad(fz,H,['#6f7432','#3d4a1c']);g.fillRect(0,fz+4,W,H-fz);
+for(var f=0;f<3200;f++){var dpt=Math.pow(r(),1.6),fy=fz+8+dpt*(H-fz),fr2=0.6+dpt*7;g.fillStyle=['#ff7a1a','#ff9a2e','#f05a14','#ffb347'][f%4];g.globalAlpha=0.55+dpt*0.45;g.beginPath();g.arc(r()*W,fy,fr2,0,7);g.fill()}g.globalAlpha=1}
+else if(kind==='dunes'){var dz=H*0.5;sky(['#f0a86a','#f7d3a1','#fcefd6'],dz);g.fillStyle='#fff6dc';g.beginPath();g.arc(W*0.3,dz*0.62,Math.min(W,H)*0.06,0,7);g.fill();glow(W*0.3,dz*0.62,W*0.45,'rgba(255,226,170,.55)');
+['#eab074','#dc9455','#c8783f','#ad6131','#8c4b26'].forEach(function(col,i){ridge(H*(0.46+i*0.12),H*(0.05+i*0.015),col,[1.1+r(),2.4+r(),4.5+r()*2])});
+g.globalCompositeOperation='overlay';for(var dl=0;dl<40;dl++){g.strokeStyle='rgba(255,240,210,.18)';g.lineWidth=1.5;g.beginPath();var dy0=H*(0.55+r()*0.45);g.moveTo(0,dy0);for(var dx=0;dx<=W;dx+=20)g.lineTo(dx,dy0+Math.sin(dx*0.01+dl)*8);g.stroke()}g.globalCompositeOperation='source-over'}
+else if(kind==='city'){var cz=H*0.78;sky(['#090d22','#1d2150','#5a3466'],cz);for(var cs=0;cs<160;cs++){g.fillStyle='rgba(255,255,255,'+(0.2+r()*0.6)+')';g.fillRect(r()*W,r()*H*0.4,1.2,1.2)}
+glow(W*0.5,cz,W*0.6,'rgba(255,140,120,.28)');for(var bx=-10;bx<W;){var bw=W*(0.04+r()*0.07),bh=H*(0.22+r()*0.42),by=cz-bh;g.fillStyle=r()<0.5?'#10122a':'#161838';g.fillRect(bx,by,bw,bh+2);
+for(var wy=by+10;wy<cz-8;wy+=14)for(var wx=bx+6;wx<bx+bw-8;wx+=12){if(r()<0.38){g.fillStyle=r()<0.7?'rgba(255,214,140,.9)':'rgba(160,210,255,.85)';g.fillRect(wx,wy,5,7)}}bx+=bw+2+r()*6}
+g.fillStyle=vgrad(cz,H,['#151735','#06070f']);g.fillRect(0,cz,W,H-cz);for(var rf=0;rf<120;rf++){g.fillStyle='rgba(255,200,140,'+(0.05+r()*0.15)+')';g.fillRect(r()*W,cz+4+r()*(H-cz),10+r()*50,1.5)}}
+else if(kind==='aurora'){sky(['#020510','#06192a','#0b2a3a'],H*0.8);for(var as=0;as<300;as++){g.fillStyle='rgba(255,255,255,'+(0.2+r()*0.7)+')';var az=r()*1.5+0.3;g.fillRect(r()*W,r()*H*0.7,az,az)}
+g.globalCompositeOperation='lighter';for(var ab=0;ab<6;ab++){var ay=H*(0.18+ab*0.06+r()*0.05),ph2=r()*6;var lw=H*(0.05+r()*0.06);[[1,'.16'],[0.35,'.28']].forEach(function(pass){g.lineWidth=lw*pass[0];g.strokeStyle=['rgba(80,255,170,','rgba(60,220,200,','rgba(150,120,255,'][ab%3]+pass[1]+')';g.beginPath();for(var ax=-20;ax<=W+20;ax+=12)g.lineTo(ax,ay+Math.sin(ax/W*5+ph2)*H*0.06);g.stroke()})}
+g.globalCompositeOperation='source-over';ridge(H*0.7,H*0.1,'#0a1520',[2+r(),5+r()*2,12+r()*4]);g.fillStyle=vgrad(H*0.8,H,['#c9d8e6','#8aa0b8']);ridge(H*0.84,H*0.02,g.fillStyle)}
+else{var sz=H*0.48,bz=H*0.74;sky(['#5fc3ef','#bfe9fb','#eefaff'],sz);g.fillStyle='rgba(255,255,255,.85)';for(var cl=0;cl<5;cl++){var cx=r()*W,cy=H*(0.1+r()*0.2);for(var b=0;b<6;b++){g.beginPath();g.arc(cx+b*26,cy+Math.sin(b)*8,20+r()*18,0,7);g.fill()}}
+g.fillStyle=vgrad(sz,bz,['#0f8fb3','#25c0c9','#8be6d8']);g.fillRect(0,sz,W,bz-sz);g.fillStyle=vgrad(bz,H,['#f6e7c1','#e7cf98']);g.beginPath();g.moveTo(0,bz);for(var x3=0;x3<=W;x3+=10)g.lineTo(x3,bz+Math.sin(x3*0.012)*10);g.lineTo(W,H);g.lineTo(0,H);g.closePath();g.fill();
+g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=3;g.beginPath();for(var x4=0;x4<=W;x4+=10)g.lineTo(x4,bz-4+Math.sin(x4*0.012)*10+Math.sin(x4*0.08)*2);g.stroke();
+g.strokeStyle='#3a2a1a';g.lineWidth=14;g.lineCap='round';g.beginPath();g.moveTo(W*0.14,H);g.quadraticCurveTo(W*0.12,H*0.55,W*0.2,H*0.3);g.stroke();
+g.strokeStyle='#1f4a2a';g.lineWidth=9;for(var fd=0;fd<8;fd++){var a=fd/8*Math.PI*2;g.beginPath();g.moveTo(W*0.2,H*0.3);g.quadraticCurveTo(W*0.2+Math.cos(a)*90,H*0.3+Math.sin(a)*40-50,W*0.2+Math.cos(a)*170,H*0.3+Math.sin(a)*70+40);g.stroke()}}
+var vg=g.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,W*0.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.35)');g.fillStyle=vg;g.fillRect(0,0,W,H);
+var img=g.getImageData(0,0,W,H),d=img.data;for(var p=0;p<d.length;p+=4){var v=(r()-0.5)*10;d[p]+=v;d[p+1]+=v;d[p+2]+=v}g.putImageData(img,0,0);return c};`;
+
 /* ── Morph gallery ──────────────────────────────────────────────────────────── */
 
 /**
@@ -538,41 +588,9 @@ var wrapIndex=function(i,n,loop){if(n<=0)return 0;return loop?((i%n)+n)%n:Math.m
 var easeInOutQuint=function(t){var x=Math.min(Math.max(t,0),1);return x<0.5?16*Math.pow(x,5):1-Math.pow(-2*x+2,5)/2};
 
 /* The six scenes the demo captions, painted. */
-var rng=function(seed){var a=seed>>>0;return function(){a=(a+0x6d2b79f5)>>>0;var t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}};
 var W=1200,H=750;
-var paint=function(kind,seed){var c=document.createElement('canvas');c.width=W;c.height=H;var g=c.getContext('2d'),r=rng(seed);
-var vgrad=function(y0,y1,stops){var gr=g.createLinearGradient(0,y0,0,y1);stops.forEach(function(s,i){gr.addColorStop(i/(stops.length-1),s)});return gr};
-var sky=function(stops,hz){g.fillStyle=vgrad(0,hz,stops);g.fillRect(0,0,W,H)};
-var ridge=function(base,amp,fill,f){var ph=[r()*6,r()*6,r()*6],fr=f||[2+r()*2,5+r()*3,13+r()*6];g.beginPath();g.moveTo(0,H);
-for(var x=0;x<=W;x+=6){var u=x/W;g.lineTo(x,base-amp*(0.6*Math.sin(u*fr[0]+ph[0])+0.3*Math.sin(u*fr[1]+ph[1])+0.1*Math.sin(u*fr[2]+ph[2])))}g.lineTo(W,H);g.closePath();g.fillStyle=fill;g.fill()};
-var glow=function(x,y,rad,col){var gr=g.createRadialGradient(x,y,0,x,y,rad);gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,W,H)};
-if(kind==='forest'){sky(['#fff4d1','#cfd9a4','#6f8b52'],H);
-var TR=[[16,8,8,'rgba(80,100,66,.4)'],[9,18,16,'rgba(44,60,36,.8)'],[5,38,30,'#182214']];TR.forEach(function(T){for(var i=0;i<T[0];i++){var x=r()*W,w=T[1]+r()*T[2];g.fillStyle=T[3];g.fillRect(x,0,w,H);g.fillStyle='rgba(255,240,190,.08)';g.fillRect(x+w*0.7,0,w*0.12,H)}})
-g.globalCompositeOperation='lighter';for(var k=0;k<7;k++){var sx=W*(0.55+r()*0.35),sw=30+r()*70;g.beginPath();g.moveTo(sx,-10);g.lineTo(sx+sw,-10);g.lineTo(sx+sw-W*0.5,H);g.lineTo(sx-W*0.62,H);g.closePath();g.fillStyle='rgba(255,236,170,'+(0.05+r()*0.07)+')';g.fill()}
-g.globalCompositeOperation='source-over';glow(W*0.82,0,W*0.5,'rgba(255,245,200,.7)');g.fillStyle=vgrad(H*0.78,H,['rgba(30,44,22,0)','#24331b']);g.fillRect(0,H*0.78,W,H*0.22)}
-else if(kind==='night'){sky(['#03060f','#0d1838','#26386a'],H*0.8);for(var s=0;s<360;s++){g.fillStyle='rgba(255,255,255,'+(0.2+r()*0.8)+')';var z=r()*1.6+0.3;g.fillRect(r()*W,r()*H*0.7,z,z)}
-g.fillStyle='#f4f1e3';g.beginPath();g.arc(W*0.8,H*0.18,26,0,7);g.fill();glow(W*0.8,H*0.18,180,'rgba(200,215,255,.25)');
-var peak=[[W*0.08,H],[W*0.3,H*0.52],[W*0.42,H*0.38],[W*0.5,H*0.24],[W*0.58,H*0.36],[W*0.68,H*0.33],[W*0.86,H*0.6],[W,H*0.66],[W,H]];
-g.beginPath();peak.forEach(function(p,i){i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])});g.closePath();g.fillStyle=vgrad(H*0.24,H,['#5d6f99','#1b2440']);g.fill();
-g.save();g.clip();g.beginPath();g.moveTo(0,0);g.lineTo(W,0);for(var x2=W;x2>=0;x2-=20)g.lineTo(x2,H*0.47+Math.sin(x2*0.05)*14+r()*16);g.closePath();g.fillStyle=vgrad(H*0.24,H*0.5,['#f6f8ff','#b8c5e6']);g.fill();g.restore();
-ridge(H*0.84,H*0.05,'#05070d')}
-else if(kind==='lake'){var hz=H*0.56;sky(['#f7c59f','#f0d7c4','#a9c3df'],hz);glow(W*0.3,hz*0.8,W*0.4,'rgba(255,214,170,.5)');
-g.beginPath();g.moveTo(0,hz);[[0.12,0.78],[0.3,0.5],[0.44,0.2],[0.52,0.28],[0.6,0.16],[0.78,0.52],[1,0.7]].forEach(function(p){g.lineTo(W*p[0],hz*p[1])});g.lineTo(W,hz);g.closePath();g.fillStyle=vgrad(hz*0.16,hz,['#8a98b8','#5b6b8c']);g.fill();ridge(hz-H*0.02,H*0.05,'#2c3a33');g.fillStyle='#2c3a33';g.fillRect(0,hz-4,W,H-hz+4);
-g.save();g.translate(0,2*hz);g.scale(1,-1);g.drawImage(c,0,0,W,hz,0,0,W,hz);g.restore();g.fillStyle='rgba(40,70,110,.35)';g.fillRect(0,hz,W,H-hz);
-for(var q=0;q<90;q++){g.fillStyle='rgba(255,255,255,'+(0.04+r()*0.08)+')';g.fillRect(r()*W,hz+r()*(H-hz),40+r()*160,1.2)}}
-else if(kind==='hills'){sky(['#bfe0f5','#e7f2ee'],H*0.4);var greens=['#9fc58b','#7fb06a','#5d9a4e','#3f7d3a','#2b5f2b'];
-for(var h=0;h<5;h++){ridge(H*(0.32+h*0.13),H*(0.06+h*0.02),greens[h],[1.5+r(),3+r()*2,7+r()*3])}
-for(var tr=0;tr<60;tr++){var tx=r()*W,ty=H*(0.5+r()*0.5);g.fillStyle='rgba(20,60,25,.8)';g.beginPath();g.arc(tx,ty,4+r()*7,0,7);g.fill()}}
-else if(kind==='field'){var fz=H*0.5;sky(['#f9935a','#ffd29a','#fff1cf'],fz);g.fillStyle='#fff3c4';g.beginPath();g.arc(W*0.62,fz-30,46,0,7);g.fill();glow(W*0.62,fz-30,W*0.4,'rgba(255,220,150,.6)');
-ridge(fz+6,H*0.03,'#8b6a52');g.fillStyle=vgrad(fz,H,['#6f7432','#3d4a1c']);g.fillRect(0,fz+4,W,H-fz);
-for(var f=0;f<3200;f++){var dpt=Math.pow(r(),1.6),fy=fz+8+dpt*(H-fz),fr2=0.6+dpt*7;g.fillStyle=['#ff7a1a','#ff9a2e','#f05a14','#ffb347'][f%4];g.globalAlpha=0.55+dpt*0.45;g.beginPath();g.arc(r()*W,fy,fr2,0,7);g.fill()}g.globalAlpha=1}
-else{var sz=H*0.48,bz=H*0.74;sky(['#5fc3ef','#bfe9fb','#eefaff'],sz);g.fillStyle='rgba(255,255,255,.85)';for(var cl=0;cl<5;cl++){var cx=r()*W,cy=H*(0.1+r()*0.2);for(var b=0;b<6;b++){g.beginPath();g.arc(cx+b*26,cy+Math.sin(b)*8,20+r()*18,0,7);g.fill()}}
-g.fillStyle=vgrad(sz,bz,['#0f8fb3','#25c0c9','#8be6d8']);g.fillRect(0,sz,W,bz-sz);g.fillStyle=vgrad(bz,H,['#f6e7c1','#e7cf98']);g.beginPath();g.moveTo(0,bz);for(var x3=0;x3<=W;x3+=10)g.lineTo(x3,bz+Math.sin(x3*0.012)*10);g.lineTo(W,H);g.lineTo(0,H);g.closePath();g.fill();
-g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=3;g.beginPath();for(var x4=0;x4<=W;x4+=10)g.lineTo(x4,bz-4+Math.sin(x4*0.012)*10+Math.sin(x4*0.08)*2);g.stroke();
-g.strokeStyle='#3a2a1a';g.lineWidth=14;g.lineCap='round';g.beginPath();g.moveTo(W*0.14,H);g.quadraticCurveTo(W*0.12,H*0.55,W*0.2,H*0.3);g.stroke();
-g.strokeStyle='#1f4a2a';g.lineWidth=9;for(var fd=0;fd<8;fd++){var a=fd/8*Math.PI*2;g.beginPath();g.moveTo(W*0.2,H*0.3);g.quadraticCurveTo(W*0.2+Math.cos(a)*90,H*0.3+Math.sin(a)*40-50,W*0.2+Math.cos(a)*170,H*0.3+Math.sin(a)*70+40);g.stroke()}}
-var vg=g.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,W*0.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.35)');g.fillStyle=vg;g.fillRect(0,0,W,H);
-var img=g.getImageData(0,0,W,H),d=img.data;for(var p=0;p<d.length;p+=4){var v=(r()-0.5)*10;d[p]+=v;d[p+1]+=v;d[p+2]+=v}g.putImageData(img,0,0);return c};
+var paint=function(kind,seed){return paintScene(kind,seed,W,H)};
+${SCENE_PAINTER}
 var shrink=function(src,w,h){var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(src,0,0,w,h);return c.toDataURL('image/jpeg',0.82)};
 
 var root=document.querySelector('.mg'),canvas=root.querySelector('.mg-canvas'),fallback=root.querySelector('.mg-fallback'),list=root.querySelector('.mg-thumbs'),sr=root.querySelector('.mg-sr');
@@ -778,6 +796,78 @@ vp.addEventListener('scroll',schedule,{passive:true});
 var resizeTimer=0;addEventListener('resize',function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120)});
 reducedMq.addEventListener('change',function(){reduced=reducedMq.matches;update()});
 (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(layout);layout();
+})();`;
+
+/* ── Sticky scroll gallery ──────────────────────────────────────────────────── */
+
+/**
+ * After ui-layout's sticky scroll gallery on 21st.dev. Upstream wraps the page in
+ * Lenis for smooth wheel scrolling; a port ships no library, so the wheel is eased
+ * here the way Lenis does by default (each frame closes a tenth of the gap to the
+ * target), and left native under reduced motion and for keys and the scrollbar. The
+ * markup and its proportions are upstream's: a gridded hero, three columns where the
+ * middle one sticks while the outer ones scroll past, and the clipped "ui-layout"
+ * footer. Its thirteen photos are on a CDN this sandbox cannot reach, so painted
+ * scenes stand in, painted a frame at a time so the page shows before they finish.
+ */
+const STICKY_SCENES = {
+  left: ["forest", "dunes", "lake", "city", "field"],
+  middle: ["aurora", "beach", "night"],
+  right: ["hills", "dunes", "aurora", "field", "city"],
+};
+const STICKY_ALT: Record<string, string> = {
+  forest: "Sun through a pine forest", dunes: "Desert dunes at sunrise", lake: "A mountain reflected in a lake",
+  city: "A city skyline at night", field: "A field of orange flowers", aurora: "Northern lights over mountains",
+  beach: "A palm over a tropical beach", night: "A snowy peak under the moon", hills: "Rolling green hills",
+};
+const stickyFigure = (kind: string, id: string, tall: boolean) =>
+  `<figure class="ss-fig${tall ? " ss-fill" : ""}"><img class="ss-img" data-kind="${kind}" data-seed="${id}" alt="${STICKY_ALT[kind]}"></figure>`;
+
+const STICKY_HTML = `<div class="ss-viewport" tabindex="0" aria-label="Sticky gallery, scrollable"><main class="ss">
+<div class="wrapper"><section class="ss-hero"><div class="ss-grid" aria-hidden="true"></div><h1>Create Gallery In a Better Way<br>Using CSS sticky properties <br>Scroll down! 👇</h1></section></div>
+<section class="ss-gallery"><div class="ss-cols">
+<div class="ss-col">${STICKY_SCENES.left.map((kind, i) => stickyFigure(kind, `l${i}`, false)).join("")}</div>
+<div class="ss-col ss-sticky">${STICKY_SCENES.middle.map((kind, i) => stickyFigure(kind, `m${i}`, true)).join("")}</div>
+<div class="ss-col">${STICKY_SCENES.right.map((kind, i) => stickyFigure(kind, `r${i}`, false)).join("")}</div>
+</div></section>
+<footer class="ss-foot"><h1>ui-layout</h1><div class="ss-bar"></div></footer></main></div>`;
+
+const STICKY_CSS = `body{display:block!important}
+.ss-viewport{position:fixed;inset:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;outline:none;background:#000}
+.ss{background:#000;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#fff}
+.ss h1{margin:0;letter-spacing:normal}
+.ss-hero{position:sticky;top:0;display:grid;place-content:center;width:100%;height:100vh;background:#020617;color:#fff}
+.ss-grid{position:absolute;inset:0;background-image:linear-gradient(to right,#4f4f4f2e 1px,transparent 1px),linear-gradient(to bottom,#4f4f4f2e 1px,transparent 1px);background-size:54px 54px;-webkit-mask-image:radial-gradient(ellipse 60% 50% at 50% 0%,#000 70%,transparent 100%);mask-image:radial-gradient(ellipse 60% 50% at 50% 0%,#000 70%,transparent 100%)}
+.ss-hero h1{position:relative;padding:0 32px;font-size:48px;font-weight:600;line-height:120%;letter-spacing:-.025em;text-align:center}
+@media(min-width:1536px){.ss-hero h1{font-size:72px}}
+.ss-gallery{width:100%;background:#020617;color:#fff}
+.ss-cols{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px}
+.ss-col{display:grid;gap:8px;grid-column:span 4/span 4}
+.ss-sticky{position:sticky;top:0;width:100%;height:100vh;grid-template-rows:repeat(3,minmax(0,1fr))}
+.ss-fig{width:100%;margin:0}.ss-fill{height:100%}
+.ss-img{display:block;width:100%;height:384px;vertical-align:bottom;object-fit:cover;border-radius:6px;background:#1e293b;transition:all .3s}
+.ss-fill .ss-img{height:100%}
+.ss-foot{background:#020617}
+.ss-foot h1{transform:translateY(80px);font-size:16vw;line-height:100%;font-weight:600;text-transform:uppercase;text-align:center;background:linear-gradient(to right,#9ca3af,#1f2937);-webkit-background-clip:text;background-clip:text;color:transparent;transition:all .15s linear}
+.ss-bar{position:relative;z-index:10;display:grid;place-content:center;height:160px;background:#000;border-radius:9999px 9999px 0 0;font-size:24px}`;
+
+const STICKY_JS = `(function(){
+${SCENE_PAINTER}
+var vp=document.querySelector('.ss-viewport'),reducedMq=matchMedia('(prefers-reduced-motion: reduce)');
+/* The photos, painted one per frame so the hero shows before the gallery is done. */
+var imgs=Array.prototype.slice.call(vp.querySelectorAll('.ss-img'));
+var seedOf=function(id){var h=7;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))%9973;return h};
+var next=function(){var img=imgs.shift();if(!img)return;var tall=img.closest('.ss-fill');
+img.src=paintScene(img.dataset.kind,seedOf(img.dataset.seed),tall?900:720,tall?560:760).toDataURL('image/jpeg',0.86);requestAnimationFrame(next)};
+requestAnimationFrame(next);
+/* Lenis's default feel: the wheel sets a target and the page eases a tenth of the way to it each frame. */
+var target=0,current=0,raf=0,easing=false;
+var max=function(){return vp.scrollHeight-vp.clientHeight};
+var step=function(){raf=0;current+=(target-current)*0.1;if(Math.abs(target-current)<0.5){current=target;easing=false}vp.scrollTop=current;if(easing)raf=requestAnimationFrame(step)};
+vp.addEventListener('wheel',function(e){if(reducedMq.matches||e.ctrlKey)return;e.preventDefault();var d=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?vp.clientHeight:1);
+if(!easing){current=vp.scrollTop;target=current}target=Math.max(0,Math.min(max(),target+d));easing=true;if(!raf)raf=requestAnimationFrame(step)},{passive:false});
+vp.addEventListener('scroll',function(){if(!easing){current=target=vp.scrollTop}},{passive:true});
+vp.addEventListener('pointerdown',function(){easing=false;if(raf){cancelAnimationFrame(raf);raf=0}});
 })();`;
 
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
@@ -1246,5 +1336,16 @@ ${FEATURE_ROWS.map(featureRow).join('\n<hr class="ft-rule">\n')}
     html: TIMELINE_HTML,
     css: TIMELINE_CSS,
     js: TIMELINE_JS,
+  },
+  {
+    id: "21st-sticky-scroll-gallery",
+    title: "Sticky scroll gallery",
+    category: "Scroll effects",
+    description:
+      "A three-column photo gallery built on CSS sticky: the middle column pins for a screen while the outer two scroll past it, between a gridded hero and an oversized clipped wordmark, with the wheel eased the way Lenis eases it. After ui-layout's sticky scroll gallery on 21st.dev.",
+    tag: "21st.dev",
+    html: STICKY_HTML,
+    css: STICKY_CSS,
+    js: STICKY_JS,
   },
 ];
