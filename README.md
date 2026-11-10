@@ -19,7 +19,7 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets — or read them off the client's current website — and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image and the brand's own uploaded typeface. Decide whether the site has a dark theme. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 134 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+5. Browse 154 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes, light, dark or side by side, with a contrast lens that outlines failing text in place. Return to editing as often as needed.
 7. Download the ZIP handoff or a restorable project backup; a client rationale page and a standalone sample page are under More options.
 
@@ -238,6 +238,11 @@ The 21st.dev Globe (Magic UI's) is the one port that runs a library: its dotted 
 cobe's, with the land map baked into cobe's shader, so cobe and phenomenon, the WebGL
 helper it imports, ship inside that element unchanged with both MIT notices at the head
 (see `vendor/cobe/SOURCE.md`).
+GradFlow (gradflow.meerbahadin.dev, by Meer Bahadin, MIT) is the second publisher whose
+work runs here as published: its one shader draws all twenty gradient types, shipped
+unchanged with its presets from `vendor/gradflow`, credited as "GradFlow · original
+component". Each of the twenty elements carries GradFlow's playground controls (type,
+colours, speed, scale, noise, pointer, pause, presets) and the code for what it shows.
 
 **Preview coverage is explicit.** Every original effect has a live visualiser, and every registry entry a compiled one; a card that cannot render says why rather than showing a blank tile. Hooks and utilities, which have nothing to render, are hidden from the grid unless asked for (a search or their own type still finds them).
 

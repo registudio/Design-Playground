@@ -3,11 +3,12 @@ import { ELEMENTS, elementDocument, elementOrigin } from "@/elements/catalogue";
 import { CULT_ELEMENTS } from "@/elements/cult-elements";
 import { SHADER_ELEMENTS } from "@/elements/shader-elements";
 import { TWENTYFIRST_ELEMENTS } from "@/elements/twentyfirst-elements";
-import { COMPONENT_SOURCES, ENGINE_SOURCES, PORT_SOURCES, browseSourceOf, engineFor, portFor } from "@/elements/extended-catalogue";
+import { COMPONENT_SOURCES, ENGINE_SOURCES, PORT_SOURCES, browseSourceOf, componentSourceFor, engineFor, portFor } from "@/elements/extended-catalogue";
 import { SHIPNOTES_ELEMENTS } from "@/elements/shipnotes-elements";
 import { readFile } from "node:fs/promises";
 import { shipnotesModule } from "../scripts/vendor-shipnotes.mjs";
 import { cobeModule } from "../scripts/vendor-cobe.mjs";
+import { gradflowModule } from "../scripts/vendor-gradflow.mjs";
 
 /**
  * The originals that come from somewhere else.
@@ -178,6 +179,25 @@ describe("Ship Notes components", () => {
   it("keeps the generated sources in step with the vendored files", async () => {
     const committed = await readFile(new URL("../src/elements/shipnotes-sources.ts", import.meta.url), "utf8");
     expect(committed, "run node scripts/vendor-shipnotes.mjs").toBe(await shipnotesModule());
+  });
+});
+
+describe("GradFlow gradients", () => {
+  it("keeps the generated module in step with the vendored files", async () => {
+    const committed = await readFile(new URL("../src/elements/gradflow-source.ts", import.meta.url), "utf8");
+    expect(committed, "run node scripts/vendor-gradflow.mjs").toBe(await gradflowModule());
+  });
+
+  it("offers every gradient type once, credited to GradFlow, with the MIT notice and the controls", async () => {
+    const { GRADFLOW_ELEMENTS } = await import("../src/elements/gradflow-elements");
+    const { GRADFLOW_TYPE_NUMBER } = await import("../src/elements/gradflow-source");
+    expect(GRADFLOW_ELEMENTS.map(element => element.id).sort()).toEqual(Object.keys(GRADFLOW_TYPE_NUMBER).map(type => `gradflow-${type}`).sort());
+    for (const element of GRADFLOW_ELEMENTS) {
+      expect(componentSourceFor(element.id)?.label, element.id).toBe("GradFlow");
+      expect(element.js, element.id).toContain("Copyright (c) Meer Bahadin");
+      expect(element.js, element.id).not.toMatch(/<\/script/i);
+      for (const control of ["gf-select", 'data-color="color1"', 'data-key="speed"', 'data-key="scale"', 'data-key="noise"', "gf-follow", "gf-pause", "gf-presets"]) expect(element.html, element.id).toContain(control);
+    }
   });
 });
 

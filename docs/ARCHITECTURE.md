@@ -27,11 +27,11 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 
 ## The element catalogue
 
-- `src/elements/catalogue.ts` — `ELEMENTS` (134 authored originals), `elementOrigin(id)`
+- `src/elements/catalogue.ts` — `ELEMENTS` (154 authored originals), `elementOrigin(id)`
   for attribution, and `elementDocument(id, accent)`, which wraps an element's
   `{html, css, js}` into the standalone document every card, dialog and export runs.
   `INTERACTION_ONLY` names the elements whose script still runs under reduced motion
-  (controls — carousels, charts, cult-ui, 21st.dev and dqnamo ports, and Ship Notes components,
+  (controls — carousels, charts, cult-ui, 21st.dev and dqnamo ports, and Ship Notes and GradFlow components,
   whose script is what defines them — rather than decoration).
   `engineLoader()` loads engine bundles after the frame's first paint, when idle: one
   Vanta bundle starting synchronously held up its neighbours' first paint.
@@ -49,6 +49,12 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 - `src/elements/cobe-source.ts` — cobe 0.6.5 and phenomenon 1.6.0, the WebGL globe the
   `21st-globe` port runs, vendored unchanged in `vendor/cobe/` and bundled, both MIT
   notices first, by `scripts/vendor-cobe.mjs`; the same drift test holds them together.
+- `src/elements/gradflow-elements.ts` — GradFlow's twenty gradients, one element per type,
+  each with GradFlow's playground controls. The shader and presets are vendored
+  unchanged in `vendor/gradflow/` and generated into `src/elements/gradflow-source.ts`
+  by `scripts/vendor-gradflow.mjs` (a drift test holds them together); its renderer
+  and React hook are rebuilt as plain script in the element. `vendor/` is outside the
+  typecheck, since vendored files keep their own imports.
 - `scripts/engine-demos.mjs` — the runtime JS for every engine demo, keyed by element id
   and root selector. Plain `.mjs` so the build imports it with no compile step;
   `engine-demos.d.mts` types it for tests.
