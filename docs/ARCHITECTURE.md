@@ -27,7 +27,7 @@ arranged and which parts are easy to break. Keep it current when a part moves.
 
 ## The element catalogue
 
-- `src/elements/catalogue.ts` — `ELEMENTS` (133 authored originals), `elementOrigin(id)`
+- `src/elements/catalogue.ts` — `ELEMENTS` (134 authored originals), `elementOrigin(id)`
   for attribution, and `elementDocument(id, accent)`, which wraps an element's
   `{html, css, js}` into the standalone document every card, dialog and export runs.
   `INTERACTION_ONLY` names the elements whose script still runs under reduced motion
@@ -46,6 +46,9 @@ arranged and which parts are easy to break. Keep it current when a part moves.
   `SOURCE.md`) and minified, MIT notice first, into the generated
   `src/elements/shipnotes-sources.ts` by `scripts/vendor-shipnotes.mjs`; a test fails
   if the two drift. Never edit the generated module or the vendored files by hand.
+- `src/elements/cobe-source.ts` — cobe 0.6.5 and phenomenon 1.6.0, the WebGL globe the
+  `21st-globe` port runs, vendored unchanged in `vendor/cobe/` and bundled, both MIT
+  notices first, by `scripts/vendor-cobe.mjs`; the same drift test holds them together.
 - `scripts/engine-demos.mjs` — the runtime JS for every engine demo, keyed by element id
   and root selector. Plain `.mjs` so the build imports it with no compile step;
   `engine-demos.d.mts` types it for tests.

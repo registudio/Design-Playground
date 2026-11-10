@@ -19,7 +19,7 @@ business.md → assets → Design Playground → live preview → approval → /
 2. Optionally upload brand assets — or read them off the client's current website — and choose a website template, including a blank canvas.
 3. Choose colours, typography and a cursor, including a custom image and the brand's own uploaded typeface. Decide whether the site has a dark theme. Colours and typography can remain undecided.
 4. Pick section variants and drag the section order, or use the accessible move buttons. Any section can be omitted.
-5. Browse 133 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
+5. Browse 134 interactive original effects, expanded previews, notes and placement, alongside every indexed registry component in the same grid, filtered by type from a row pinned above it. Registry components are compiled and previewed on approach; both kinds of selection record a note and a placement.
 6. Visualise the composition at desktop, tablet or mobile sizes, light, dark or side by side, with a contrast lens that outlines failing text in place. Return to editing as often as needed.
 7. Download the ZIP handoff or a restorable project backup; a client rationale page and a standalone sample page are under More options.
 
@@ -234,6 +234,10 @@ none is presented as a Playground Original. The six Ship Notes cards are the thi
 relationship: plain web components that run here as published, so their own script
 ships inside each element document, unchanged and minified with its MIT notice at the
 head, credited as "Ship Notes · original component". Only the demo around each is ours.
+The 21st.dev Globe (Magic UI's) is the one port that runs a library: its dotted world is
+cobe's, with the land map baked into cobe's shader, so cobe and phenomenon, the WebGL
+helper it imports, ship inside that element unchanged with both MIT notices at the head
+(see `vendor/cobe/SOURCE.md`).
 
 **Preview coverage is explicit.** Every original effect has a live visualiser, and every registry entry a compiled one; a card that cannot render says why rather than showing a blank tile. Hooks and utilities, which have nothing to render, are hidden from the grid unless asked for (a search or their own type still finds them).
 

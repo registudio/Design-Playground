@@ -13,6 +13,7 @@
  * `prefers-reduced-motion` and damp their own movement, because a control that stops
  * responding is broken rather than calmed.
  */
+import { COBE_SOURCE } from "./cobe-source";
 import type { BrowseCategory } from "./taxonomy";
 
 interface TwentyFirstElement {
@@ -870,6 +871,76 @@ vp.addEventListener('scroll',function(){if(!easing){current=target=vp.scrollTop}
 vp.addEventListener('pointerdown',function(){easing=false;if(raf){cancelAnimationFrame(raf);raf=0}});
 })();`;
 
+/* ── Globe ──────────────────────────────────────────────────────────────────── */
+
+/**
+ * Magic UI's Globe, as given on 21st.dev. Unlike the other ports, this one runs the
+ * library it is built on: the dotted world is cobe's, whose land map is baked into its
+ * shader and is not something to redraw by hand, so cobe 0.6.5 (what the component's
+ * `^0.6.4` resolves to) and the phenomenon helper it imports are vendored unchanged in
+ * vendor/cobe and bundled, MIT notices first, into cobe-source.ts. Around it, the
+ * component and its demo are rebuilt as written: the same config and ten markers, the
+ * drag that adds `delta / 200` to the spin, and the 500ms fade-in. One change: under
+ * reduced motion the globe stops turning by itself, and still turns when dragged. The
+ * card takes its height from its padding, as it does in 21st.dev's centred preview, so
+ * the globe rises behind the bottom of the wordmark rather than over all of it.
+ */
+const GLOBE_CONFIG = {
+  devicePixelRatio: 2,
+  phi: 0,
+  theta: 0.3,
+  dark: 0,
+  diffuse: 0.4,
+  mapSamples: 16000,
+  mapBrightness: 1.2,
+  baseColor: [1, 1, 1],
+  markerColor: [251 / 255, 100 / 255, 21 / 255],
+  glowColor: [1, 1, 1],
+  markers: [
+    { location: [14.5995, 120.9842], size: 0.03 },
+    { location: [19.076, 72.8777], size: 0.1 },
+    { location: [23.8103, 90.4125], size: 0.05 },
+    { location: [30.0444, 31.2357], size: 0.07 },
+    { location: [39.9042, 116.4074], size: 0.08 },
+    { location: [-23.5505, -46.6333], size: 0.1 },
+    { location: [19.4326, -99.1332], size: 0.1 },
+    { location: [40.7128, -74.006], size: 0.1 },
+    { location: [34.6937, 135.5022], size: 0.05 },
+    { location: [41.0082, 28.9784], size: 0.06 },
+  ],
+};
+
+const GLOBE_HTML = `<div class="gb-demo"><span class="gb-word">Globe</span>
+<div class="gb-globe"><canvas class="gb-canvas" role="img" aria-label="A dotted globe turning slowly, with orange markers on ten cities. Drag sideways to spin it."></canvas></div>
+<div class="gb-shade" aria-hidden="true"></div></div>`;
+
+const GLOBE_CSS = `:root{color-scheme:light}body{background:#fff;color:#0a0a0a;padding:16px}
+.gb-demo{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:32rem;overflow:hidden;border-radius:8px;border:1px solid #e5e5e5;background:#fff;padding:32px 160px 160px;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+@media(min-width:768px){.gb-demo{padding-bottom:240px;box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1)}}
+.gb-word{pointer-events:none;white-space:pre-wrap;text-align:center;font-size:96px;font-weight:600;line-height:1;background:linear-gradient(to bottom,#000,rgba(209,213,219,.8));-webkit-background-clip:text;background-clip:text;color:transparent}
+.gb-globe{position:absolute;inset:0;top:112px;margin:0 auto;aspect-ratio:1/1;width:100%;max-width:600px}
+.gb-canvas{display:block;width:100%;height:100%;opacity:0;transition:opacity .5s;contain:layout paint size;cursor:grab;touch-action:pan-y}
+.gb-shade{pointer-events:none;position:absolute;inset:0;height:100%;background:radial-gradient(circle at 50% 200%,rgba(0,0,0,.2),rgba(255,255,255,0))}`;
+
+const GLOBE_JS = `${COBE_SOURCE}
+;(function(){
+var CONFIG=${JSON.stringify(GLOBE_CONFIG)};
+var canvas=document.querySelector('.gb-canvas'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
+var phi=0,width=0,pointer=null,movement=0,r=0;
+var setPointer=function(v){pointer=v;canvas.style.cursor=v!==null?'grabbing':'grab'};
+var move=function(x){if(pointer!==null){var delta=x-pointer;movement=delta;r=delta/200}};
+canvas.addEventListener('pointerdown',function(e){setPointer(e.clientX-movement)});
+canvas.addEventListener('pointerup',function(){setPointer(null)});
+canvas.addEventListener('pointerout',function(){setPointer(null)});
+canvas.addEventListener('mousemove',function(e){move(e.clientX)});
+canvas.addEventListener('touchmove',function(e){if(e.touches[0])move(e.touches[0].clientX)},{passive:true});
+var onResize=function(){width=canvas.offsetWidth};addEventListener('resize',onResize);onResize();
+if(!window.createGlobe)return;
+try{window.createGlobe(canvas,Object.assign({},CONFIG,{width:width*2,height:width*2,onRender:function(state){
+if(pointer===null&&!reduced.matches)phi+=0.005;state.phi=phi+r;state.width=width*2;state.height=width*2}}));
+setTimeout(function(){canvas.style.opacity='1'})}catch(e){canvas.setAttribute('aria-label','The globe needs WebGL, which is not available here.')}
+})();`;
+
 export const TWENTYFIRST_ELEMENTS: TwentyFirstElement[] = [
   {
     id: "21st-radial-orbital-timeline",
@@ -1347,5 +1418,16 @@ ${FEATURE_ROWS.map(featureRow).join('\n<hr class="ft-rule">\n')}
     html: STICKY_HTML,
     css: STICKY_CSS,
     js: STICKY_JS,
+  },
+  {
+    id: "21st-globe",
+    title: "Globe",
+    category: "Charts & data viz",
+    description:
+      "A dotted WebGL globe that turns slowly on its own with orange markers on ten cities, rising out of the bottom of a card under a large gradient wordmark. Drag sideways to spin it. Magic UI's Globe on 21st.dev, running cobe, which ships inside it with its MIT notice.",
+    tag: "21st.dev",
+    html: GLOBE_HTML,
+    css: GLOBE_CSS,
+    js: GLOBE_JS,
   },
 ];

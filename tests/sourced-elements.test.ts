@@ -7,6 +7,7 @@ import { COMPONENT_SOURCES, ENGINE_SOURCES, PORT_SOURCES, browseSourceOf, engine
 import { SHIPNOTES_ELEMENTS } from "@/elements/shipnotes-elements";
 import { readFile } from "node:fs/promises";
 import { shipnotesModule } from "../scripts/vendor-shipnotes.mjs";
+import { cobeModule } from "../scripts/vendor-cobe.mjs";
 
 /**
  * The originals that come from somewhere else.
@@ -177,6 +178,21 @@ describe("Ship Notes components", () => {
   it("keeps the generated sources in step with the vendored files", async () => {
     const committed = await readFile(new URL("../src/elements/shipnotes-sources.ts", import.meta.url), "utf8");
     expect(committed, "run node scripts/vendor-shipnotes.mjs").toBe(await shipnotesModule());
+  });
+});
+
+describe("vendored cobe", () => {
+  it("keeps the generated module in step with the vendored files", async () => {
+    const committed = await readFile(new URL("../src/elements/cobe-source.ts", import.meta.url), "utf8");
+    expect(committed, "run node scripts/vendor-cobe.mjs").toBe(await cobeModule());
+  });
+
+  it("ships both MIT notices and never closes its own script tag early", async () => {
+    const { COBE_SOURCE } = await import("../src/elements/cobe-source");
+    expect(COBE_SOURCE.startsWith("/*! cobe 0.6.5")).toBe(true);
+    expect(COBE_SOURCE).toContain("Copyright (c) 2021 Shu Ding");
+    expect(COBE_SOURCE).toContain("Copyright (c) 2019 Colin van Eenige");
+    expect(COBE_SOURCE).not.toMatch(/<\/script/i);
   });
 });
 
